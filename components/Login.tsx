@@ -13,10 +13,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const [error, setError] = useState<string | null>(null);
     const [showPasswordHint, setShowPasswordHint] = useState(false);
 
-    // Auto-fill admin credentials for convenience
+    // Initial state empty
     useEffect(() => {
-        setEmail('admin@guaimaral.edu.co');
-        setPassword('admin2026');
+        setEmail('');
+        setPassword('');
     }, []);
 
     const handleLogin = async (e: React.FormEvent) => {

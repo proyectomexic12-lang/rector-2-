@@ -15,7 +15,7 @@ const initialInput: SequenceInput = {
   area: '',
   tema: '',
   dba: '',
-  sesiones: 2,
+  sesiones: 0,
   ejeCrese: '',
 };
 
