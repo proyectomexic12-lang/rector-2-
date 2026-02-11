@@ -145,6 +145,18 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
   ];
 
   const safeTema = sanitizeInput(input.tema);
+  const areaNormativa = {
+    conDBA: ['MATEMATICAS', 'LENGUAJE', 'CIENCIAS NATURALES', 'CIENCIAS SOCIALES', 'INGLES'],
+    conOrientaciones: ['EDUCACION ARTISTICA', 'EDUCACION FISICA', 'ETICA', 'VALORES', 'RELIGION', 'TECNOLOGIA', 'FILOSOFIA', 'CONVIVENCIA']
+  };
+
+  const currentArea = input.area.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a));
+
+  const pedagogicalInstruction = hasDBA
+    ? `- **DBA Oficial:** ${sanitizeInput(input.dba) || 'LOCALIZAR Y USAR EL DBA OFICIAL DEL MEN PARA ESTE GRADO/ÁREA'}`
+    : `- **Referencia Pedagógica:** Esta área NO utiliza DBA. Debes aplicar estrictamente las **Orientaciones Pedagógicas y Curriculares del MEN de Colombia** para ${input.area}. NO inventes DBAs inexistentes.`;
+
   const prompt = `
     ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM)
     Eres el Agente Supremo de la I.E. Guaimaral. Fusionas la excelencia pedagógica de un Consultor Senior del MEN con la precisión técnica de un Ingeniero de Orquestación de IA de nivel platino. Tu misión es la perfección absoluta en cada letra y estructura.
@@ -152,20 +164,20 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     ### MARCO DE OPERACIÓN SUPREMO
     - **Protocolo de las 50 Reglas de Oro:** Aplicar cada directriz de excelencia pedagógica (Alineación MEN, DUA, Bloom, CRESE).
     - **Robustez Técnica Platino:** Generar JSON puro, sin errores estructurales, con tipos validados al 100%.
-    - **Cero Alucinación Curricular:** Veracidad total en DBA y Estándares 2024/2025.
+    - **Cero Alucinación Curricular:** Veracidad total en referentes nacionales 2024/2025.
     - **Metodologías de Vanguardia:** Aprendizaje Basado en Problemas, Flipped Classroom y Momentos ADI Creativos.
 
     ### PARÁMETROS DE LA SECUENCIA
     - **Grado:** ${input.grado} | **Área:** ${input.area}
     - **Tema:** ${safeTema} | **Sesiones:** ${input.sesiones}
-    - **DBA Oficial:** ${sanitizeInput(input.dba) || 'LOCALIZAR Y USAR EL DBA OFICIAL DEL MEN PARA ESTE GRADO/ÁREA'}
+    ${pedagogicalInstruction}
     - **Integración Transversal:** ${input.ejeCrese || 'Fusión socioemocional y ciudadana de alto impacto.'}
     ${refinementInstruction ? `- **COMANDO DE REFINAMIENTO MAESTRO:** ${sanitizeInput(refinementInstruction)}` : ''}
 
     ### AUDITORÍA DE CALIDAD PRE-SALIDA
     - ¿La evaluación es tipo ICFES con 4 opciones y situaciones problema reales?
     - ¿La guía imprimible es autónoma y pedagógicamente motivadora?
-    - ¿Se integran correctamente los Momentos ADI y la Corporiedad?
+    - ¿Se han seguido los estándares o las orientaciones curriculares vigentes en Colombia según el área?
 
     Responde únicamente con el JSON validado.
   `;
