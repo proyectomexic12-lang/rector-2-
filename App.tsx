@@ -307,6 +307,7 @@ function App() {
               setInput={setInput}
               onGenerate={() => handleGenerate()}
               isLoading={isLoading}
+              user={currentUser}
             />
           </div>
         </div>

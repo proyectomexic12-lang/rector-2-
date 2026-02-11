@@ -3,15 +3,29 @@ import { SequenceInput } from '../types';
 import { GRADOS, AREAS, EJES_CRESE } from '../constants';
 import { BookOpen, Calendar, Target, Layers, BrainCircuit, Play, Sparkles, Wand2, PenTool } from 'lucide-react';
 
+import { User } from '../services/authService';
+
 interface InputFormProps {
   input: SequenceInput;
   setInput: React.Dispatch<React.SetStateAction<SequenceInput>>;
   onGenerate: () => void;
   isLoading: boolean;
+  user?: User | null;
 }
 
-export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerate, isLoading }) => {
+export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerate, isLoading, user }) => {
   const [dbaMode, setDbaMode] = useState<'manual' | 'auto'>('manual');
+
+  // Lógica de filtrado personalizada para docentes de Transición
+  const isTransitionTeacher = user?.name.includes("Ibet Charris") || user?.name.includes("Deicy Mercado");
+
+  const filteredGrados = isTransitionTeacher
+    ? GRADOS.filter(g => g === "Transición")
+    : GRADOS;
+
+  const filteredAreas = isTransitionTeacher
+    ? AREAS.filter(a => a.startsWith("Dimensión"))
+    : AREAS;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -56,7 +70,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer shadow-sm hover:border-blue-300 text-gray-700 font-medium"
             >
               <option value="">Seleccionar Grado</option>
-              {GRADOS.map(g => <option key={g} value={g}>{g}</option>)}
+              {filteredGrados.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
             <div className="absolute right-3 top-4 pointer-events-none">
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -78,7 +92,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer shadow-sm hover:border-blue-300 text-gray-700 font-medium"
             >
               <option value="">Seleccionar Área</option>
-              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+              {filteredAreas.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <div className="absolute right-3 top-4 pointer-events-none">
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
