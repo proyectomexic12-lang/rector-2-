@@ -31,7 +31,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
     : isLindaVarela
       ? AREAS.filter(a => a === "Lengua Castellana")
       : isAsterioTorres
-        ? AREAS.filter(a => a.includes("Naturales") || a.includes("Agropecuaria"))
+        ? AREAS.filter(a => a.includes("Naturales") || a.includes("Agropecuaria") || a.includes("Ética"))
         : isRobertoDaza
           ? AREAS.filter(a => ["Ciencias Sociales", "Ética y Valores", "Filosofía", "Cátedra de la Paz"].includes(a))
           : AREAS;
