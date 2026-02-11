@@ -236,12 +236,12 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
       </div>
 
       {/* DOCUMENTO OFICIAL - FORMATO GUAIMARAL */}
-      <div id="preview-container" className="bg-white shadow-2xl mx-auto max-w-[21.5cm] min-h-[29.7cm] p-[1cm] md:p-[1.5cm] border border-gray-200 text-black print:shadow-none print:border-none print:p-0 print:m-0 print:w-full print:max-w-none">
+      <div id="preview-container" className="bg-white shadow-2xl mx-auto max-w-[21.5cm] min-h-[29.7cm] p-[1cm] md:p-[1.5cm] border border-gray-200 text-black print:shadow-none print:border-none print:p-0 print:m-0 print:w-full print:max-w-none print:min-h-0">
 
         {/* --- SECCIÓN PLANEACIÓN --- */}
         <div className={`${planningClass}`}>
           {/* ENCABEZADO INSTITUCIONAL */}
-          <div className="flex gap-6 items-center mb-6 border-b-2 border-slate-900 pb-4">
+          <div className="flex gap-4 items-center mb-4 border-b-2 border-slate-900 pb-2 print:mb-2 print:pb-1">
             {/* Logo Oficial */}
             <div className="w-24 h-24 flex items-center justify-center flex-shrink-0">
               <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="w-full h-full object-contain" />
@@ -257,7 +257,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
           </div>
 
           {/* TABLA PRINCIPAL DE DATOS */}
-          <div className="border-2 border-gray-800 mb-6 font-sans">
+          <div className="border-2 border-gray-800 mb-4 font-sans print:mb-2">
             <div className="bg-indigo-50 no-print p-2 text-[10px] text-indigo-700 font-bold border-b border-gray-400 flex items-center gap-2">
               <Sparkles size={14} />
               CONSEJO: Puedes editar cualquier texto haciendo clic directamente sobre él. Se guardará para el Word y el PDF.
@@ -313,7 +313,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
           </div>
 
           {/* SECCIONES DEL FORMATO - Estilo Caja Verde */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5 print:gap-0">
             {/* Descripción */}
             <div className="border border-gray-400 institutional-section">
               <HeaderBox className="border-0 border-b">DESCRIPCIÓN DE LA SECUENCIA DIDÁCTICA: APRENDIZAJES A LOGRAR</HeaderBox>
@@ -324,7 +324,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* Objetivo */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">OBJETIVO DE APRENDIZAJE</HeaderBox>
               <EditableContent
                 value={editableData.objetivo_aprendizaje}
@@ -333,7 +333,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* Contenidos */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">CONTENIDOS A DESARROLLAR</HeaderBox>
               <div className="p-2 text-[11px]">
                 <p className="text-[9px] text-gray-400 mb-1 no-print italic">Usa el Refinamiento IA para ajustar la lista de contenidos.</p>
@@ -343,7 +343,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               </div>
             </div>
             {/* Competencias y Estándar */}
-            <div className="mt-2 grid grid-cols-2 gap-1 institutional-section">
+            <div className="mt-2 grid grid-cols-2 gap-1 institutional-section print:mt-1 print:gap-0">
               <div className="border border-gray-400">
                 <HeaderBox className="border-0 border-b">COMPETENCIAS DEL MEN</HeaderBox>
                 <EditableContent
@@ -362,7 +362,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               </div>
             </div>
             {/* DBA */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">DERECHOS BÁSICOS DE APRENDIZAJE (DBA)</HeaderBox>
               <EditableContent
                 value={editableData.dba_utilizado || input.dba}
@@ -371,7 +371,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* CRESE y Corporiedad */}
-            <div className="mt-2 border border-gray-400 px-2 py-1 text-[10px] institutional-section">
+            <div className="mt-2 border border-gray-400 px-2 py-1 text-[10px] institutional-section print:mt-1">
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 <span className="font-bold">EJE TRANSVERSAL (CRESE):</span>
                 <span>{editableData.eje_crese_utilizado || input.ejeCrese || 'Seleccionado por IA'}</span>
@@ -385,7 +385,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               </div>
             </div>
             {/* Metodología */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">METODOLOGÍA</HeaderBox>
               <EditableContent
                 value={editableData.metodologia}
@@ -394,7 +394,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* Recursos */}
-            <div className="mt-2 grid grid-cols-2 gap-0 border border-gray-400 institutional-section">
+            <div className="mt-2 grid grid-cols-2 gap-0 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-r border-gray-400 bg-[#EDF7ED]">NOMBRE DEL RECURSO</HeaderBox>
               <HeaderBox className="border-0 bg-[#EDF7ED]">DESCRIPCIÓN DEL RECURSO</HeaderBox>
             </div>
@@ -423,7 +423,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               ))}
             </div>
             {/* Evaluación */}
-            <div className="mt-2 grid grid-cols-2 gap-0 border border-gray-400 institutional-section">
+            <div className="mt-2 grid grid-cols-2 gap-0 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-r border-gray-400 bg-[#EDF7ED]">EVALUACIÓN Y PRODUCTOS ASOCIADOS</HeaderBox>
               <HeaderBox className="border-0 bg-[#EDF7ED]">INSTRUMENTOS DE EVALUACIÓN</HeaderBox>
             </div>
@@ -441,7 +441,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
             </div>
 
             {/* Bibliografía */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">BIBLIOGRAFÍA</HeaderBox>
               <EditableContent
                 value={editableData.bibliografia}
@@ -450,7 +450,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* Observaciones */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
               <HeaderBox className="border-0 border-b">OBSERVACIONES</HeaderBox>
               <EditableContent
                 value={editableData.observaciones}
@@ -459,7 +459,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               />
             </div>
             {/* Registro de Seguimiento */}
-            <div className="mt-2 border border-gray-400 institutional-section">
+            <div className="mt-1 border border-gray-400 institutional-section print:mt-0.5">
               <HeaderBox className="border-0 border-b bg-[#f9fafb]">REGISTRO DE SEGUIMIENTO (PARA LLENAR POR EL DOCENTE)</HeaderBox>
               <div className="p-2 min-h-[4rem] text-[10px] text-gray-400 italic">
                 Espacio reservado para registrar el avance, dificultades encontradas y ajustes realizados durante la ejecución de la secuencia.
@@ -468,7 +468,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
           </div>
 
           {/* LISTA DE ASISTENCIA (OPCIONAL/PRINT ONLY) */}
-          <div className="mt-6 border-2 border-gray-800 p-2 hidden print:block institutional-section">
+          <div className="mt-4 border-2 border-gray-800 p-2 hidden print:block institutional-section print:mt-2">
             <h3 className="text-[10px] font-bold uppercase mb-2">Control de Asistencia del Día</h3>
             <div className="grid grid-cols-2 gap-x-4">
               {[...Array(10)].map((_, i) => (
@@ -487,8 +487,8 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
         <div className={`${anexosClass}`}>
 
           {/* PIAR (ANEXO) */}
-          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300 break-before-page">
-            <div className="mt-2 text-black border border-gray-400">
+          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300">
+            <div className="mt-2 text-black border border-gray-400 print:mt-1">
               <HeaderBox className="border-0 border-b">ADECUACIONES CURRICULARES (PIAR - Inclusión)</HeaderBox>
               <EditableContent
                 value={editableData.adecuaciones_piar || "No se generaron adecuaciones específicas."}
@@ -499,9 +499,9 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
           </div>
 
           {/* DETALLE DE SESIONES (ANEXO) */}
-          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300 font-sans">
+          <div className="mt-6 pt-2 border-t-2 border-dashed border-gray-300 font-sans print:mt-4 print:pt-1">
             <h3 className="text-center font-bold text-gray-400 uppercase text-[10px] mb-4">- ANEXO 1: DESGLOSE DE SESIONES -</h3>
-            <div className="grid gap-4">
+            <div className="grid gap-2 print:gap-1">
               {editableData.actividades.map((act, idx) => (
                 <div key={idx} className="border border-gray-300 rounded p-3 bg-gray-50 break-inside-avoid shadow-sm group activity-block">
                   <div className="font-bold text-sm mb-1 text-black flex justify-between">
@@ -558,10 +558,10 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
           </div>
 
           {/* RÚBRICA Y EVALUACIÓN (ANEXO) */}
-          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300 break-before-page">
+          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300">
             <h3 className="text-center font-bold text-gray-400 uppercase text-[10px] mb-4">- ANEXO 2: RÚBRICA Y EVALUACIÓN -</h3>
 
-            <div className="mb-6">
+            <div className="mb-6 print:mb-2">
               <h4 className="font-bold text-xs mb-2 text-gray-800">Rúbrica de Desempeño</h4>
               <div className="overflow-hidden border border-gray-300 rounded-lg shadow-sm institutional-section">
                 <table className="w-full text-[10px]">
@@ -623,9 +623,9 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
               </div>
             </div>
 
-            <div>
+            <div className="print:mt-1">
               <h4 className="font-bold text-xs mb-2 text-gray-800">Banco de Preguntas (Evaluación por Competencias)</h4>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-2 print:gap-1">
                 {editableData.evaluacion.map((ev, i) => (
                   <div key={i} className="border border-gray-300 p-3 rounded bg-gray-50 break-inside-avoid shadow-sm group evaluation-card">
                     <div className="flex justify-between items-start mb-2">
@@ -689,8 +689,8 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
         {/* --- FIN ANEXOS --- */}
 
         {/* --- SECCIÓN TALLER IMPRIMIBLE --- */}
-        <div className={`mt-12 pt-8 border-t-4 border-double border-gray-400 break-before-page ${anexosClass}`}>
-          <div className="flex justify-between items-start mb-10 border-b border-slate-200 pb-6">
+        <div className={`mt-8 pt-4 border-t-4 border-double border-gray-400 ${anexosClass} print:mt-4 print:pt-2`}>
+          <div className="flex justify-between items-start mb-6 border-b border-slate-200 pb-4 print:mb-2 print:pb-2">
             <div className="flex gap-4 items-center">
               <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
                 <img src="/logo_guaimaral.png" alt="Logo" className="w-full h-full object-contain" />
@@ -706,7 +706,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 print:space-y-2">
             <div>
               <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-1 mb-2">Introducción</h4>
               <EditableContent
@@ -758,7 +758,7 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
             </div>
           </div>
 
-          <p className="mt-12 text-center text-[9px] text-gray-400 uppercase tracking-widest italic no-print">
+          <p className="mt-12 text-center text-[9px] text-gray-400 uppercase tracking-widest italic no-print print:mt-4">
             "Educar es dar al cuerpo y al alma toda la belleza y perfección de que son capaces"
           </p>
         </div>

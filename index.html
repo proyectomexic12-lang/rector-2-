@@ -62,15 +62,13 @@
     @media print {
       @page {
         size: portrait;
-        margin: 0;
-        /* Hides browser headers/footers */
+        margin: 0.5cm;
       }
 
       body {
         background-color: white !important;
         margin: 0 !important;
-        padding: 0.7cm !important;
-        /* Compressed to fit more content */
+        padding: 0 !important;
       }
 
       * {
@@ -88,10 +86,6 @@
         display: none !important;
       }
 
-      .print-only {
-        display: block !important;
-      }
-
       .shadow-2xl,
       .shadow-lg,
       .shadow-md,
@@ -99,43 +93,30 @@
         box-shadow: none !important;
       }
 
-      .border,
-      .border-gray-200,
-      .border-gray-300,
-      .border-gray-400,
-      .border-gray-800 {
-        border-color: #000 !important;
-      }
-
-      /* Intelligent breaks: Keep sections together but compressed */
-      .institutional-section,
+      /* Permite que bloques grandes fluyan a la siguiente página sin dejar huecos */
       .activity-block,
       .evaluation-card,
       tr,
       td,
       th {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
         margin-bottom: 2px !important;
       }
 
-      /* Headers stay with content */
+      .institutional-section {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+
       h1,
       h2,
       h3,
-      h4,
       .institutional-header {
         page-break-after: avoid !important;
         break-after: avoid !important;
       }
 
-      h1,
-      h2,
-      h3 {
-        page-break-after: avoid !important;
-      }
-
-      /* Force background colors for the Green boxes in institutional format */
       .bg-\[\#EDF7ED\] {
         background-color: #EDF7ED !important;
       }

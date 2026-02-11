@@ -18,12 +18,17 @@ export const AREAS = [
   "Lengua Castellana",
   "Ciencias Naturales",
   "Ciencias Sociales",
+  "Filosofía",
   "Inglés",
   "Educación Artística",
   "Educación Física",
   "Tecnología e Informática",
   "Ética y Valores",
-  "Religión"
+  "Religión",
+  "Dimensión Corporal",
+  "Dimensión Cognitiva",
+  "Dimensión Socioafectiva",
+  "Dimensión Comunicativa"
 ];
 
 export const EJES_CRESE = [
