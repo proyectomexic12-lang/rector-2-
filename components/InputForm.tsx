@@ -16,8 +16,9 @@ interface InputFormProps {
 export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerate, isLoading, user }) => {
   const [dbaMode, setDbaMode] = useState<'manual' | 'auto'>('manual');
 
-  // Lógica de filtrado personalizada para docentes de Transición
+  // Lógica de filtrado personalizada para docentes específicos
   const isTransitionTeacher = user?.name.includes("Ibet Charris") || user?.name.includes("Deicy Mercado");
+  const isLindaVarena = user?.name.includes("Linda Varena");
 
   const filteredGrados = isTransitionTeacher
     ? GRADOS.filter(g => g === "Transición")
@@ -25,7 +26,9 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
 
   const filteredAreas = isTransitionTeacher
     ? AREAS.filter(a => a.startsWith("Dimensión"))
-    : AREAS;
+    : isLindaVarena
+      ? AREAS.filter(a => a === "Lengua Castellana")
+      : AREAS;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
