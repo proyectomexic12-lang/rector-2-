@@ -170,14 +170,16 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     - **Metodologías de Vanguardia:** Aprendizaje Basado en Problemas, Flipped Classroom y Momentos ADI Creativos.
 
     ### PARÁMETROS DE LA SECUENCIA
-    - **Grado:** ${input.grado} | **Área:** ${input.area}
+    - **Grado:** ${input.grado} | **Area:** ${input.area}
     - **Tema:** ${safeTema} | **Sesiones:** ${input.sesiones}
     ${pedagogicalInstruction}
+    - **Banco de Evaluación:** Generar obligatoriamente **10 preguntas** de selección múltiple tipo ICFES con 4 opciones.
+    - **Recursos Multimedia:** Si una actividad implica un video, debes incluir un enlace de búsqueda de YouTube con el formato: \`https://www.youtube.com/results?search_query=[TEMA+DEL+VIDEO+ESPECIFICO]\`.
     - **Integración Transversal:** ${input.ejeCrese || 'Fusión socioemocional y ciudadana de alto impacto.'}
     ${refinementInstruction ? `- **COMANDO DE REFINAMIENTO MAESTRO:** ${sanitizeInput(refinementInstruction)}` : ''}
 
     ### AUDITORÍA DE CALIDAD PRE-SALIDA
-    - ¿La evaluación es tipo ICFES con 4 opciones y situaciones problema reales?
+    - ¿Hay exactamente **10 preguntas** de evaluación con situaciones problema reales?
     - ¿La guía imprimible es autónoma y pedagógicamente motivadora?
     - ¿Se han seguido los estándares o las orientaciones curriculares vigentes en Colombia según el área?
 
@@ -208,9 +210,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
         const text = result.response.text();
         const parsed = JSON.parse(text);
 
-        console.log(`%c[✨ ÉXITO] Respondió: ${modelName} | Llave: ${label}`, "color: #10b981; font-weight: bold;");
+        console.log(`% c[✨ ÉXITO]Respondió: ${modelName} | Llave: ${label} `, "color: #10b981; font-weight: bold;");
 
-        const mKey = `key${i + 1}` as keyof typeof apiMetrics;
+        const mKey = `key${i + 1} ` as keyof typeof apiMetrics;
         apiMetrics[mKey].requests++;
         apiMetrics[mKey].success++;
         apiMetrics[mKey].lastUsed = new Date().toLocaleTimeString();
@@ -221,9 +223,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
       } catch (err: any) {
         lastError = err;
-        console.warn(`[❌ Intento Fallido] ${modelName} (${label}): ${err.message}`);
+        console.warn(`[❌ Intento Fallido] ${modelName} (${label}): ${err.message} `);
         modelHealthStatus[modelName] = "offline";
-        const mKey = `key${i + 1}` as keyof typeof apiMetrics;
+        const mKey = `key${i + 1} ` as keyof typeof apiMetrics;
         apiMetrics[mKey].requests++;
         apiMetrics[mKey].errors++;
         logApiKeyUsage(i, 'error', err.message, modelName);
@@ -233,7 +235,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     }
   }
 
-  throw new Error(`[Fallo en Orquestación]: Ninguna combinación de llave y modelo tiene cuota disponible. Error final: ${lastError?.message}`);
+  throw new Error(`[Fallo en Orquestación]: Ninguna combinación de llave y modelo tiene cuota disponible.Error final: ${lastError?.message} `);
 };
 
 export let lastWorkingModel = "gemini-2.0-flash";
