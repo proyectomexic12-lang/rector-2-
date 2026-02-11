@@ -361,9 +361,13 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
                 />
               </div>
             </div>
-            {/* DBA */}
+            {/* DBA / Referente Pedagógico */}
             <div className="mt-2 border border-gray-400 institutional-section print:mt-1">
-              <HeaderBox className="border-0 border-b">DERECHOS BÁSICOS DE APRENDIZAJE (DBA)</HeaderBox>
+              <HeaderBox className="border-0 border-b">
+                {(editableData.dba_utilizado || "").includes("Orientaciones")
+                  ? "REFERENTE PEDAGÓGICO (Orientaciones MEN)"
+                  : "DERECHOS BÁSICOS DE APRENDIZAJE (DBA)"}
+              </HeaderBox>
               <EditableContent
                 value={editableData.dba_utilizado || input.dba}
                 onSave={(val) => handleUpdateField('dba_utilizado', val)}

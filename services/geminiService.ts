@@ -154,8 +154,10 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
   const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a));
 
   const pedagogicalInstruction = hasDBA
-    ? `- **DBA Oficial:** ${sanitizeInput(input.dba) || 'LOCALIZAR Y USAR EL DBA OFICIAL DEL MEN PARA ESTE GRADO/ÁREA'}`
-    : `- **Referencia Pedagógica:** Esta área NO utiliza DBA. Debes aplicar estrictamente las **Orientaciones Pedagógicas y Curriculares del MEN de Colombia** para ${input.area}. NO inventes DBAs inexistentes.`;
+    ? `- **DBA Oficial:** Debes identificar el número exacto del DBA (ej: "DBA #3") y transcribir su contenido literal que se está abordando.
+       - **Input del Usuario:** ${sanitizeInput(input.dba) || 'Sin DBA previo'}. Si este input es un número, busca el contenido oficial. Si es texto, valida su correspondencia con el número.`
+    : `- **Referencia Pedagógica:** Esta área NO utiliza DBA. Debes citar explícitamente las **"Orientaciones Pedagógicas y Curriculares del MEN para ${input.area}"**. 
+       - **Instrucción Especial:** En la casilla de DBA, debes colocar: "Tomado de las Orientaciones Pedagógicas del MEN: [Citar el eje o lineamiento específico usado]". NO inventes un número de DBA.`;
 
   const prompt = `
     ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM)
@@ -164,7 +166,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     ### MARCO DE OPERACIÓN SUPREMO
     - **Protocolo de las 50 Reglas de Oro:** Aplicar cada directriz de excelencia pedagógica (Alineación MEN, DUA, Bloom, CRESE).
     - **Robustez Técnica Platino:** Generar JSON puro, sin errores estructurales, con tipos validados al 100%.
-    - **Cero Alucinación Curricular:** Veracidad total en referentes nacionales 2024/2025.
+    - **Cero Alucinación Curricular:** Veracidad total en referentes nacionales. Si es DBA, incluir número y texto. Si son Orientaciones, citarlas textualmente.
     - **Metodologías de Vanguardia:** Aprendizaje Basado en Problemas, Flipped Classroom y Momentos ADI Creativos.
 
     ### PARÁMETROS DE LA SECUENCIA
