@@ -30,7 +30,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
     : isLindaVarela
       ? AREAS.filter(a => a === "Lengua Castellana")
       : isAsterioTorres
-        ? AREAS.filter(a => a.includes("Naturales") || a.includes("Agropecuarias"))
+        ? AREAS.filter(a => a.includes("Naturales") || a.includes("Agropecuaria"))
         : AREAS;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
