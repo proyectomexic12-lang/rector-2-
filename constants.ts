@@ -28,7 +28,8 @@ export const AREAS = [
   "Dimensión Corporal",
   "Dimensión Cognitiva",
   "Dimensión Socioafectiva",
-  "Dimensión Comunicativa"
+  "Dimensión Comunicativa",
+  "Ciencias Agropecuarias"
 ];
 
 export const EJES_CRESE = [

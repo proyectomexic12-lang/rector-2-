@@ -19,6 +19,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
   // Lógica de filtrado personalizada para docentes específicos (Normalizada con authService)
   const isTransitionTeacher = user?.name.toLowerCase().includes("ibeth charris") || user?.name.toLowerCase().includes("deisy mercado");
   const isLindaVarela = user?.name.toLowerCase().includes("linda varela");
+  const isAsterioTorres = user?.name.toLowerCase().includes("asterio torres");
 
   const filteredGrados = isTransitionTeacher
     ? GRADOS.filter(g => g === "Transición")
@@ -28,7 +29,9 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
     ? AREAS.filter(a => a.startsWith("Dimensión"))
     : isLindaVarela
       ? AREAS.filter(a => a === "Lengua Castellana")
-      : AREAS;
+      : isAsterioTorres
+        ? AREAS.filter(a => a.includes("Naturales") || a.includes("Agropecuarias"))
+        : AREAS;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
