@@ -3,11 +3,11 @@ import { SequenceInput, DidacticSequence } from "../types";
 import { supabase } from "./supabaseClient";
 
 export const modelHealthStatus: Record<string, 'online' | 'offline' | 'checking'> = {
+  "gemini-2.5-flash": "checking",
+  "gemini-2.5-flash-8b": "checking",
   "gemini-2.0-flash": "checking",
   "gemini-1.5-flash": "checking",
   "gemini-1.5-pro": "checking",
-  "gemini-2.0-flash-lite-preview-02-05": "checking",
-  "gemini-1.5-flash-8b": "checking"
 };
 
 export const apiMetrics = {
@@ -135,12 +135,12 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
   const usage = [apiMetrics.key1.requests, apiMetrics.key2.requests, apiMetrics.key3.requests];
   const sortedIndices = [0, 1, 2].sort((a, b) => usage[a] - usage[b]);
 
-  // Lista Maestra de Modelos por orden de eficiencia y costo
+  // Lista Maestra de Modelos (Prioridad Gemini 2.5 Flash)
   const modelsToTry = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-8b",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
-    "gemini-2.0-flash-lite-preview-02-05",
-    "gemini-1.5-flash-8b",
     "gemini-1.5-pro"
   ];
 
