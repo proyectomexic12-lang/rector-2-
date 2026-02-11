@@ -32,7 +32,8 @@ export const AREAS = [
   "Agropecuaria",
   "Cátedra de la Paz",
   "Física",
-  "Estadística"
+  "Estadística",
+  "Geometría"
 ];
 
 export const EJES_CRESE = [
