@@ -138,8 +138,8 @@ create publication supabase_realtime for table app_users, usage_logs, api_key_lo
 -- ✅ PASO 12: REGISTRO E INSERTADO INICIAL DE DOCENTES CON PLANES E ILIMITADOS
 insert into app_users (email, password, name, role, areas, grados, is_unlimited, unlimited_start_date, monthly_price, subscription_months) values
 ('admin@guaimaral.edu.co', 'Mw==', 'Admin', 'admin', '{}', '{}', true, now(), 0, 12),
-('jairo.blanco@guaimaral.edu.co', 'Mw==', 'Jairo Blanco', 'docente', '{}', '{}', true, now(), 15000, 1),
-('liliana.valle@guaimaral.edu.co', 'Mw==', 'Liliana Valle', 'docente', '{}', '{}', true, now(), 15000, 1),
+('jairo.blanco@guaimaral.edu.co', 'Mw==', 'Jairo Blanco', 'docente', '{}', '{}', true, '2026-08-13 12:00:00-05', 15000, 1),
+('liliana.valle@guaimaral.edu.co', 'Mw==', 'Liliana Valle', 'docente', '{}', '{}', true, '2026-08-12 12:00:00-05', 15000, 1),
 ('demo@guaimaral.edu.co', 'Mw==', 'Docente Demo (Ilimitado)', 'docente', '{}', '{}', true, now(), 0, 12),
 ('alex.sanjuan@guaimaral.edu.co', 'Mw==', 'Alex San Juan', 'docente', '{}', '{}', false, null, 15000, 1),
 ('deisy.arroyo@guaimaral.edu.co', 'Mw==', 'Deisy Arroyo', 'docente', '{}', '{}', false, null, 15000, 1),

@@ -73,8 +73,8 @@ export const AUTHORIZED_USERS: User[] = [
     // Guaimaral Bachillerato (Orden Alfabético)
     { name: 'Alex San Juan', email: 'alex.sanjuan@guaimaral.edu.co', role: 'docente' },
     { name: 'Deisy Arroyo', email: 'deisy.arroyo@guaimaral.edu.co', role: 'docente' },
-    { name: 'Jairo Blanco', email: 'jairo.blanco@guaimaral.edu.co', role: 'docente', is_unlimited: true },
-    { name: 'Liliana Valle', email: 'liliana.valle@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    { name: 'Jairo Blanco', email: 'jairo.blanco@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-13', monthly_price: 15000, subscription_months: 1 },
+    { name: 'Liliana Valle', email: 'liliana.valle@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12', monthly_price: 15000, subscription_months: 1 },
     { name: 'Paula Padilla', email: 'paula.padilla@guaimaral.edu.co', role: 'docente' },
     { name: 'Rocio Ramírez', email: 'rocio.ramirez@guaimaral.edu.co', role: 'docente' },
 
