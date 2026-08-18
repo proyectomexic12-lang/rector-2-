@@ -59,6 +59,25 @@ export function getAvailableKeysInfo(): KeyConfigInfo[] {
   return keysInfo;
 }
 
+const LOCAL_STORAGE_METRICS_KEY = "guaimaral_api_metrics_store";
+
+function loadMetricsFromStorage(): Record<string, any> {
+  if (typeof window === 'undefined' || !window.localStorage) return {};
+  try {
+    const raw = window.localStorage.getItem(LOCAL_STORAGE_METRICS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveMetricsToStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(LOCAL_STORAGE_METRICS_KEY, JSON.stringify(apiMetrics));
+  } catch (e) {}
+}
+
 export const apiMetrics: Record<string, { 
   requests: number; 
   success: number; 
@@ -68,9 +87,18 @@ export const apiMetrics: Record<string, {
   errorLogs: { time: string; message: string }[];
 }> = {};
 
-// Inicializar métricas para todas las llaves detectadas
+// Inicializar métricas para todas las llaves detectadas con persistencia local
+const savedMetrics = loadMetricsFromStorage();
 getAvailableKeysInfo().forEach(k => {
-  apiMetrics[k.id] = { requests: 0, success: 0, errors: 0, lastUsed: "", label: k.label, errorLogs: [] };
+  const existing = savedMetrics[k.id];
+  apiMetrics[k.id] = {
+    requests: existing?.requests || 0,
+    success: existing?.success || 0,
+    errors: existing?.errors || 0,
+    lastUsed: existing?.lastUsed || "",
+    label: k.label,
+    errorLogs: Array.isArray(existing?.errorLogs) ? existing.errorLogs : []
+  };
 });
 
 const sanitizeInput = (text: string | undefined): string => {
@@ -576,11 +604,12 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
         // Actualizar métricas
         if (!apiMetrics[keyId]) {
-          apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label };
+          apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
         }
         apiMetrics[keyId].requests++;
         apiMetrics[keyId].success++;
         apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
+        saveMetricsToStorage();
 
         modelHealthStatus[modelName] = "online";
         logApiKeyUsage(label, 'success', undefined, modelName);
@@ -609,6 +638,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               time: new Date().toLocaleTimeString(),
               message: errMsg
             });
+            saveMetricsToStorage();
 
             logApiKeyUsage(label, 'error', errMsg, modelName);
             console.warn(`[⚠️ Conmutación Inteligente] Llave ${label} falló o está bloqueada. Saltando a la siguiente llave...`);
@@ -819,6 +849,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           apiMetrics[keyId].requests++;
           apiMetrics[keyId].success++;
           apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
+          saveMetricsToStorage();
 
           return parsed as EvaluationItem[];
 
@@ -838,6 +869,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
               time: new Date().toLocaleTimeString(),
               message: `ICFES Gen Error: ${errMsg}`
             });
+            saveMetricsToStorage();
 
             break; 
           } else {
