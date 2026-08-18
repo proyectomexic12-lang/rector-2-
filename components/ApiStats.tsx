@@ -141,7 +141,18 @@ export const ApiStats: React.FC = () => {
                     const keyName = kInfo.id;
                     const label = kInfo.label;
                     const localData = apiMetrics[keyName] || { requests: 0, success: 0, errors: 0, lastUsed: "", label };
-                    const metrics = (cloudMetrics && cloudMetrics[label]) ? cloudMetrics[label] : { ...localData, today: 0, lastAction: "---" };
+                    const cloudData = cloudMetrics?.[label];
+                    
+                    const requests = Math.max(localData.requests, cloudData?.requests || 0);
+                    const success = Math.max(localData.success, cloudData?.success || 0);
+                    const errors = Math.max(localData.errors, cloudData?.errors || 0);
+                    const today = Math.max(localData.success, cloudData?.today || 0);
+                    const lastUsed = localData.lastUsed || cloudData?.lastUsed || "---";
+                    const lastAction = (cloudData?.lastAction && cloudData.lastAction !== "---") 
+                        ? cloudData.lastAction 
+                        : (localData.lastUsed ? "Operación local exitosa" : "En espera");
+                    
+                    const metrics = { requests, success, errors, today, lastUsed, lastAction };
                     const successRate = metrics.requests > 0 ? (metrics.success / metrics.requests) * 100 : 100;
 
                     return (
@@ -207,6 +218,34 @@ export const ApiStats: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            {/* Panel de Registro de Fallos (Logs) */}
+            <div className="mt-8 pt-6 border-t border-slate-200/50 relative z-10">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Registro Activo de Fallos en APIs
+                </h4>
+                <div className="bg-slate-900 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar border border-slate-800 shadow-inner">
+                    {keysInfo.every(k => !apiMetrics[k.id]?.errorLogs?.length) ? (
+                        <div className="text-center py-6 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            No se han registrado fallos en esta sesión. Todo funcionando perfectamente.
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {keysInfo.map(kInfo => {
+                                const logs = apiMetrics[kInfo.id]?.errorLogs || [];
+                                return logs.map((log, idx) => (
+                                    <div key={`${kInfo.id}-${idx}`} className="flex items-start gap-3 text-[10px] sm:text-xs font-mono bg-slate-800/50 p-2.5 rounded-lg border border-red-500/20">
+                                        <span className="text-red-400 font-bold whitespace-nowrap">[{log.time}]</span>
+                                        <span className="text-slate-300 font-bold text-blue-400">{kInfo.label}:</span>
+                                        <span className="text-red-300 flex-1 break-words">{log.message}</span>
+                                    </div>
+                                ));
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

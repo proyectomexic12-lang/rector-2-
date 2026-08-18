@@ -59,11 +59,18 @@ export function getAvailableKeysInfo(): KeyConfigInfo[] {
   return keysInfo;
 }
 
-export const apiMetrics: Record<string, { requests: number; success: number; errors: number; lastUsed: string; label: string }> = {};
+export const apiMetrics: Record<string, { 
+  requests: number; 
+  success: number; 
+  errors: number; 
+  lastUsed: string; 
+  label: string;
+  errorLogs: { time: string; message: string }[];
+}> = {};
 
 // Inicializar métricas para todas las llaves detectadas
 getAvailableKeysInfo().forEach(k => {
-  apiMetrics[k.id] = { requests: 0, success: 0, errors: 0, lastUsed: "", label: k.label };
+  apiMetrics[k.id] = { requests: 0, success: 0, errors: 0, lastUsed: "", label: k.label, errorLogs: [] };
 });
 
 const sanitizeInput = (text: string | undefined): string => {
@@ -243,10 +250,20 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // Modelos a probar en orden de prioridad (Solo modelos vigentes y soportados por Groq Cloud 2026)
-  const rawModelsToTry = provider === 'google' 
-    ? ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"]
-    : [customModel, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.3-70b-specdec", "llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview"];
+  // Modelos a probar en orden de prioridad
+  let rawModelsToTry = [customModel];
+  if (provider === 'google') {
+    rawModelsToTry.push("gemini-2.0-flash", "gemini-1.5-pro");
+  } else if (baseUrl.includes('openrouter')) {
+    rawModelsToTry.push(
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "openrouter/free"
+    );
+  } else {
+    rawModelsToTry.push("llama-3.3-70b-versatile", "llama-3.1-8b-instant");
+  }
 
   const modelsToTry = Array.from(new Set(rawModelsToTry));
 
@@ -536,10 +553,14 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             modelHealthStatus[modelName] = "offline";
             
             if (!apiMetrics[keyId]) {
-              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label };
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
             }
             apiMetrics[keyId].requests++;
             apiMetrics[keyId].errors++;
+            apiMetrics[keyId].errorLogs.unshift({
+              time: new Date().toLocaleTimeString(),
+              message: errMsg
+            });
 
             logApiKeyUsage(label, 'error', errMsg, modelName);
             console.warn(`[⚠️ Conmutación Inteligente] Llave ${label} falló o está bloqueada. Saltando a la siguiente llave...`);
@@ -604,3 +625,180 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 };
 
 export let lastWorkingModel = "omni-model";
+
+// =========================================================================
+// GENERADOR DE EXÁMENES ICFES (NUEVA FASE 1)
+// =========================================================================
+
+export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence): Promise<EvaluationItem[]> => {
+  const provider = import.meta.env.VITE_AI_PROVIDER || 'openai';
+  const baseUrl = import.meta.env.VITE_AI_BASE_URL || 'https://api.groq.com/openai/v1';
+  const customModel = import.meta.env.VITE_AI_MODEL || 'openai/gpt-oss-120b';
+
+  const availableKeys = getAvailableKeysInfo();
+
+  if (availableKeys.length === 0) {
+    throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
+  }
+
+  // Modelos a probar en orden de prioridad
+  let rawModelsToTry = [customModel];
+  if (provider === 'google') {
+    rawModelsToTry.push("gemini-2.0-flash", "gemini-1.5-pro");
+  } else if (baseUrl.includes('openrouter')) {
+    rawModelsToTry.push(
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "openrouter/free"
+    );
+  } else {
+    rawModelsToTry.push("llama-3.3-70b-versatile", "llama-3.1-8b-instant");
+  }
+
+  const modelsToTry = Array.from(new Set(rawModelsToTry));
+
+  const prompt = `
+  Actúa como un experto en evaluación educativa del ICFES (Colombia).
+  Tu tarea es generar un examen riguroso de 10 preguntas de selección múltiple con única respuesta (opciones A, B, C, D) 
+  basado EXCLUSIVAMENTE en la siguiente planeación de clase:
+
+  Tema Principal: ${sequenceData.tema_principal}
+  Objetivo: ${sequenceData.objetivo_aprendizaje}
+  DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
+  Contenidos: ${sequenceData.contenidos.join(', ')}
+
+  REGLAS ESTRICTAS:
+  1. Genera EXACTAMENTE 10 preguntas. Ni una más, ni una menos.
+  2. Las preguntas deben tener diferentes niveles de complejidad:
+     - 3 preguntas de nivel literal (reconocimiento de información).
+     - 4 preguntas de nivel inferencial (análisis, deducción).
+     - 3 preguntas de nivel crítico (toma de postura, evaluación).
+  3. Cada pregunta debe tener 4 opciones (A, B, C, D) donde solo una es correcta.
+  4. La respuesta correcta debe estar explícitamente indicada.
+  5. Debes proporcionar una justificación pedagógica clara de por qué la respuesta correcta es la elegida.
+
+  DEVUELVE ÚNICAMENTE UN ARRAY DE OBJETOS JSON CON ESTA ESTRUCTURA EXACTA:
+  [
+    {
+      "pregunta": "Texto de la pregunta...",
+      "tipo": "Múltiple Opción",
+      "opciones": ["A. Opción 1", "B. Opción 2", "C. Opción 3", "D. Opción 4"],
+      "respuesta_correcta": "La opción correcta (ej. A)",
+      "justificacion": "Por qué es correcta."
+    }
+  ]
+  `;
+
+  let lastError: any;
+
+  // Bucle multi-modelo y multi-llave con conmutación por error (Failover)
+  for (const modelName of modelsToTry) {
+    const sortedKeys = [...availableKeys].sort((a, b) => {
+      const mA = apiMetrics[a.id] || { requests: 0, errors: 0 };
+      const mB = apiMetrics[b.id] || { requests: 0, errors: 0 };
+      if (mA.errors !== mB.errors) return mA.errors - mB.errors;
+      return mA.requests - mB.requests;
+    });
+
+    for (const keyInfo of sortedKeys) {
+      const key = keyInfo.key;
+      const label = keyInfo.label;
+      const keyId = keyInfo.id;
+
+      const maxRetries = 2;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(\`[🔍 ICFES Generator] Probando modelo \${modelName} con llave: \${label} (\${keyId})\`);
+          let text = "";
+
+          if (provider === 'openai') {
+            const res = await fetch(\`\${baseUrl}/chat/completions\`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': \`Bearer \${key}\`
+              },
+              body: JSON.stringify({
+                model: modelName,
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.2, // Un poco más bajo para exámenes rigurosos
+                max_tokens: 4000
+              })
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(\`Error API Groq/OpenAI \${res.status}: \${errData?.error?.message || res.statusText}\`);
+            }
+
+            const data = await res.json();
+            text = data.choices?.[0]?.message?.content || "";
+          }
+
+          if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
+
+          // Limpieza del JSON
+          let cleanText = text.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();
+          const jsonBlockMatch = cleanText.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`/i);
+          if (jsonBlockMatch && jsonBlockMatch[1]) {
+            cleanText = jsonBlockMatch[1].trim();
+          }
+
+          const firstBracket = cleanText.indexOf('[');
+          const lastBracket = cleanText.lastIndexOf(']');
+          
+          if (firstBracket !== -1 && lastBracket !== -1) {
+            cleanText = cleanText.substring(firstBracket, lastBracket + 1);
+          }
+          
+          let parsed: any;
+          try {
+            parsed = JSON.parse(cleanText);
+          } catch (parseError) {
+            throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
+          }
+
+          if (!Array.isArray(parsed) || parsed.length < 5) {
+             throw new Error("El examen devuelto no contiene un array válido o tiene muy pocas preguntas.");
+          }
+
+          console.log(\`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo \${modelName} usando Llave: \${label}\`, "color: #10b981; font-weight: bold;");
+
+          if (!apiMetrics[keyId]) {
+            apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+          }
+          apiMetrics[keyId].requests++;
+          apiMetrics[keyId].success++;
+          apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
+
+          return parsed as EvaluationItem[];
+
+        } catch (err: any) {
+          lastError = err;
+          const errMsg = err?.message || String(err);
+          
+          const isFatalApiError = errMsg.includes('429') || errMsg.includes('404') || errMsg.includes('400');
+          
+          if (attempt === maxRetries || isFatalApiError) {
+            if (!apiMetrics[keyId]) {
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+            }
+            apiMetrics[keyId].requests++;
+            apiMetrics[keyId].errors++;
+            apiMetrics[keyId].errorLogs.unshift({
+              time: new Date().toLocaleTimeString(),
+              message: \`ICFES Gen Error: \${errMsg}\`
+            });
+
+            break; 
+          } else {
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+      }
+    }
+  }
+
+  throw new Error(\`[ICFES Generator] Falló la generación del examen. Causa: \${lastError?.message || 'Sin respuesta'}\`);
+};

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { DidacticSequence, SequenceInput } from '../../types';
-import { Sparkles, PenTool, Lock, BookOpen, GraduationCap } from 'lucide-react';
+import { Sparkles, PenTool, Lock, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
 import { ResourceViewer } from './ResourceViewer';
+import { generateExtendedIcfesExam } from '../../services/geminiService';
 
 interface SequenceDocumentProps {
   editableData: DidacticSequence;
@@ -12,6 +13,21 @@ interface SequenceDocumentProps {
 
 export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData, input, handleUpdateField, printMode }) => {
   const [activeView, setActiveView] = useState<'docente' | 'estudiante'>('docente');
+  const [isGeneratingIcfes, setIsGeneratingIcfes] = useState(false);
+  const [icfesError, setIcfesError] = useState('');
+
+  const handleGenerateIcfes = async () => {
+    try {
+      setIsGeneratingIcfes(true);
+      setIcfesError('');
+      const newEvaluacion = await generateExtendedIcfesExam(editableData);
+      handleUpdateField('evaluacion', newEvaluacion);
+    } catch (err: any) {
+      setIcfesError(err.message || 'Error al generar examen ICFES');
+    } finally {
+      setIsGeneratingIcfes(false);
+    }
+  };
   
   // Helper for institutional table headers
   const HeaderBox = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
@@ -581,7 +597,34 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
           </div>
           
           <div className="print:mt-1 print:break-before-page">
-            <h4 className="font-bold text-xs mb-2 text-gray-800">Banco de Preguntas (Evaluación por Competencias)</h4>
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-bold text-xs text-gray-800">Banco de Preguntas (Evaluación por Competencias)</h4>
+              
+              <button 
+                onClick={handleGenerateIcfes}
+                disabled={isGeneratingIcfes || editableData.evaluacion.length >= 10}
+                className={`no-print flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded shadow-sm transition-all
+                  ${(isGeneratingIcfes || editableData.evaluacion.length >= 10) 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'
+                  }`}
+              >
+                {isGeneratingIcfes ? (
+                  <><Loader2 size={12} className="animate-spin" /> Diseñando...</>
+                ) : editableData.evaluacion.length >= 10 ? (
+                  <><Sparkles size={12} /> Examen Completo</>
+                ) : (
+                  <><Sparkles size={12} /> Generar Examen ICFES (10 Preguntas)</>
+                )}
+              </button>
+            </div>
+            
+            {icfesError && (
+              <div className="mb-2 text-[10px] text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                {icfesError}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-2 print:gap-1">
               {editableData.evaluacion.map((ev, i) => (
                 <div key={i} className="border border-gray-300 p-3 rounded bg-gray-50 break-inside-avoid shadow-sm group evaluation-card">
