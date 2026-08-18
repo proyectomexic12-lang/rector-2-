@@ -140,13 +140,14 @@ export const ApiStats: React.FC = () => {
                 {keysInfo.map((kInfo, i) => {
                     const keyName = kInfo.id;
                     const label = kInfo.label;
-                    const localData = apiMetrics[keyName] || { requests: 0, success: 0, errors: 0, lastUsed: "", label };
+                    const localData = apiMetrics[keyName] || { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label };
                     const cloudData = cloudMetrics?.[label];
                     
                     const requests = Math.max(localData.requests, cloudData?.requests || 0);
                     const success = Math.max(localData.success, cloudData?.success || 0);
                     const errors = Math.max(localData.errors, cloudData?.errors || 0);
                     const today = Math.max(localData.success, cloudData?.today || 0);
+                    const tokens = localData.tokens || 0;
                     const lastUsed = localData.lastUsed || cloudData?.lastUsed || "---";
                     const lastAction = (cloudData?.lastAction && cloudData.lastAction !== "---") 
                         ? cloudData.lastAction 
@@ -199,7 +200,7 @@ export const ApiStats: React.FC = () => {
 
                             <div className="flex justify-between items-center text-[9px] font-black">
                                 <span className="text-slate-500 uppercase flex items-center gap-1">
-                                    <BarChart size={10} /> {metrics.requests} Peticiones
+                                    <BarChart size={10} /> {metrics.requests} Peticiones <span className="text-indigo-600 font-bold">({tokens.toLocaleString()} tokens)</span>
                                 </span>
                                 <span className="text-slate-400 uppercase bg-white px-2 py-0.5 rounded-full border border-slate-100">{metrics.lastUsed || "---"}</span>
                             </div>

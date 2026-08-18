@@ -82,6 +82,7 @@ export const apiMetrics: Record<string, {
   requests: number; 
   success: number; 
   errors: number; 
+  tokens: number;
   lastUsed: string; 
   label: string;
   errorLogs: { time: string; message: string }[];
@@ -95,6 +96,7 @@ getAvailableKeysInfo().forEach(k => {
     requests: existing?.requests || 0,
     success: existing?.success || 0,
     errors: existing?.errors || 0,
+    tokens: existing?.tokens || 0,
     lastUsed: existing?.lastUsed || "",
     label: k.label,
     errorLogs: Array.isArray(existing?.errorLogs) ? existing.errorLogs : []
@@ -150,22 +152,25 @@ export const tryRepairAndParseJson = (raw: string): any => {
 
 let canSyncApiKeyLogs = true;
 
-const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string) => {
+const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string, tokensUsed: number = 0) => {
   if (!supabase || !canSyncApiKeyLogs) return;
   try {
     const cleanMsg = errorMsg 
       ? (typeof errorMsg === 'string' ? errorMsg.slice(0, 300) : String(errorMsg?.message || errorMsg).slice(0, 300))
       : null;
+    const actionDesc = tokensUsed > 0 
+      ? `Respuesta de: ${modelName || 'Desconocido'} (${tokensUsed} tokens)`
+      : `Respuesta de: ${modelName || 'Desconocido'}`;
+
     const { error } = await supabase.from('api_key_logs').insert([
       {
         key_name: keyLabel,
         status,
         error_message: cleanMsg,
-        action: `Respuesta de: ${modelName || 'Desconocido'}`
+        action: actionDesc
       }
     ]);
     if (error) {
-      // Si la tabla api_key_logs no existe en la base de datos, no reintentar para no saturar la consola
       canSyncApiKeyLogs = false;
     }
   } catch (e) {
@@ -478,6 +483,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
         try {
           console.log(`[🔍 Orquestador Groq/AI] Probando modelo ${modelName} con llave: ${label} (${keyId}) - Intento ${attempt}/${maxRetries}...`);
           let text = "";
+          let tokensUsed = 0;
 
         if (provider === 'openai') {
           // Conexión API OpenAI-Compatible (Groq / OpenRouter / DeepSeek)
@@ -502,6 +508,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
           const data = await res.json();
           text = data.choices?.[0]?.message?.content || "";
+          tokensUsed = data?.usage?.total_tokens || 0;
 
         } else {
           // Conexión Google Gemini Nativa
@@ -604,15 +611,16 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
         // Actualizar métricas
         if (!apiMetrics[keyId]) {
-          apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+          apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
         }
         apiMetrics[keyId].requests++;
         apiMetrics[keyId].success++;
+        apiMetrics[keyId].tokens = (apiMetrics[keyId].tokens || 0) + tokensUsed;
         apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
         saveMetricsToStorage();
 
         modelHealthStatus[modelName] = "online";
-        logApiKeyUsage(label, 'success', undefined, modelName);
+        logApiKeyUsage(label, 'success', undefined, modelName, tokensUsed);
         lastWorkingModel = modelName;
 
         return parsed as DidacticSequence;
@@ -789,6 +797,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
         try {
           console.log(`[🔍 ICFES Generator] Probando modelo ${modelName} con llave: ${label} (${keyId})`);
           let text = "";
+          let tokensUsed = 0;
 
           if (provider === 'openai') {
             const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -812,6 +821,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
 
             const data = await res.json();
             text = data.choices?.[0]?.message?.content || "";
+            tokensUsed = data?.usage?.total_tokens || 0;
           }
 
           if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
@@ -844,12 +854,14 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           console.log(`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
 
           if (!apiMetrics[keyId]) {
-            apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+            apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
           }
           apiMetrics[keyId].requests++;
           apiMetrics[keyId].success++;
+          apiMetrics[keyId].tokens = (apiMetrics[keyId].tokens || 0) + tokensUsed;
           apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
           saveMetricsToStorage();
+          logApiKeyUsage(label, 'success', undefined, modelName, tokensUsed);
 
           return parsed as EvaluationItem[];
 
