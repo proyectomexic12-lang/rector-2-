@@ -120,7 +120,7 @@ export const UserManagement: React.FC = () => {
         setAreaManagementUser(user);
         setTempAreas(user.areas && user.areas.length > 0 ? [...user.areas] : [...AREAS]);
         setTempGrados(user.grados && user.grados.length > 0 ? [...user.grados] : [...GRADOS]);
-        setTempIsUnlimited(!!user.is_unlimited || user.role === 'admin' || user.email.toLowerCase().includes('demo'));
+        setTempIsUnlimited(!!user.is_unlimited || user.role === 'admin' || (user.email || '').toLowerCase().includes('demo'));
         setTempCustomCredits(user.custom_credits !== undefined && user.custom_credits !== null ? user.custom_credits : 6);
         setTempStartDate(user.unlimited_start_date || new Date().toISOString().substring(0, 10));
         setTempMonthlyPrice(user.monthly_price || 15000);
@@ -242,7 +242,7 @@ export const UserManagement: React.FC = () => {
                                                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
                                                         {user.name.charAt(0)}
                                                     </div>
-                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${onlineUsers[user.email.toLowerCase()] ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${onlineUsers[(user.email || '').toLowerCase()] ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
                                                 </div>
                                                 <div>
                                                     <div className="font-bold text-slate-800">{user.name}</div>
