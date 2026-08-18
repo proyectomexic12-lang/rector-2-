@@ -25,7 +25,7 @@ const obfuscate = (text: string): string => {
     return btoa(result);
 };
 
-const deobfuscate = (encoded: string): string => {
+export const deobfuscate = (encoded: string): string => {
     if (!encoded) return '';
     try {
         const text = atob(encoded);
@@ -48,6 +48,7 @@ export interface User {
     role: 'admin' | 'docente';
     areas?: string[];
     grados?: string[];
+    password?: string;
     custom_credits?: number | null;
     is_unlimited?: boolean;
     unlimited_start_date?: string | null;
@@ -625,7 +626,7 @@ export const authService = {
                 // 1. Obtener todos los usuarios de la nube de una vez
                 const { data: cloudData } = await supabase
                     .from('app_users')
-                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months');
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months, password');
 
                 if (cloudData && cloudData.length > 0) {
                     const cloudUsers: User[] = cloudData.map(u => ({
@@ -638,7 +639,8 @@ export const authService = {
                         is_unlimited: u.is_unlimited,
                         unlimited_start_date: u.unlimited_start_date,
                         monthly_price: u.monthly_price,
-                        subscription_months: u.subscription_months
+                        subscription_months: u.subscription_months,
+                        password: u.password
                     }));
 
                     const emailMap = new Map();

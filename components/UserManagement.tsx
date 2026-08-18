@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { authService, User } from '../services/authService';
+import { authService, User, deobfuscate } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import { AREAS, GRADOS } from '../constants';
 import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap } from 'lucide-react';
@@ -248,6 +248,11 @@ export const UserManagement: React.FC = () => {
                                                 <div>
                                                     <div className="font-bold text-slate-800">{user.name}</div>
                                                     <div className="text-xs text-slate-400">{user.email}</div>
+                                                    {user.password && (
+                                                        <div className="text-[10px] text-slate-500 font-medium mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded inline-block">
+                                                            🔑 Clave: <span className="font-black text-slate-700">{deobfuscate(user.password)}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
