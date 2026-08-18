@@ -136,6 +136,24 @@ export const ApiStats: React.FC = () => {
                 </div>
             </div>
 
+            {/* Banner de Alerta Inteligente para el Administrador */}
+            {keysInfo.some(k => (apiMetrics[k.id]?.errors || 0) > 0) && (
+                <div className="mb-8 p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-red-500/10 border-2 border-amber-400/40 rounded-2xl flex items-center justify-between gap-4 animate-fade-in-up">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl animate-bounce">⚠️</span>
+                        <div>
+                            <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">Aviso de Cuota / Conmutación Activa</h4>
+                            <p className="text-[11px] font-medium text-amber-800">
+                                Una de tus llaves registró error o límite de tasa (429). El orquestador activó el salto automático hacia las llaves restantes para que tus profesores no se detengan.
+                            </p>
+                        </div>
+                    </div>
+                    <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-3 py-1.5 rounded-xl whitespace-nowrap shadow-sm">
+                        Failover Protegido
+                    </span>
+                </div>
+            )}
+
             <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${keysInfo.length >= 4 ? 'xl:grid-cols-4' : ''} gap-6 relative z-10 mb-10`}>
                 {keysInfo.map((kInfo, i) => {
                     const keyName = kInfo.id;
