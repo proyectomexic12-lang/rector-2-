@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { School, Lock, ArrowRight, ShieldCheck, Mail, Info, AlertTriangle } from 'lucide-react';
+import { School, Lock, ArrowRight, ShieldCheck, Mail, Info, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface LoginProps {
@@ -12,6 +12,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPasswordHint, setShowPasswordHint] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // Initial state empty
     useEffect(() => {
@@ -129,13 +130,21 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                                 </label>
                                 <div className="relative group">
                                     <input
-                                        type="password"
+                                        type={isPasswordVisible ? "text" : "password"}
                                         required
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
-                                        className="w-full pl-5 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-sm"
+                                        className="w-full pl-5 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-sm"
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors p-1"
+                                        title={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    >
+                                        {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
                                 </div>
                             </div>
 
