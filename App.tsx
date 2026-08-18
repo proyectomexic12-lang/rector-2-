@@ -7,7 +7,7 @@ import { AdminSequenceViewer } from './components/AdminSequenceViewer';
 import { SecurityDashboard } from './components/SecurityDashboard';
 import { SequenceInput } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService } from './services/authService';
 import { useAuth } from './context/AuthContext';
@@ -548,6 +548,26 @@ function App() {
               onReset={handleReset}
             />
           </div>
+        )}
+
+        {/* Botón Flotante de WhatsApp Solo para Usuarios VIP */}
+        {currentUser && authService.isUserUnlimited(currentUser) && (
+          <a
+            href="https://wa.me/573205957019?text=Hola,%20soy%20usuario%20Premium%20de%20la%20plataforma%20Guaimaral%20AI.%20Necesito%20soporte%20o%20tengo%20una%20sugerencia:"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#1ebe57] hover:scale-110 transition-all z-50 flex items-center justify-center group animate-fade-in-up"
+            title="Contactar Soporte Premium"
+          >
+            <MessageCircle size={32} />
+            <span className="absolute right-16 bg-white text-[#25D366] text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap border border-green-100 translate-x-4 group-hover:translate-x-0">
+              Soporte VIP
+            </span>
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
+            </span>
+          </a>
         )}
       </main>
     </div>
