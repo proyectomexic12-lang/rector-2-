@@ -78,22 +78,28 @@ const sanitizeInput = (text: string | undefined): string => {
   return text.trim().replace(/['"<>]/g, "");
 };
 
+let canSyncApiKeyLogs = true;
+
 const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string) => {
-  if (!supabase) return;
+  if (!supabase || !canSyncApiKeyLogs) return;
   try {
     const cleanMsg = errorMsg 
       ? (typeof errorMsg === 'string' ? errorMsg.slice(0, 300) : String(errorMsg?.message || errorMsg).slice(0, 300))
       : null;
-    await supabase.from('api_key_logs').insert([
+    const { error } = await supabase.from('api_key_logs').insert([
       {
         key_name: keyLabel,
         status,
         error_message: cleanMsg,
         action: `Respuesta de: ${modelName || 'Desconocido'}`
       }
-    ]).then(() => {}).catch(() => {});
+    ]);
+    if (error) {
+      // Si la tabla api_key_logs no existe en la base de datos, no reintentar para no saturar la consola
+      canSyncApiKeyLogs = false;
+    }
   } catch (e) {
-    // Silencioso
+    canSyncApiKeyLogs = false;
   }
 };
 

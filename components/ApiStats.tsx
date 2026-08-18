@@ -62,7 +62,7 @@ export const ApiStats: React.FC = () => {
             }
             setCloudMetrics(newCloudMetrics);
         } catch (e) {
-            console.error("Error fetching global API metrics:", e);
+            // Manejo silencioso de métricas de nube si la tabla aún no existe
         }
     };
 
