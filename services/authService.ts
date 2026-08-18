@@ -48,6 +48,11 @@ export interface User {
     role: 'admin' | 'docente';
     areas?: string[];
     grados?: string[];
+    custom_credits?: number | null;
+    is_unlimited?: boolean;
+    unlimited_start_date?: string | null;
+    monthly_price?: number;
+    subscription_months?: number;
     session_id?: string; // Para control de sesión única tipo WhatsApp
     stats?: {
         today: number;
@@ -94,6 +99,23 @@ export const AUTHORIZED_USERS: User[] = [
 ];
 
 export const authService = {
+    isUserUnlimited: (user: User | null | undefined): boolean => {
+        if (!user || !user.email || typeof user.email !== 'string') return false;
+        const lowEmail = user.email.toLowerCase().trim();
+        if (user.role === 'admin' || lowEmail.includes('demo')) return true;
+        if (user.is_unlimited === true) return true;
+
+        const authUser = AUTHORIZED_USERS.find(u => u.email && u.email.toLowerCase() === lowEmail);
+        if (authUser && (authUser as any).is_unlimited === true) return true;
+
+        const localUnlimited = localStorage.getItem(`guaimaral_unlimited_${lowEmail}`);
+        if (localUnlimited) {
+            try { if (JSON.parse(localUnlimited) === true) return true; } catch (e) {}
+        }
+
+        return false;
+    },
+
     // --- PASSWORD MANAGEMENT ---
     changePassword: async (email: string, newPass: string) => {
         // 1. Local
