@@ -29,7 +29,8 @@ export const UserManagement: React.FC = () => {
     };
 
     const getNextBillingDateStr = (startDateStr?: string | null, months: number = 1) => {
-        const start = startDateStr ? new Date(startDateStr + 'T12:00:00') : new Date();
+        if (!startDateStr) return '';
+        const start = startDateStr.includes('T') ? new Date(startDateStr) : new Date(startDateStr + 'T12:00:00');
         if (isNaN(start.getTime())) return '';
         const next = new Date(start);
         next.setMonth(next.getMonth() + months);
