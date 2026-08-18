@@ -397,9 +397,43 @@ function App() {
                         Es momento de renovar su suscripción para generar planeaciones sin límites.
                       </strong>
                     </p>
-                    <div className="bg-white/10 border border-white/20 p-4 rounded-2xl inline-block backdrop-blur-md">
-                      <p className="text-xs sm:text-sm font-black text-white uppercase tracking-widest">
-                        Hay tres planes disponibles. Habla con el administrador para activar tus créditos.
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-left">
+                      <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
+                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Básico</div>
+                        <div className="text-3xl font-black text-white mb-2">$15.000<span className="text-sm font-bold text-red-200">/mes</span></div>
+                        <ul className="text-xs text-red-100 space-y-1 font-medium">
+                          <li>✅ Acceso Ilimitado</li>
+                          <li>✅ Descargas PDF/Word</li>
+                        </ul>
+                      </div>
+                      <div className="bg-white text-red-700 border-2 border-red-300 p-4 rounded-2xl shadow-xl transform md:-translate-y-2 relative">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-md">Más Popular</div>
+                        <div className="text-red-900 text-xs font-black uppercase tracking-widest mb-1">Plan Semestral</div>
+                        <div className="text-3xl font-black mb-2">$60.000<span className="text-sm font-bold text-red-700">/6 meses</span></div>
+                        <ul className="text-xs space-y-1 font-bold">
+                          <li>⭐ Ahorras $30.000</li>
+                          <li>⭐ Soporte Prioritario</li>
+                        </ul>
+                      </div>
+                      <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
+                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Anual</div>
+                        <div className="text-3xl font-black text-white mb-2">$120.000<span className="text-sm font-bold text-red-200">/año</span></div>
+                        <ul className="text-xs text-red-100 space-y-1 font-medium">
+                          <li>🚀 Ahorras $60.000</li>
+                          <li>🚀 Todas las actualizaciones</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="bg-black/30 border border-white/20 p-5 rounded-2xl inline-block backdrop-blur-md max-w-2xl mx-auto">
+                      <p className="text-sm sm:text-base font-black text-white mb-2">
+                        💳 Para activar tu cuenta, transfiere por <span className="text-purple-300">Nequi</span> al:
+                      </p>
+                      <div className="text-4xl font-black text-white tracking-widest bg-black/40 py-3 rounded-xl mb-3 shadow-inner">
+                        320 595 7019
+                      </div>
+                      <p className="text-xs sm:text-sm text-red-100 font-bold uppercase tracking-wider">
+                        Envía el pantallazo del pago a este mismo número por WhatsApp para activación inmediata.
                       </p>
                     </div>
                   </div>
