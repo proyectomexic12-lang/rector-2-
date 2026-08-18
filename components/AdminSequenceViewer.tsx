@@ -15,7 +15,7 @@ export const AdminSequenceViewer: React.FC<{ userEmail?: string }> = ({ userEmai
         let seqData = await authService.getAllSequences();
 
         if (userEmail) {
-            seqData = seqData.filter(s => s.user_email.toLowerCase() === userEmail.toLowerCase());
+            seqData = seqData.filter(s => (s.user_email || '').toLowerCase() === userEmail.toLowerCase());
             // Cargar estadísticas también
             const s = await authService.getUsageStats(userEmail);
             setStats(s);

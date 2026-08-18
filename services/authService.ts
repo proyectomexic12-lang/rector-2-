@@ -615,19 +615,24 @@ export const authService = {
 
                 const countsMap: Record<string, number> = {};
                 seqStats?.forEach(s => {
-                    const email = s.user_email.toLowerCase();
-                    countsMap[email] = (countsMap[email] || 0) + 1;
+                    if (s.user_email) {
+                        const email = s.user_email.toLowerCase();
+                        countsMap[email] = (countsMap[email] || 0) + 1;
+                    }
                 });
 
                 // 3. Cruzar datos de forma ultra-rápida en memoria
-                return userList.map(user => ({
-                    ...user,
-                    stats: {
-                        today: 0, week: 0, month: 0, year: 0, // Simplificamos para no saturar
-                        total: countsMap[user.email.toLowerCase()] || 0,
-                        saved: countsMap[user.email.toLowerCase()] || 0
-                    }
-                }));
+                return userList.map(user => {
+                    const low = (user && user.email) ? user.email.toLowerCase() : '';
+                    return {
+                        ...user,
+                        stats: {
+                            today: 0, week: 0, month: 0, year: 0,
+                            total: low ? (countsMap[low] || 0) : 0,
+                            saved: low ? (countsMap[low] || 0) : 0
+                        }
+                    };
+                });
 
             } catch (e) {
                 console.error("🚀 Error en carga masiva de estadísticas:", e);
