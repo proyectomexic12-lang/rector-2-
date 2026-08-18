@@ -1,0 +1,36 @@
+{
+  "titulo_secuencia": "Exploradores de la Biodiversidad en el Ecosistema del Norte de Santander",
+  "descripcion_secuencia": "Secuencia didáctica de 3 sesiones orientada al reconocimiento de la flora y fauna local, aplicando ABP y pensamiento crítico.",
+  "tema_principal": "Ecosistemas y Conservación Ambiental",
+  "objetivo_aprendizaje": "Formular hipótesis sobre el impacto de la actividad humana en los ecosistemas locales mediante la indagación guiada.",
+  "competencias_men": "Uso comprensivo del conocimiento científico e Indagación",
+  "estandar": "Explico las adaptaciones de los seres vivos a los ecosistemas en los que habitan.",
+  "metodologia": "Aprendizaje Basado en Problemas (ABP) + Gamificación",
+  "corporiedad_adi": "Pausa activa de 4 minutos: Estiramiento de extremidades imitando el movimiento de los árboles y respiración diafragmática consciente.",
+  "eje_crese_utilizado": "Empatía ambiental y Ética del Cuidado",
+  "adecuaciones_piar": "Para estudiante con TDAH: Fraccionamiento de guías en micro-metas de 10 minutos y apoyo de compañero tutor.",
+  "actividades": [
+    {
+      "sesion": 1,
+      "tiempo": "60 minutos",
+      "fase_inicio": "Presentación del caso detonante: ¿Por qué han disminuido las especies de aves nativas en los parques de Cúcuta?",
+      "fase_desarrollo": "Trabajo en equipos de 4 estudiantes para clasificar factores bióticos y abióticos usando tarjetas manipulativas.",
+      "fase_cierre": "Planteamiento de 2 hipótesis por equipo y registro en la bitácora ambiental.",
+      "preguntas_socraticas": [
+        "¿Qué sucedería si eliminamos un eslabón de la cadena alimenticia en nuestra región?",
+        "¿Cómo se relaciona la temperatura ambiental con la presencia de insectos polinizadores?"
+      ],
+      "materiales": ["Tarjetas ilustradas", "Bitácora en papel reciclado", "Lápices de colores"],
+      "imprimibles": "Ficha N° 1: Clasificador de Factores del Ecosistema"
+    }
+  ],
+  "taller_imprimible": {
+    "introduccion": "¡Bienvenido, explorador ambiental! Hoy investigarás la riqueza natural de nuestro departamento.",
+    "instrucciones": "Lee el caso presentado, analiza la tabla de especies y completa los ejercicios propuestos.",
+    "ejercicios": [
+      "Subraya con verde los factores bióticos y con azul los factores abióticos en la lectura.",
+      "Dibuja una red trófica con al menos 3 organismos de la región."
+    ],
+    "reto_creativo": "Diseña un afiche de concientización ambiental usando materiales reciclados para pegar en el periódico mural del colegio."
+  }
+}

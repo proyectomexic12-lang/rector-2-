@@ -1,0 +1,143 @@
+===========================================
+📋 CREDENCIALES - I.E. GUAIMARAL
+Sistema de Planificación Didáctica con IA
+===========================================
+
+🔐 CONTRASEÑA PREDETERMINADA PARA TODOS:
+guaimaral2026
+
+⚠️ IMPORTANTE: Cada docente puede cambiar su contraseña desde su perfil (ícono de usuario arriba a la derecha).
+
+-------------------------------------------
+👨‍💼 ADMINISTRADOR
+-------------------------------------------
+Email: admin@guaimaral.edu.co
+Contraseña: admin2026
+Rol: Rector/Coordinador
+Acceso: Panel completo + Estadísticas globales
+
+-------------------------------------------
+👩‍🏫 GUAIMARAL BACHILLERATO (6 docentes - Orden Alfabético)
+-------------------------------------------
+1. Alex San Juan
+   Email: alex.sanjuan@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+2. Deisy Arroyo
+   Email: deisy.arroyo@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+3. Jairo Blanco
+   Email: jairo.blanco@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+4. Liliana Valle
+   Email: liliana.valle@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+5. Paula Padilla
+   Email: paula.padilla@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+6. Rocio Ramírez
+   Email: rocio.ramirez@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+-------------------------------------------
+👨‍🏫 GUAIMARAL PRIMARIA (17 docentes - Orden Alfabético)
+-------------------------------------------
+1. Aleida Lara
+   Email: aleida.lara@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+2. Alfredo Torres
+   Email: alfredo.torres@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+3. Asterio Torres
+   Email: asterio.torres@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+4. Carlos Sandoval
+   Email: carlos.sandoval@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+5. Deisy Mercado
+   Email: deisy.mercado@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+6. Eduardo
+   Email: eduardo@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+7. Evaristo Vertel
+   Email: evaristo.vertel@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+8. Ibeth Charris
+   Email: ibeth.charris@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+9. Jairo Benavides
+   Email: jairo.benavides@guaimaral.edu.co
+   Contraseña: guaimaral2026
+
+10. Jorge de la Hoz
+    Email: jorge.delahoz@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+11. Jorge Ferrer
+    Email: jorge.ferrer@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+12. Leovigilda Navarro
+    Email: leovigilda.navarro@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+13. Linda Varela
+    Email: linda.varela@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+14. Martín Celin
+    Email: martin.celin@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+15. Nancy Vargas
+    Email: nancy.vargas@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+16. Pedro Arroyo
+    Email: pedro.arroyo@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+17. Roberto Daza
+    Email: roberto.daza@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+18. Xilena Santiago
+    Email: xilena.santiago@guaimaral.edu.co
+    Contraseña: guaimaral2026
+
+===========================================
+📊 TOTAL: 25 USUARIOS (1 Admin + 24 Docentes)
+===========================================
+
+🌐 ACCESO AL SISTEMA:
+URL: http://localhost:3000 (desarrollo)
+URL Producción: [Configurar en Vercel/Netlify]
+
+💡 FUNCIONALIDADES:
+✅ Generación de secuencias didácticas con IA
+✅ Alineación automática con DBA y estándares MEN
+✅ Adaptación a contexto institucional (recursos limitados, grupos pequeños)
+✅ Cambio de contraseña desde perfil
+✅ Estadísticas en tiempo real (solo Admin)
+✅ Monitoreo de uso de APIs (solo Admin)
+
+📞 SOPORTE TÉCNICO:
+Contacto: [Tu información de contacto]
+
+===========================================
+Generado: 2026-02-04
+Sistema: Docente AI Pro v2.1
+===========================================

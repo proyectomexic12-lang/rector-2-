@@ -1,0 +1,5 @@
+{
+  "name": "Guaimaral Docente AI",
+  "description": "Sistema de Generación Automática de Secuencias Didácticas para la Institución Educativa Guaimaral usando Gemini AI.",
+  "requestFramePermissions": []
+}
