@@ -284,20 +284,26 @@ function App() {
             {/* User Profile & Credits */}
             <div className="flex items-center gap-3 pl-2">
               
-              {/* Credits Badge (Para todos los usuarios autenticados) */}
+              {/* Subscription Badge (Para todos los usuarios autenticados) */}
               {currentUser && (
                 authService.isUserUnlimited(currentUser) ? (
                   <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Créditos:</span>
-                    <span className="text-xs font-black bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
-                      <span>∞</span> Ilimitados
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Plan:</span>
+                    <span className="text-xs font-black bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1 uppercase tracking-wider">
+                      <span>∞</span> {
+                        currentUser.role === 'admin' ? 'ADMINISTRADOR' :
+                        currentUser.subscription_months === 6 ? 'SEMESTRAL' :
+                        currentUser.subscription_months === 3 ? 'TRIMESTRAL' :
+                        currentUser.subscription_months === 1 ? 'MENSUAL' : 'ILIMITADO'
+                      }
                     </span>
                   </div>
-                ) : creditsLeft !== null && (
-                  <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-xl border border-amber-200 shadow-sm" title={`Te quedan ${creditsLeft} créditos esta semana (Se renuevan cada Lunes)`}>
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Créditos:</span>
-                    <span className="text-xs font-black bg-white px-2 py-0.5 rounded-md border border-amber-100 text-amber-600 shadow-inner">
-                      {creditsLeft}/{(currentUser.custom_credits !== undefined && currentUser.custom_credits !== null ? currentUser.custom_credits : 6)}
+                ) : (
+                  <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1.5 rounded-xl border border-red-200 shadow-sm animate-pulse" title="No cuentas con una suscripción activa">
+                    <AlertTriangle size={14} className="text-red-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block text-red-600">Estado:</span>
+                    <span className="text-[10px] font-black bg-red-600 text-white px-2 py-0.5 rounded-md shadow-sm uppercase tracking-widest">
+                      SIN SUSCRIPCIÓN
                     </span>
                   </div>
                 )
