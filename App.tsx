@@ -382,6 +382,29 @@ function App() {
 
             {activeTab === 'create' && (
               <>
+                {currentUser && !authService.isUserUnlimited(currentUser) && (
+                  <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-br from-rose-500 via-red-500 to-red-700 rounded-[2.5rem] p-8 sm:p-10 text-white shadow-2xl shadow-red-500/40 text-center animate-fade-in-up border-4 border-white/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black/10 rounded-full blur-2xl"></div>
+                    
+                    <AlertTriangle size={56} className="mx-auto mb-5 drop-shadow-lg opacity-90 animate-bounce" />
+                    <h3 className="text-3xl sm:text-4xl font-black tracking-tight mb-4 drop-shadow-md">
+                      ⚠️ ¡Atención Profesores!
+                    </h3>
+                    <p className="text-lg sm:text-xl font-medium leading-relaxed opacity-95 mb-6 text-red-50">
+                      Hace 6 meses pagaron 20 mil pesos por la plataforma demo.<br/>
+                      <strong className="font-black text-white bg-black/20 px-4 py-1.5 rounded-xl mt-3 inline-block shadow-inner backdrop-blur-sm">
+                        Es momento de renovar su suscripción para generar planeaciones sin límites.
+                      </strong>
+                    </p>
+                    <div className="bg-white/10 border border-white/20 p-4 rounded-2xl inline-block backdrop-blur-md">
+                      <p className="text-xs sm:text-sm font-black text-white uppercase tracking-widest">
+                        Hay tres planes disponibles. Habla con el administrador para activar tus créditos.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="max-w-4xl mx-auto mb-16 text-center">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full text-blue-600 text-[10px] font-black uppercase tracking-[3px] mb-6 shadow-sm border border-blue-100">
                     <GraduationCap size={14} /> Nueva Planeación
