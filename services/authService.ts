@@ -236,13 +236,14 @@ export const authService = {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
     },
 
-    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[] }) => {
+    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number }) => {
         const lowEmail = email.toLowerCase().trim();
         console.log(`🛠️ Iniciando guardado para: ${lowEmail}`, settings);
 
         // 1. Local (Legado/Respaldo)
         if (settings.areas) localStorage.setItem(`guaimaral_areas_${lowEmail}`, JSON.stringify(settings.areas));
         if (settings.grados) localStorage.setItem(`guaimaral_grados_${lowEmail}`, JSON.stringify(settings.grados));
+        if (settings.is_unlimited !== undefined) localStorage.setItem(`guaimaral_unlimited_${lowEmail}`, JSON.stringify(settings.is_unlimited));
 
         // 2. Cloud (Supabase)
         if (supabase) {
@@ -257,12 +258,17 @@ export const authService = {
                 if (fetchError) throw fetchError;
 
                 if (existingUser) {
-                    // Si existe, SOLO actualizamos áreas y grados (Protegemos el password)
+                    // Si existe, actualizamos áreas, grados y plan de créditos (Protegemos el password)
                     const { error: updateError } = await supabase
                         .from('app_users')
                         .update({
                             areas: settings.areas,
-                            grados: settings.grados
+                            grados: settings.grados,
+                            is_unlimited: settings.is_unlimited,
+                            custom_credits: settings.custom_credits,
+                            unlimited_start_date: settings.unlimited_start_date,
+                            monthly_price: settings.monthly_price,
+                            subscription_months: settings.subscription_months
                         })
                         .eq('email', lowEmail);
 
@@ -280,7 +286,12 @@ export const authService = {
                                 role: authUser.role,
                                 password: obfuscate('docente2026'), // Password temporal
                                 areas: settings.areas || [],
-                                grados: settings.grados || []
+                                grados: settings.grados || [],
+                                is_unlimited: settings.is_unlimited ?? authUser.is_unlimited ?? false,
+                                custom_credits: settings.custom_credits ?? authUser.custom_credits ?? null,
+                                unlimited_start_date: settings.unlimited_start_date ?? authUser.unlimited_start_date ?? null,
+                                monthly_price: settings.monthly_price ?? authUser.monthly_price ?? 15000,
+                                subscription_months: settings.subscription_months ?? authUser.subscription_months ?? 1
                             });
 
                         if (insertError) throw insertError;
