@@ -72,15 +72,16 @@ function App() {
       }
 
       // FETCH CREDITS
-      if (currentUser.role !== 'admin') {
-        authService.getUsageStats(currentUser.email).then(stats => {
-          const isRocio = currentUser.email.toLowerCase() === 'rocio.ramirez@guaimaral.edu.co';
-          if (isRocio) {
-            setCreditsLeft(6); // Internamente siempre tendrá 6 para que nunca se bloquee
-          } else {
-            setCreditsLeft(Math.max(0, 6 - stats.week));
-          }
-        });
+      if (currentUser) {
+        const isUnlim = authService.isUserUnlimited(currentUser);
+        if (isUnlim) {
+          setCreditsLeft(9999);
+        } else {
+          authService.getUsageStats(currentUser.email).then(stats => {
+            const userMax = currentUser.custom_credits !== undefined && currentUser.custom_credits !== null ? currentUser.custom_credits : 6;
+            setCreditsLeft(Math.max(0, userMax - stats.week));
+          });
+        }
       }
     }
   }, [isAuthenticated, currentUser?.email]);
@@ -117,13 +118,14 @@ function App() {
     setIsLoading(true);
     setError(null);
 
-    // CRÉDITOS SEMANALES: Bloqueo para docentes si superan 6
-    if (currentUser && currentUser.role !== 'admin') {
+    // CRÉDITOS SEMANALES: Bloqueo si el usuario supera su límite (Exento si es ilimitado o admin)
+    const isUnlimitedUser = currentUser && authService.isUserUnlimited(currentUser);
+    const maxCredits = currentUser?.custom_credits !== undefined && currentUser?.custom_credits !== null ? currentUser.custom_credits : 6;
+    if (currentUser && !isUnlimitedUser) {
       try {
         const stats = await authService.getUsageStats(currentUser.email);
-        const isRocio = currentUser.email.toLowerCase() === 'rocio.ramirez@guaimaral.edu.co';
-        if (!isRocio && stats.week >= 6) {
-          toast("Has agotado tus 6 créditos semanales. Tu saldo se recargará el próximo lunes.", 'error');
+        if (stats.week >= maxCredits) {
+          toast(`Has agotado tus ${maxCredits} créditos semanales. Tu saldo se recargará el próximo lunes.`, 'error');
           setIsLoading(false);
           return;
         }
@@ -282,14 +284,23 @@ function App() {
             {/* User Profile & Credits */}
             <div className="flex items-center gap-3 pl-2">
               
-              {/* Credits Badge (Only for teachers) */}
-              {currentUser?.role === 'docente' && creditsLeft !== null && (
-                <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-xl border border-amber-200 shadow-sm" title="Tus créditos se renuevan cada Lunes">
-                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Créditos:</span>
-                  <span className="text-xs font-black bg-white px-2 py-0.5 rounded-md border border-amber-100 text-amber-600 shadow-inner">
-                    {creditsLeft}/6
-                  </span>
-                </div>
+              {/* Credits Badge (Para todos los usuarios autenticados) */}
+              {currentUser && (
+                authService.isUserUnlimited(currentUser) ? (
+                  <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Créditos:</span>
+                    <span className="text-xs font-black bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                      <span>∞</span> Ilimitados
+                    </span>
+                  </div>
+                ) : creditsLeft !== null && (
+                  <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-xl border border-amber-200 shadow-sm" title={`Te quedan ${creditsLeft} créditos esta semana (Se renuevan cada Lunes)`}>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Créditos:</span>
+                    <span className="text-xs font-black bg-white px-2 py-0.5 rounded-md border border-amber-100 text-amber-600 shadow-inner">
+                      {creditsLeft}/{(currentUser.custom_credits !== undefined && currentUser.custom_credits !== null ? currentUser.custom_credits : 6)}
+                    </span>
+                  </div>
+                )
               )}
 
               <div className="hidden lg:flex flex-col items-end">

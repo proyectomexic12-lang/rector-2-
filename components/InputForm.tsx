@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SequenceInput } from '../types';
 import { GRADOS, AREAS, EJES_CRESE } from '../constants';
 import { BookOpen, Calendar, Target, Layers, BrainCircuit, Play, Sparkles, Wand2, PenTool, Network, CheckCircle2, Cpu, Zap } from 'lucide-react';
-import { User } from '../services/authService';
+import { authService, User } from '../services/authService';
 import { useToast } from '../context/ToastContext';
 
 interface InputFormProps {
@@ -312,27 +312,33 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
             </div>
             
             {/* Main CTA Button inside the right panel for better visual flow */}
-            <button
-              onClick={handleValidationAndGenerate}
-              disabled={isLoading || creditsLeft === 0}
-              className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isLoading || creditsLeft === 0
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:-translate-y-1 hover:shadow-blue-500/40 border border-blue-500/30'
-                }`}
-            >
-              {isLoading ? (
-                "Procesando..."
-              ) : creditsLeft === 0 ? (
-                "Créditos Agotados"
-              ) : (
-                <>
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out"></div>
-                  <Sparkles className="h-5 w-5 animate-pulse relative z-10" />
-                  <span className="relative z-10">Generar Planeación</span>
-                  <Play className="h-4 w-4 ml-1 opacity-80 relative z-10" fill="currentColor" />
-                </>
-              )}
-            </button>
+            {(() => {
+              const isUnlimited = user ? authService.isUserUnlimited(user) : false;
+              const isBlockedByCredits = !isUnlimited && creditsLeft === 0;
+              return (
+                <button
+                  onClick={handleValidationAndGenerate}
+                  disabled={isLoading || isBlockedByCredits}
+                  className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isLoading || isBlockedByCredits
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:-translate-y-1 hover:shadow-blue-500/40 border border-blue-500/30'
+                    }`}
+                >
+                  {isLoading ? (
+                    "Procesando..."
+                  ) : isBlockedByCredits ? (
+                    "Créditos Agotados"
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out"></div>
+                      <Sparkles className="h-5 w-5 animate-pulse relative z-10" />
+                      <span className="relative z-10">Generar Planeación</span>
+                      <Play className="h-4 w-4 ml-1 opacity-80 relative z-10" fill="currentColor" />
+                    </>
+                  )}
+                </button>
+              );
+            })()}
           </div>
         </div>
 
