@@ -614,7 +614,7 @@ export const authService = {
                 // 1. Obtener todos los usuarios de la nube de una vez
                 const { data: cloudData } = await supabase
                     .from('app_users')
-                    .select('name, email, role, areas, grados');
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months');
 
                 if (cloudData && cloudData.length > 0) {
                     const cloudUsers: User[] = cloudData.map(u => ({
@@ -622,7 +622,12 @@ export const authService = {
                         email: u.email,
                         role: u.role as 'admin' | 'docente',
                         areas: u.areas || [],
-                        grados: u.grados || []
+                        grados: u.grados || [],
+                        custom_credits: u.custom_credits,
+                        is_unlimited: u.is_unlimited,
+                        unlimited_start_date: u.unlimited_start_date,
+                        monthly_price: u.monthly_price,
+                        subscription_months: u.subscription_months
                     }));
 
                     const emailMap = new Map();
