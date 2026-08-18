@@ -123,7 +123,7 @@ export const UserManagement: React.FC = () => {
         setTempGrados(user.grados && user.grados.length > 0 ? [...user.grados] : [...GRADOS]);
         setTempIsUnlimited(!!user.is_unlimited || user.role === 'admin' || (user.email || '').toLowerCase().includes('demo'));
         setTempCustomCredits(user.custom_credits !== undefined && user.custom_credits !== null ? user.custom_credits : 6);
-        setTempStartDate(user.unlimited_start_date || new Date().toISOString().substring(0, 10));
+        setTempStartDate(user.unlimited_start_date ? user.unlimited_start_date.substring(0, 10) : new Date().toISOString().substring(0, 10));
         setTempMonthlyPrice(user.monthly_price || 15000);
         setTempSubscriptionMonths(user.subscription_months || 1);
         setActiveModalTab(initialTab);
@@ -168,7 +168,7 @@ export const UserManagement: React.FC = () => {
                 grados: tempGrados,
                 is_unlimited: tempIsUnlimited,
                 custom_credits: tempCustomCredits,
-                unlimited_start_date: tempIsUnlimited ? (tempStartDate || new Date().toISOString()) : null,
+                unlimited_start_date: tempIsUnlimited ? (tempStartDate ? tempStartDate.substring(0, 10) + 'T12:00:00' : new Date().toISOString()) : null,
                 monthly_price: tempMonthlyPrice,
                 subscription_months: tempSubscriptionMonths
             });
