@@ -235,7 +235,7 @@ function getAreaContext(area: string): string {
 export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
   const provider = import.meta.env.VITE_AI_PROVIDER || 'openai';
   const baseUrl = import.meta.env.VITE_AI_BASE_URL || 'https://api.groq.com/openai/v1';
-  const customModel = import.meta.env.VITE_AI_MODEL || 'llama-3.3-70b-versatile';
+  const customModel = import.meta.env.VITE_AI_MODEL || 'openai/gpt-oss-120b';
 
   const availableKeys = getAvailableKeysInfo();
 
@@ -243,10 +243,10 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // Modelos a probar en orden de prioridad
+  // Modelos a probar en orden de prioridad (120B de entrada por máxima calidad y rapidez)
   const rawModelsToTry = provider === 'google' 
     ? ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"]
-    : [customModel, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "allam-2-7b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+    : [customModel, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
 
   const modelsToTry = Array.from(new Set(rawModelsToTry));
 
