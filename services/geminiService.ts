@@ -78,6 +78,48 @@ const sanitizeInput = (text: string | undefined): string => {
   return text.trim().replace(/['"<>]/g, "");
 };
 
+// Función de auto-reparación inteligente de JSON para modelos que dejan comas colgantes o corchetes abiertos
+export const tryRepairAndParseJson = (raw: string): any => {
+  try {
+    return JSON.parse(raw);
+  } catch (e1) {
+    // 1. Quitar comas colgantes antes de llaves o corchetes de cierre: ,} o ,]
+    let fixed = raw.replace(/,\s*([\]}])/g, '$1');
+    
+    // 2. Normalizar comillas especiales si las hubiera
+    fixed = fixed.replace(/[\u201C\u201D]/g, '"');
+
+    try {
+      return JSON.parse(fixed);
+    } catch (e2) {
+      // 3. Reparación de JSON truncado por límite de tokens: cerrar estructuras abiertas
+      let openBraces = (fixed.match(/{/g) || []).length;
+      let closeBraces = (fixed.match(/}/g) || []).length;
+      let openBrackets = (fixed.match(/\[/g) || []).length;
+      let closeBrackets = (fixed.match(/\]/g) || []).length;
+
+      // Quitar coma huérfana al final
+      fixed = fixed.trim().replace(/,\s*$/, '');
+
+      // Cerrar corchetes y llaves faltantes
+      while (openBrackets > closeBrackets) {
+        fixed += ']';
+        closeBrackets++;
+      }
+      while (openBraces > closeBraces) {
+        fixed += '}';
+        closeBraces++;
+      }
+
+      try {
+        return JSON.parse(fixed);
+      } catch (e3) {
+        throw e1; // Lanzar el error original si no se pudo auto-reparar
+      }
+    }
+  }
+};
+
 let canSyncApiKeyLogs = true;
 
 const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string) => {
@@ -506,7 +548,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
         
         let parsed: any;
         try {
-          parsed = JSON.parse(cleanText);
+          parsed = tryRepairAndParseJson(cleanText);
         } catch (parseError) {
           console.error("JSON Inválido devuelto por la IA:", cleanText.substring(0, 500) + '...');
           throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
@@ -760,7 +802,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           
           let parsed: any;
           try {
-            parsed = JSON.parse(cleanText);
+            parsed = tryRepairAndParseJson(cleanText);
           } catch (parseError) {
             throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
           }
