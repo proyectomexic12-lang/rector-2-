@@ -709,15 +709,15 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
       const maxRetries = 2;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(\`[🔍 ICFES Generator] Probando modelo \${modelName} con llave: \${label} (\${keyId})\`);
+          console.log(`[🔍 ICFES Generator] Probando modelo ${modelName} con llave: ${label} (${keyId})`);
           let text = "";
 
           if (provider === 'openai') {
-            const res = await fetch(\`\${baseUrl}/chat/completions\`, {
+            const res = await fetch(`${baseUrl}/chat/completions`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': \`Bearer \${key}\`
+                'Authorization': `Bearer ${key}`
               },
               body: JSON.stringify({
                 model: modelName,
@@ -729,7 +729,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
 
             if (!res.ok) {
               const errData = await res.json().catch(() => ({}));
-              throw new Error(\`Error API Groq/OpenAI \${res.status}: \${errData?.error?.message || res.statusText}\`);
+              throw new Error(`Error API Groq/OpenAI ${res.status}: ${errData?.error?.message || res.statusText}`);
             }
 
             const data = await res.json();
@@ -739,8 +739,8 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
 
           // Limpieza del JSON
-          let cleanText = text.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();
-          const jsonBlockMatch = cleanText.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`/i);
+          let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          const jsonBlockMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
           if (jsonBlockMatch && jsonBlockMatch[1]) {
             cleanText = jsonBlockMatch[1].trim();
           }
@@ -763,7 +763,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
              throw new Error("El examen devuelto no contiene un array válido o tiene muy pocas preguntas.");
           }
 
-          console.log(\`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo \${modelName} usando Llave: \${label}\`, "color: #10b981; font-weight: bold;");
+          console.log(`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
 
           if (!apiMetrics[keyId]) {
             apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
@@ -788,7 +788,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
             apiMetrics[keyId].errors++;
             apiMetrics[keyId].errorLogs.unshift({
               time: new Date().toLocaleTimeString(),
-              message: \`ICFES Gen Error: \${errMsg}\`
+              message: `ICFES Gen Error: ${errMsg}`
             });
 
             break; 
@@ -800,5 +800,5 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
     }
   }
 
-  throw new Error(\`[ICFES Generator] Falló la generación del examen. Causa: \${lastError?.message || 'Sin respuesta'}\`);
+  throw new Error(`[ICFES Generator] Falló la generación del examen. Causa: ${lastError?.message || 'Sin respuesta'}`);
 };
