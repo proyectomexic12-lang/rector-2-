@@ -733,3 +733,78 @@ export const UserManagement: React.FC = () => {
         </>
     );
 };
+
+export const PasswordChange: React.FC<{ email: string }> = ({ email }) => {
+    const [newPass, setNewPass] = useState('');
+    const [confirmPass, setConfirmPass] = useState('');
+    const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMsg(null);
+        if (!newPass || newPass.length < 4) {
+            setMsg({ text: 'La contraseña debe tener al menos 4 caracteres.', type: 'error' });
+            return;
+        }
+        if (newPass !== confirmPass) {
+            setMsg({ text: 'Las contraseñas no coinciden.', type: 'error' });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await authService.changePassword(email, newPass);
+            setMsg({ text: '✅ Contraseña actualizada con éxito.', type: 'success' });
+            setNewPass('');
+            setConfirmPass('');
+        } catch (err) {
+            setMsg({ text: '❌ Error actualizando la contraseña.', type: 'error' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    Nueva Contraseña:
+                </label>
+                <input
+                    type="password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    Confirmar Contraseña:
+                </label>
+                <input
+                    type="password"
+                    value={confirmPass}
+                    onChange={(e) => setConfirmPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            {msg && (
+                <div className={`p-3 rounded-xl text-xs font-bold ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {msg.text}
+                </div>
+            )}
+
+            <button
+                type="submit"
+                disabled={isSaving}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/20"
+            >
+                {isSaving ? 'Actualizando...' : 'Cambiar Contraseña'}
+            </button>
+        </form>
+    );
+};
