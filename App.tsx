@@ -433,7 +433,7 @@ function App() {
 
                     <div className="bg-black/30 border border-white/20 p-5 rounded-2xl inline-block backdrop-blur-md max-w-2xl mx-auto">
                       <p className="text-sm sm:text-base font-black text-white mb-2">
-                        💳 Para activar tu cuenta, transfiere por <span className="text-purple-300">Nequi</span> al:
+                        💳 Para activar tu cuenta, transfiere por <span className="text-purple-300">Nequi</span> o <span className="text-red-300">DaviPlata</span> al:
                       </p>
                       <div className="text-4xl font-black text-white tracking-widest bg-black/40 py-3 rounded-xl mb-3 shadow-inner">
                         320 595 7019
