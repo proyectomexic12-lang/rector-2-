@@ -167,27 +167,32 @@ export const ApiStats: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Éxitos Hoy</span>
-                                    <span className="text-2xl font-black text-green-600 leading-none">{metrics.today}</span>
+                            <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                                <div className="bg-green-50/70 p-2 rounded-xl border border-green-100">
+                                    <span className="text-[8px] font-black text-green-700 uppercase tracking-wider block mb-0.5">Éxitos</span>
+                                    <span className="text-xl font-black text-green-600 leading-none">{metrics.success}</span>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Global</span>
-                                    <span className="text-2xl font-black text-slate-800 opacity-80 leading-none">{metrics.success}</span>
+                                <div className="bg-red-50/70 p-2 rounded-xl border border-red-100">
+                                    <span className="text-[8px] font-black text-red-700 uppercase tracking-wider block mb-0.5">Fallos</span>
+                                    <span className={`text-xl font-black leading-none ${metrics.errors > 0 ? 'text-red-600' : 'text-slate-400'}`}>{metrics.errors}</span>
+                                </div>
+                                <div className="bg-blue-50/70 p-2 rounded-xl border border-blue-100">
+                                    <span className="text-[8px] font-black text-blue-700 uppercase tracking-wider block mb-0.5">Total</span>
+                                    <span className="text-xl font-black text-blue-900 leading-none">{metrics.requests}</span>
                                 </div>
                             </div>
 
                             <div className="mb-4">
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Última Acción:</span>
-                                <div className="bg-slate-100/60 px-2.5 py-1 rounded-lg border border-slate-200/50 truncate">
+                                <div className="bg-slate-100/60 px-2.5 py-1 rounded-lg border border-slate-200/50 truncate flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-blue-600 italic tracking-tight">{metrics.lastAction}</span>
+                                    <span className="text-[9px] font-bold text-slate-400">{successRate.toFixed(0)}% Efectivo</span>
                                 </div>
                             </div>
 
                             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-3">
                                 <div
-                                    className={`h-full transition-all duration-1000 ${successRate > 50 ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-red-500'}`}
+                                    className={`h-full transition-all duration-1000 ${successRate >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-600' : successRate > 40 ? 'bg-amber-500' : 'bg-red-500'}`}
                                     style={{ width: `${successRate}%` }}
                                 ></div>
                             </div>
