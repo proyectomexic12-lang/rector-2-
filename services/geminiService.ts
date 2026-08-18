@@ -243,10 +243,10 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // Modelos a probar en orden de prioridad (120B de entrada por máxima calidad y rapidez)
+  // Modelos a probar en orden de prioridad (Solo modelos vigentes y soportados por Groq Cloud 2026)
   const rawModelsToTry = provider === 'google' 
     ? ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"]
-    : [customModel, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+    : [customModel, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.3-70b-specdec", "llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview"];
 
   const modelsToTry = Array.from(new Set(rawModelsToTry));
 
@@ -555,7 +555,52 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     console.warn(`[⚠️ Conmutación de Modelo] Todas las llaves fallaron para ${modelName}. Probando modelo de respaldo...`);
   }
 
-  throw new Error(`[IA ${provider} Multi-Key]: Todos los canales (${availableKeys.length} llaves) y modelos sufrieron error. Último error: ${lastError?.message || lastError || 'Sin respuesta'}.`);
+  // FALLBACK DE EMERGENCIA: Intentar Google Gemini únicamente con llaves de Google (AIza...)
+  const googleKeys = availableKeys.filter(k => !k.key.startsWith('gsk_'));
+  if (googleKeys.length > 0) {
+    console.warn(`[🚨 Fallback de Emergencia] Intentando canal directo Google Gemini 2.0 Flash con ${googleKeys.length} llaves...`);
+    for (const keyInfo of googleKeys) {
+      try {
+        const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(keyInfo.key)}`;
+        const res = await fetch(restUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema,
+              temperature: 0.1
+            }
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (text) {
+            const firstBrace = text.indexOf('{');
+            const lastBrace = text.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+              text = text.substring(firstBrace, lastBrace + 1);
+            }
+            const parsed = JSON.parse(text);
+            console.log(`%c[✨ ÉXITO EMERGENCIAL] Respondió Google Gemini 2.0 Flash usando Llave: ${keyInfo.label}`, "color: #10b981; font-weight: bold;");
+            lastWorkingModel = "gemini-2.0-flash";
+            return parsed as DidacticSequence;
+          }
+        }
+      } catch (emergencyErr) {
+        // Continuar con la siguiente llave
+      }
+    }
+  }
+
+  const detailedReason = lastError?.message?.includes('404')
+    ? 'Las llaves de Groq (gsk_...) en tu archivo .env no son válidas o están revocadas por Groq. Genera llaves nuevas en https://console.groq.com/keys o cambia VITE_AI_PROVIDER=google en tu .env.'
+    : (lastError?.message || 'Sin respuesta');
+
+  throw new Error(`[IA ${provider} Multi-Key]: Todos los canales (${availableKeys.length} llaves) fallaron. Causa: ${detailedReason}`);
 };
 
 export let lastWorkingModel = "omni-model";

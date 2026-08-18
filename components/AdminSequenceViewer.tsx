@@ -47,10 +47,10 @@ export const AdminSequenceViewer: React.FC<{ userEmail?: string }> = ({ userEmai
     }, []);
 
     const filteredSequences = sequences.filter(s =>
-        s.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.tema.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.grado.toLowerCase().includes(searchTerm.toLowerCase())
+        (s.user_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.tema || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.area || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.grado || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const downloadJson = (sequence: any) => {

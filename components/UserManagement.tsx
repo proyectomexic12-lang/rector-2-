@@ -31,7 +31,7 @@ export const UserManagement: React.FC = () => {
         setIsLoadingSeqs(true);
         setExpandedUser(email);
         const allSeqs = await authService.getAllSequences();
-        const filtered = allSeqs.filter(s => s.user_email.toLowerCase() === email.toLowerCase());
+        const filtered = allSeqs.filter(s => (s.user_email || '').toLowerCase() === email.toLowerCase());
         setUserSequences(prev => ({ ...prev, [email]: filtered }));
         setIsLoadingSeqs(false);
     };
