@@ -399,28 +399,28 @@ function App() {
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-left">
                       <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
-                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Básico</div>
+                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Mensual</div>
                         <div className="text-3xl font-black text-white mb-2">$15.000<span className="text-sm font-bold text-red-200">/mes</span></div>
                         <ul className="text-xs text-red-100 space-y-1 font-medium">
                           <li>✅ Acceso Ilimitado</li>
-                          <li>✅ Descargas PDF/Word</li>
+                          <li>✅ Descargas en PDF</li>
                         </ul>
                       </div>
                       <div className="bg-white text-red-700 border-2 border-red-300 p-4 rounded-2xl shadow-xl transform md:-translate-y-2 relative">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-md">Más Popular</div>
-                        <div className="text-red-900 text-xs font-black uppercase tracking-widest mb-1">Plan Semestral</div>
-                        <div className="text-3xl font-black mb-2">$60.000<span className="text-sm font-bold text-red-700">/6 meses</span></div>
+                        <div className="text-red-900 text-xs font-black uppercase tracking-widest mb-1">Plan Trimestral</div>
+                        <div className="text-3xl font-black mb-2">$35.000<span className="text-sm font-bold text-red-700">/3 meses</span></div>
                         <ul className="text-xs space-y-1 font-bold">
-                          <li>⭐ Ahorras $30.000</li>
-                          <li>⭐ Soporte Prioritario</li>
+                          <li>⭐ Promoción especial</li>
+                          <li>⭐ Ahorras $10.000</li>
                         </ul>
                       </div>
                       <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
-                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Anual</div>
-                        <div className="text-3xl font-black text-white mb-2">$120.000<span className="text-sm font-bold text-red-200">/año</span></div>
+                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Semestral</div>
+                        <div className="text-3xl font-black text-white mb-2">$75.000<span className="text-sm font-bold text-red-200">/6 meses</span></div>
                         <ul className="text-xs text-red-100 space-y-1 font-medium">
-                          <li>🚀 Ahorras $60.000</li>
-                          <li>🚀 Todas las actualizaciones</li>
+                          <li>🚀 Ahorras $15.000</li>
+                          <li>🚀 Soporte Prioritario</li>
                         </ul>
                       </div>
                     </div>
