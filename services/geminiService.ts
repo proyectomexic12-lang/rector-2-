@@ -376,12 +376,12 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // DeepSeek Prioridad Suprema (DeepSeek R1 / V3)
+  // DeepSeek Plataforma Oficial (Prioridad Suprema)
   let rawModelsToTry = [
-    "deepseek/deepseek-r1:free",
-    "deepseek/deepseek-chat:free",
     "deepseek-chat",
     "deepseek-reasoner",
+    "deepseek/deepseek-r1:free",
+    "deepseek/deepseek-chat:free",
     customModel
   ];
 
