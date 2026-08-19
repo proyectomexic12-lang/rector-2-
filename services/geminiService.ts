@@ -376,19 +376,21 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // Modelos a probar en orden de prioridad (Priorizando estabilidad de JSON)
-  let rawModelsToTry = [customModel];
+  // DeepSeek Prioridad Suprema (DeepSeek R1 / V3)
+  let rawModelsToTry = [
+    "deepseek/deepseek-r1:free",
+    "deepseek/deepseek-chat:free",
+    "deepseek-chat",
+    "deepseek-reasoner",
+    customModel
+  ];
+
   if (provider === 'google') {
     rawModelsToTry.push("gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash");
-  } else if (provider === 'deepseek' || baseUrl.includes('deepseek')) {
-    rawModelsToTry.push("deepseek-chat", "deepseek-reasoner");
   } else if (baseUrl.includes('openrouter')) {
     rawModelsToTry.push(
-      "deepseek/deepseek-r1:free",
-      "deepseek/deepseek-chat:free",
       "google/gemma-2-9b-it:free",
       "meta-llama/llama-3.3-70b-instruct:free",
-      "meta-llama/llama-3.1-8b-instruct:free",
       "qwen/qwen-2.5-coder-32b-instruct:free",
       "mistralai/mistral-7b-instruct:free",
       "openrouter/free"
