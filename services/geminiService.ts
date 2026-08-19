@@ -281,6 +281,12 @@ function getAreaContext(area: string): string {
 
 
 export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
+  const availableKeys = getAvailableKeysInfo();
+
+  if (availableKeys.length === 0) {
+    throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
+  }
+
   // Monopolio DeepSeek - Única configuración
   const modelsToTry = ["deepseek-chat"];
 
