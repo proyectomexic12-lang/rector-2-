@@ -416,6 +416,58 @@ export const authService = {
         return null;
     },
 
+    loginAsUser: async (targetUser: User): Promise<User> => {
+        const lowEmail = targetUser.email.toLowerCase().trim();
+        const sessionId = crypto.randomUUID();
+
+        let fullUser: User = { ...targetUser };
+        if (supabase) {
+            try {
+                const { data } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+                if (data) {
+                    fullUser = {
+                        ...fullUser,
+                        name: data.name || fullUser.name,
+                        role: data.role as 'admin' | 'docente',
+                        areas: data.areas || fullUser.areas,
+                        grados: data.grados || fullUser.grados,
+                        custom_credits: data.custom_credits,
+                        is_unlimited: data.is_unlimited,
+                        unlimited_start_date: data.unlimited_start_date,
+                        monthly_price: data.monthly_price,
+                        subscription_months: data.subscription_months
+                    };
+                }
+            } catch (e) {
+                console.error("Cloud fetch error in loginAsUser:", e);
+            }
+        }
+
+        const finalUser = { ...fullUser, session_id: sessionId };
+
+        localStorage.setItem(STORAGE_KEYS.AUTH, obfuscate('true'));
+        localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(finalUser)));
+
+        if (supabase) {
+            try {
+                await supabase
+                    .from('app_users')
+                    .update({ session_id: sessionId })
+                    .eq('email', lowEmail);
+            } catch (e) {
+                console.error("Fallo al registrar sesión única en nube", e);
+            }
+        }
+
+        await authService.logSecurityEvent(lowEmail, "Acceso directo a perfil por Administrador (Ingreso sin clave)", "low");
+        return finalUser;
+    },
+
+
     // --- GENERATED SEQUENCES PERSISTENCE & LOGGING ---
     saveAndLogSequence: async (user: User, sequence: any, details: { grade: string, area: string, theme: string }) => {
         const email = user.email.toLowerCase().trim();

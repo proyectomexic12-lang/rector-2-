@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { authService, User, deobfuscate } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import { AREAS, GRADOS } from '../constants';
-import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap } from 'lucide-react';
+import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap, LogIn } from 'lucide-react';
 
 export const UserManagement: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -52,6 +52,13 @@ export const UserManagement: React.FC = () => {
         const sorted = data.sort((a, b) => (b.stats?.total || 0) - (a.stats?.total || 0));
         setUsers(sorted);
         setIsRefreshing(false);
+    };
+
+    const handleDirectLogin = async (user: User) => {
+        if (window.confirm(`¿Deseas ingresar directamente al perfil del docente ${user.name}?`)) {
+            await authService.loginAsUser(user);
+            window.location.reload();
+        }
     };
 
     const toggleSequences = async (email: string) => {
@@ -294,6 +301,9 @@ export const UserManagement: React.FC = () => {
                                         <td className="py-4 text-center font-bold text-slate-800">{user.stats?.total || 0}</td>
                                         <td className="py-4 text-right pr-4">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button onClick={() => handleDirectLogin(user)} title={`Ingresar directamente como ${user.name}`} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-1.5 shadow-sm">
+                                                    <LogIn size={12} /> Entrar
+                                                </button>
                                                 <button onClick={() => openManagement(user, 'creditos')} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all flex items-center gap-1.5 shadow-sm">
                                                     <CreditCard size={12} /> Créditos
                                                 </button>
