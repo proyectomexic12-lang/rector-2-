@@ -83,7 +83,7 @@ export const AUTHORIZED_USERS: User[] = [
     { name: 'Aleida Lara', email: 'aleida.lara@guaimaral.edu.co', role: 'docente' },
     { name: 'Alfredo Torres', email: 'alfredo.torres@guaimaral.edu.co', role: 'docente' },
     { name: 'Asterio Torres', email: 'asterio.torres@guaimaral.edu.co', role: 'docente', areas: ["Ciencias Naturales y Educación Ambiental", "Educación Artística (Agropecuaria)", "Ética y Valores"], grados: ["1", "2", "3", "4", "5"] },
-    { name: 'Carlos Sandoval', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente' },
+    { name: 'Carlos Sandoval', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-19', monthly_price: 15000, subscription_months: 1 },
     { name: 'Deisy Mercado', email: 'deisy.mercado@guaimaral.edu.co', role: 'docente', areas: ["Dimensión Cognitiva", "Dimensión Comunicativa", "Dimensión Corporal", "Dimensión Socioafectiva", "Dimensión Espiritual"], grados: ["Transición"] },
     { name: 'Eduardo', email: 'eduardo@guaimaral.edu.co', role: 'docente', areas: ["Tecnología e Informática", "Educación Física"] },
     { name: 'Evaristo Vertel', email: 'evaristo.vertel@guaimaral.edu.co', role: 'docente', areas: ["Ciencias Naturales y Educación Ambiental", "Biología", "Química"] },
@@ -312,15 +312,15 @@ export const authService = {
         const current = authService.getCurrentUser();
         if (!current || !supabase) return current;
 
-        // Anti-spam: Solo refrescar cada 30 segundos como máximo
+        // Anti-spam: Solo refrescar cada 2 segundos como máximo
         const lastRefresh = (authService as any)._lastRefresh || 0;
-        if (Date.now() - lastRefresh < 30000) return current;
+        if (Date.now() - lastRefresh < 2000) return current;
         (authService as any)._lastRefresh = Date.now();
 
         try {
             const { data, error } = await supabase
                 .from('app_users')
-                .select('name, email, role, areas, grados')
+                .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
                 .eq('email', current.email.toLowerCase())
                 .maybeSingle();
 
@@ -330,7 +330,12 @@ export const authService = {
                     email: data.email,
                     role: data.role as 'admin' | 'docente',
                     areas: data.areas || [],
-                    grados: data.grados || []
+                    grados: data.grados || [],
+                    custom_credits: data.custom_credits,
+                    is_unlimited: data.is_unlimited,
+                    unlimited_start_date: data.unlimited_start_date,
+                    monthly_price: data.monthly_price,
+                    subscription_months: data.subscription_months
                 };
                 localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updatedUser)));
                 return updatedUser;
@@ -348,13 +353,13 @@ export const authService = {
             throw new Error(`Cuenta bloqueada temporalmente por seguridad. Intenta en ${lockoutStatus.remaining} min.`);
         }
 
-        // 1. First, check if user exists in Supabase to get the real name
+        // 1. First, check if user exists in Supabase to get the real name and subscription settings
         let cloudUser: User | null = null;
         if (supabase) {
             try {
                 const { data, error } = await supabase
                     .from('app_users')
-                    .select('name, email, role, areas, grados')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
                     .eq('email', email.toLowerCase())
                     .single();
 
@@ -364,7 +369,12 @@ export const authService = {
                         email: data.email,
                         role: data.role as 'admin' | 'docente',
                         areas: data.areas || [],
-                        grados: data.grados || []
+                        grados: data.grados || [],
+                        custom_credits: data.custom_credits,
+                        is_unlimited: data.is_unlimited,
+                        unlimited_start_date: data.unlimited_start_date,
+                        monthly_price: data.monthly_price,
+                        subscription_months: data.subscription_months
                     };
                 }
             } catch (e) {
