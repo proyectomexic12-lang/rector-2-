@@ -108,43 +108,84 @@ const sanitizeInput = (text: string | undefined): string => {
   return text.trim().replace(/['"<>]/g, "");
 };
 
-// Función de auto-reparación inteligente de JSON para modelos que dejan comas colgantes o corchetes abiertos
+// Función de auto-reparación inteligente de JSON para modelos que dejan comas colgantes, caracteres de control o corchetes abiertos
 export const tryRepairAndParseJson = (raw: string): any => {
+  // Helper: Sanear caracteres de control (\n, \r, \t sin escapar) dentro de cadenas de JSON
+  const sanitizeControlCharacters = (jsonStr: string): string => {
+    let inString = false;
+    let result = '';
+    for (let i = 0; i < jsonStr.length; i++) {
+      const char = jsonStr[i];
+      const prevChar = i > 0 ? jsonStr[i - 1] : '';
+
+      if (char === '"' && prevChar !== '\\') {
+        inString = !inString;
+        result += char;
+        continue;
+      }
+
+      if (inString) {
+        if (char === '\n') {
+          result += '\\n';
+        } else if (char === '\r') {
+          result += '\\r';
+        } else if (char === '\t') {
+          result += '\\t';
+        } else if (char.charCodeAt(0) < 32) {
+          result += '';
+        } else {
+          result += char;
+        }
+      } else {
+        result += char;
+      }
+    }
+    return result;
+  };
+
   try {
     return JSON.parse(raw);
   } catch (e1) {
-    // 1. Quitar comas colgantes antes de llaves o corchetes de cierre: ,} o ,]
-    let fixed = raw.replace(/,\s*([\]}])/g, '$1');
-    
-    // 2. Normalizar comillas especiales si las hubiera
-    fixed = fixed.replace(/[\u201C\u201D]/g, '"');
-
     try {
-      return JSON.parse(fixed);
-    } catch (e2) {
-      // 3. Reparación de JSON truncado por límite de tokens: cerrar estructuras abiertas
-      let openBraces = (fixed.match(/{/g) || []).length;
-      let closeBraces = (fixed.match(/}/g) || []).length;
-      let openBrackets = (fixed.match(/\[/g) || []).length;
-      let closeBrackets = (fixed.match(/\]/g) || []).length;
+      const sanitized = sanitizeControlCharacters(raw);
+      return JSON.parse(sanitized);
+    } catch (e1_1) {
+      // 1. Quitar comas colgantes antes de llaves o corchetes de cierre: ,} o ,]
+      let fixed = raw.replace(/,\s*([\]}])/g, '$1');
+      
+      // 2. Normalizar comillas especiales si las hubiera
+      fixed = fixed.replace(/[\u201C\u201D]/g, '"');
 
-      // Quitar coma huérfana al final
-      fixed = fixed.trim().replace(/,\s*$/, '');
-
-      // Cerrar corchetes y llaves faltantes
-      while (openBrackets > closeBrackets) {
-        fixed += ']';
-        closeBrackets++;
-      }
-      while (openBraces > closeBraces) {
-        fixed += '}';
-        closeBraces++;
-      }
+      // 3. Aplicar saneamiento de caracteres de control
+      fixed = sanitizeControlCharacters(fixed);
 
       try {
         return JSON.parse(fixed);
-      } catch (e3) {
-        throw e1; // Lanzar el error original si no se pudo auto-reparar
+      } catch (e2) {
+        // 4. Reparación de JSON truncado por límite de tokens: cerrar estructuras abiertas
+        let openBraces = (fixed.match(/{/g) || []).length;
+        let closeBraces = (fixed.match(/}/g) || []).length;
+        let openBrackets = (fixed.match(/\[/g) || []).length;
+        let closeBrackets = (fixed.match(/\]/g) || []).length;
+
+        // Quitar coma huérfana al final
+        fixed = fixed.trim().replace(/,\s*$/, '');
+
+        // Cerrar corchetes y llaves faltantes
+        while (openBrackets > closeBrackets) {
+          fixed += ']';
+          closeBrackets++;
+        }
+        while (openBraces > closeBraces) {
+          fixed += '}';
+          closeBraces++;
+        }
+
+        try {
+          return JSON.parse(fixed);
+        } catch (e3) {
+          throw e1; // Lanzar el error original si no se pudo auto-reparar
+        }
       }
     }
   }
@@ -153,23 +194,25 @@ export const tryRepairAndParseJson = (raw: string): any => {
 const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string, tokensUsed: number = 0) => {
   if (!supabase) return;
   try {
-    const cleanMsg = errorMsg 
-      ? (typeof errorMsg === 'string' ? errorMsg.slice(0, 300) : String(errorMsg?.message || errorMsg).slice(0, 300))
-      : null;
+    const rawMsg = errorMsg ? (typeof errorMsg === 'string' ? errorMsg : String(errorMsg?.message || errorMsg)) : '';
+    const cleanMsg = rawMsg ? rawMsg.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ').slice(0, 250) : null;
     const actionDesc = tokensUsed > 0 
       ? `Respuesta de: ${modelName || 'Desconocido'} (${tokensUsed} tokens)`
       : `Respuesta de: ${modelName || 'Desconocido'}`;
 
-    await supabase.from('api_key_logs').insert([
-      {
-        key_name: keyLabel,
-        status,
-        error_message: cleanMsg,
-        action: actionDesc
-      }
-    ]);
+    const payload: any = {
+      key_name: keyLabel,
+      status,
+      action: actionDesc
+    };
+    if (cleanMsg) payload.error_message = cleanMsg;
+
+    const { error } = await supabase.from('api_key_logs').insert([payload]);
+    if (error) {
+      console.warn("Cloud log warning:", error.message);
+    }
   } catch (e) {
-    console.warn("Log API key error:", e);
+    // Silencioso para no interrumpir el flujo principal
   }
 };
 
