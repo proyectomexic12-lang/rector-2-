@@ -223,7 +223,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
           {/* Abstract Deep Background */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-blue-600/20 rounded-full blur-[100px] animate-pulse"></div>
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-mesh-gradient opacity-80 mix-blend-overlay"></div>
 
           <div className="relative z-10 flex-1">
             <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-blue-50 tracking-tight border-b border-slate-800 pb-6">

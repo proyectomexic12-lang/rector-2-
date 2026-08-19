@@ -54,14 +54,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-outfit p-0 sm:p-6 md:p-12 overflow-hidden selection:bg-blue-100">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-outfit p-0 sm:p-6 md:p-12 overflow-hidden selection:bg-blue-100 relative">
+            {/* Ambient Background Fallback Mesh */}
+            <div className="absolute inset-0 bg-mesh-gradient opacity-30 mix-blend-multiply"></div>
+
             {/* Main Container mirroring the split layout of the reference */}
-            <div className="w-full max-w-[1100px] h-full min-h-[600px] bg-white sm:rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] border border-slate-100 flex flex-col md:flex-row overflow-hidden relative">
+            <div className="w-full max-w-[1100px] h-full min-h-[600px] bg-white/80 backdrop-blur-2xl sm:rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white flex flex-col md:flex-row overflow-hidden relative z-10">
 
                 {/* Left Side: Illustration & Branding (Inspired by the drawing) */}
-                <div className="w-full md:w-1/2 bg-[#f0f7ff] relative p-12 flex flex-col items-center justify-center overflow-hidden">
+                <div className="w-full md:w-1/2 bg-[#f0f7ff]/50 relative p-12 flex flex-col items-center justify-center overflow-hidden">
                     {/* Abstract Decorative Elements (Circles/Waves from image) */}
-                    <div className="absolute bottom-[-50px] right-[-50px] w-64 h-64 bg-blue-100/50 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-[-50px] right-[-50px] w-64 h-64 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-[-50px] left-[-50px] w-64 h-64 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
 
                     {/* Central Illustration Area */}
                     <div className="relative z-10 w-full max-w-sm">

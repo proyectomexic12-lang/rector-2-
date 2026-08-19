@@ -1,6 +1,5 @@
 declare const Deno: any;
 
-import { GoogleGenerativeAI, SchemaType } from "npm:@google/generative-ai@^0.24.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,12 +49,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const modelsToTry = [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
-      "gemini-2.0-flash-exp",
-      "gemini-1.5-flash",
-      "gemini-1.5-flash-8b",
-      "gemini-1.5-pro"
+      "deepseek-chat"
     ];
 
     const sanitizeInput = (text?: string): string => {
@@ -113,97 +107,6 @@ Deno.serve(async (req: Request) => {
       Responde únicamente con el JSON validado.
     `;
 
-    const responseSchema: any = {
-      type: SchemaType.OBJECT,
-      properties: {
-        tema_principal: { type: SchemaType.STRING },
-        titulo_secuencia: { type: SchemaType.STRING },
-        descripcion_secuencia: { type: SchemaType.STRING },
-        objetivo_aprendizaje: { type: SchemaType.STRING },
-        contenidos: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        competencias_men: { type: SchemaType.STRING },
-        estandar: { type: SchemaType.STRING },
-        metodologia: { type: SchemaType.STRING },
-        corporiedad_adi: { type: SchemaType.STRING },
-        actividades: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              sesion: { type: SchemaType.NUMBER },
-              descripcion: { type: SchemaType.STRING },
-              materiales: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-              tiempo: { type: SchemaType.STRING },
-              imprimibles: { type: SchemaType.STRING },
-              adi_especifico: { type: SchemaType.STRING }
-            },
-            required: ["sesion", "descripcion", "materiales", "tiempo", "imprimibles", "adi_especifico"]
-          }
-        },
-        rubrica: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              criterio: { type: SchemaType.STRING },
-              basico: { type: SchemaType.STRING },
-              satisfactorio: { type: SchemaType.STRING },
-              avanzado: { type: SchemaType.STRING },
-              retroalimentacion: { type: SchemaType.STRING }
-            },
-            required: ["criterio", "basico", "satisfactorio", "avanzado", "retroalimentacion"]
-          }
-        },
-        evaluacion: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              pregunta: { type: SchemaType.STRING },
-              tipo: { type: SchemaType.STRING },
-              opciones: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-              respuesta_correcta: { type: SchemaType.STRING }
-            },
-            required: ["pregunta", "tipo", "opciones", "respuesta_correcta"]
-          }
-        },
-        recursos: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: { nombre: { type: SchemaType.STRING }, descripcion: { type: SchemaType.STRING } },
-            required: ["nombre", "descripcion"]
-          }
-        },
-        productos_asociados: { type: SchemaType.STRING },
-        instrumentos_evaluacion: { type: SchemaType.STRING },
-        bibliografia: { type: SchemaType.STRING },
-        observaciones: { type: SchemaType.STRING },
-        adecuaciones_piar: { type: SchemaType.STRING },
-        taller_imprimible: {
-          type: SchemaType.OBJECT,
-          properties: {
-            introduccion: { type: SchemaType.STRING },
-            instrucciones: { type: SchemaType.STRING },
-            bitacora_test_inicial: { type: SchemaType.STRING },
-            ejercicios: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            reto_creativo: { type: SchemaType.STRING }
-          },
-          required: ["introduccion", "instrucciones", "ejercicios", "reto_creativo"]
-        },
-        alertas_generadas: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        dba_utilizado: { type: SchemaType.STRING },
-        eje_crese_utilizado: { type: SchemaType.STRING }
-      },
-      required: [
-        "tema_principal", "titulo_secuencia", "descripcion_secuencia", "objetivo_aprendizaje",
-        "contenidos", "competencias_men", "estandar", "metodologia", "corporiedad_adi",
-        "actividades", "rubrica", "evaluacion", "recursos", "productos_asociados",
-        "instrumentos_evaluacion", "bibliografia", "observaciones", "adecuaciones_piar",
-        "eje_crese_utilizado", "taller_imprimible", "alertas_generadas", "dba_utilizado"
-      ]
-    };
-
     let lastError: any;
     let sequenceData = null;
     let usedModel = "";
@@ -213,18 +116,42 @@ Deno.serve(async (req: Request) => {
       for (const modelName of modelsToTry) {
         try {
           console.log(`Trying model ${modelName} with key substring ...${key.slice(-6)}`);
-          const genAI = new GoogleGenerativeAI(key);
-          const model = genAI.getGenerativeModel({
-            model: modelName,
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema,
-              temperature: 0.1
-            }
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+          const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${key}`
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.0,
+              max_tokens: 4096
+            })
           });
 
-          const result = await model.generateContent(prompt);
-          const text = result.response.text();
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+             const errData = await res.json().catch(() => ({}));
+             throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+          }
+
+          const data = await res.json();
+          let text = data.choices?.[0]?.message?.content || "";
+
+          // JSON Parsing logic
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1) {
+            text = text.substring(firstBrace, lastBrace + 1);
+          }
+
           sequenceData = JSON.parse(text);
           usedModel = modelName;
           

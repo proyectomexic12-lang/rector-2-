@@ -361,7 +361,7 @@ export const authService = {
                     .from('app_users')
                     .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
                     .eq('email', email.toLowerCase())
-                    .single();
+                    .maybeSingle();
 
                 if (data && !error) {
                     cloudUser = {

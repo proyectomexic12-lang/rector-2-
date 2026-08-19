@@ -1,13 +1,8 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { SequenceInput, DidacticSequence } from "../types";
+import { SequenceInput, DidacticSequence, EvaluationItem } from "../types";
 import { supabase } from "./supabaseClient";
 
 export const modelHealthStatus: Record<string, 'online' | 'offline' | 'checking'> = {
-  "llama-3.3-70b-versatile": "online",
-  "llama-3.1-8b-instant": "online",
-  "mixtral-8x7b-32768": "online",
-  "gemini-2.0-flash": "online",
-  "gemini-1.5-flash": "online",
+  "deepseek-chat": "online"
 };
 
 export interface KeyConfigInfo {
@@ -247,111 +242,7 @@ const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', err
   }
 };
 
-const responseSchema: any = {
-  type: SchemaType.OBJECT,
-  properties: {
-    tema_principal: { type: SchemaType.STRING },
-    titulo_secuencia: { type: SchemaType.STRING },
-    descripcion_secuencia: { type: SchemaType.STRING },
-    objetivo_aprendizaje: { type: SchemaType.STRING },
-    contenidos: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-    competencias_men: { type: SchemaType.STRING },
-    estandar: { type: SchemaType.STRING },
-    metodologia: { type: SchemaType.STRING },
-    corporiedad_adi: { type: SchemaType.STRING },
-    actividades: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          sesion: { type: SchemaType.NUMBER },
-          fase_inicio: { type: SchemaType.STRING },
-          fase_desarrollo: { type: SchemaType.STRING },
-          fase_cierre: { type: SchemaType.STRING },
-          preguntas_socraticas: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          materiales: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          tiempo: { type: SchemaType.STRING },
-          imprimibles: { type: SchemaType.STRING },
-          adi_especifico: { type: SchemaType.STRING }
-        },
-        required: ["sesion", "fase_inicio", "fase_desarrollo", "fase_cierre", "preguntas_socraticas", "materiales", "tiempo", "imprimibles", "adi_especifico"]
-      }
-    },
-    rubrica: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          criterio: { type: SchemaType.STRING },
-          bajo: { type: SchemaType.STRING },
-          basico: { type: SchemaType.STRING },
-          alto: { type: SchemaType.STRING },
-          superior: { type: SchemaType.STRING },
-          retroalimentacion: { type: SchemaType.STRING }
-        },
-        required: ["criterio", "bajo", "basico", "alto", "superior", "retroalimentacion"]
-      }
-    },
-    evaluacion: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          pregunta: { type: SchemaType.STRING },
-          tipo: { type: SchemaType.STRING },
-          opciones: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          respuesta_correcta: { type: SchemaType.STRING },
-          justificacion: { type: SchemaType.STRING }
-        },
-        required: ["pregunta", "tipo", "opciones", "respuesta_correcta", "justificacion"]
-      }
-    },
-    recursos: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: { nombre: { type: SchemaType.STRING }, descripcion: { type: SchemaType.STRING } },
-        required: ["nombre", "descripcion"]
-      }
-    },
-    productos_asociados: { type: SchemaType.STRING },
-    instrumentos_evaluacion: { type: SchemaType.STRING },
-    bibliografia: { type: SchemaType.STRING },
-    observaciones: { type: SchemaType.STRING },
-    adecuaciones_piar: { type: SchemaType.STRING },
-    taller_imprimible: {
-      type: SchemaType.OBJECT,
-      properties: {
-        introduccion: { type: SchemaType.STRING },
-        instrucciones: { type: SchemaType.STRING },
-        bitacora_test_inicial: { type: SchemaType.STRING },
-        ejercicios: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        reto_creativo: { type: SchemaType.STRING }
-      },
-      required: ["introduccion", "instrucciones", "ejercicios", "reto_creativo"]
-    },
-    alertas_generadas: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-    dba_utilizado: { type: SchemaType.STRING },
-    eje_crese_utilizado: { type: SchemaType.STRING },
-    glosario: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: { termino: { type: SchemaType.STRING }, definicion: { type: SchemaType.STRING } },
-        required: ["termino", "definicion"]
-      }
-    },
-    aula_invertida: { type: SchemaType.STRING }
-  },
-  required: [
-    "tema_principal", "titulo_secuencia", "descripcion_secuencia", "objetivo_aprendizaje",
-    "contenidos", "competencias_men", "estandar", "metodologia", "corporiedad_adi",
-    "actividades", "rubrica", "evaluacion", "recursos", "productos_asociados",
-    "instrumentos_evaluacion", "bibliografia", "observaciones", "adecuaciones_piar",
-    "eje_crese_utilizado", "taller_imprimible", "alertas_generadas", "dba_utilizado",
-    "glosario", "aula_invertida"
-  ]
-};
+
 
 // Helper functions for dynamic pedagogical contexts
 function getGradeContext(grado: string): string {
@@ -390,40 +281,8 @@ function getAreaContext(area: string): string {
 
 
 export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
-  const provider = import.meta.env.VITE_AI_PROVIDER || 'openai';
-  const baseUrl = import.meta.env.VITE_AI_BASE_URL || 'https://api.groq.com/openai/v1';
-  const customModel = import.meta.env.VITE_AI_MODEL || 'openai/gpt-oss-120b';
-
-  const availableKeys = getAvailableKeysInfo();
-
-  if (availableKeys.length === 0) {
-    throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
-  }
-
-  // DeepSeek Plataforma Oficial (Prioridad Suprema)
-  let rawModelsToTry = [
-    "deepseek-chat",
-    "deepseek-reasoner",
-    "deepseek/deepseek-r1:free",
-    "deepseek/deepseek-chat:free",
-    customModel
-  ];
-
-  if (provider === 'google') {
-    rawModelsToTry.push("gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash");
-  } else if (baseUrl.includes('openrouter')) {
-    rawModelsToTry.push(
-      "google/gemma-2-9b-it:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "qwen/qwen-2.5-coder-32b-instruct:free",
-      "mistralai/mistral-7b-instruct:free",
-      "openrouter/free"
-    );
-  } else {
-    rawModelsToTry.push("llama-3.3-70b-versatile", "llama-3.1-8b-instant");
-  }
-
-  const modelsToTry = Array.from(new Set(rawModelsToTry));
+  // Monopolio DeepSeek - Única configuración
+  const modelsToTry = ["deepseek-chat"];
 
   const safeTema = sanitizeInput(input.tema);
   const areaNormativa = {
@@ -449,8 +308,8 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     - **Enfoque Integrador:** Debes fusionar de manera coherente las 4 áreas básicas (Lenguaje, Matemáticas, Sociales y Naturales) en una sola secuencia didáctica funcional.`;
   }
 
-  // Inject exact JSON Schema requirement for OpenAI compatible models
-  const jsonStructureGuidance = provider === 'openai' ? `
+  // Guía de estructura JSON estricta para DeepSeek
+  const jsonStructureGuidance = `
     DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA EXACTA. NADA DE TEXTO ANTES NI DESPUÉS DEL JSON:
     {
       "tema_principal": "string",
@@ -558,106 +417,46 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
       const maxRetries = 3;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`[🔍 Orquestador Groq/AI] Probando modelo ${modelName} con llave: ${label} (${keyId}) - Intento ${attempt}/${maxRetries}...`);
+          console.log(`[🔍 Orquestador DeepSeek] Conectando a api.deepseek.com con llave: ${label} (${keyId}) - Intento ${attempt}/${maxRetries}...`);
           let text = "";
           let tokensUsed = 0;
 
-        if (provider === 'openai' || provider === 'deepseek') {
-          // Detectar dinámicamente la URL Base y modelo óptimo según el tipo de llave
-          let activeBaseUrl = baseUrl;
-          let activeModel = modelName;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout para anti-congelamiento
 
-          if (key.startsWith('sk-') && !key.startsWith('sk-or-v1-') && !key.startsWith('gsk_')) {
-            // Llave nativa Oficial de DeepSeek (api.deepseek.com)
-            activeBaseUrl = 'https://api.deepseek.com/v1';
-            activeModel = modelName.includes('/') ? 'deepseek-chat' : modelName;
-          } else if (key.startsWith('sk-or-v1-')) {
-            // Llave de OpenRouter
-            activeBaseUrl = 'https://openrouter.ai/api/v1';
-          } else if (key.startsWith('gsk_')) {
-            // Llave de Groq
-            activeBaseUrl = 'https://api.groq.com/openai/v1';
-            activeModel = modelName.includes('/') ? 'llama-3.3-70b-versatile' : modelName;
-          }
-
-          console.log(`[🔍 Orquestador Híbrido] Conectando a ${activeBaseUrl} usando modelo ${activeModel} con llave ${label}...`);
-
-          const res = await fetch(`${activeBaseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${key}`
-            },
-            body: JSON.stringify({
-              model: activeModel,
-              messages: [{ role: "user", content: prompt }],
-              temperature: 0.1,
-              max_tokens: 4096
-            })
-          });
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`Error API Groq/OpenAI ${res.status}: ${errData?.error?.message || res.statusText}`);
-          }
-
-          const data = await res.json();
-          text = data.choices?.[0]?.message?.content || "";
-          tokensUsed = data?.usage?.total_tokens || 0;
-
-        } else {
-          // Conexión Google Gemini Nativa
           try {
-            const genAI = new GoogleGenerativeAI(key);
-            const model = genAI.getGenerativeModel({
-              model: modelName,
-              generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema,
-                temperature: 0.1
-              }
-            });
-            const result = await model.generateContent(prompt);
-            text = result.response.text();
-          } catch (sdkError: any) {
-            console.warn(`[SDK Gemini] Falló SDK con ${modelName}. Intentando REST... Error:`, sdkError?.message);
-          }
-
-          if (!text) {
-            const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(key)}`;
-            
-            const headers: Record<string, string> = {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': key
-            };
-            if (key.startsWith('AQ') || key.startsWith('ya29.')) {
-              headers['Authorization'] = `Bearer ${key}`;
-            }
-
-            const res = await fetch(restUrl, {
+            const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
               method: 'POST',
-              headers,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${key}`
+              },
+              signal: controller.signal,
               body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  responseSchema,
-                  temperature: 0.1
-                }
+                model: 'deepseek-chat',
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.0,
+                max_tokens: 4096
               })
             });
 
-            if (res.ok) {
-              const data = await res.json();
-              text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            } else {
-              const errorData = await res.json().catch(() => ({}));
-              throw new Error(`Error REST API Gemini ${res.status}: ${errorData?.error?.message || res.statusText}`);
-            }
-          }
-        }
+            clearTimeout(timeoutId);
 
-        if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+            }
+
+            const data = await res.json();
+            text = data.choices?.[0]?.message?.content || "";
+            tokensUsed = data?.usage?.total_tokens || 0;
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              throw new Error(`Timeout: La API de DeepSeek tardó demasiado en responder.`);
+            }
+            throw fetchError;
+          }
 
         // 1. Eliminar cualquier bloque de pensamiento <think>...</think> generado por modelos como Qwen / DeepSeek
         let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -724,7 +523,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           });
         }
 
-        console.log(`%c[✨ ÉXITO EXTREMO] Respondió modelo ${modelName} (${provider}) usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
+        console.log(`%c[✨ ÉXITO EXTREMO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
 
         // Actualizar métricas
         if (!apiMetrics[keyId]) {
@@ -779,46 +578,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     console.warn(`[⚠️ Conmutación de Modelo] Todas las llaves fallaron para ${modelName}. Probando modelo de respaldo...`);
   }
 
-  // FALLBACK DE EMERGENCIA: Intentar Google Gemini únicamente con llaves de Google (AIza...)
-  const googleKeys = availableKeys.filter(k => !k.key.startsWith('gsk_'));
-  if (googleKeys.length > 0) {
-    console.warn(`[🚨 Fallback de Emergencia] Intentando canal directo Google Gemini 2.0 Flash con ${googleKeys.length} llaves...`);
-    for (const keyInfo of googleKeys) {
-      try {
-        const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(keyInfo.key)}`;
-        const res = await fetch(restUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema,
-              temperature: 0.1
-            }
-          })
-        });
 
-        if (res.ok) {
-          const data = await res.json();
-          let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (text) {
-            const firstBrace = text.indexOf('{');
-            const lastBrace = text.lastIndexOf('}');
-            if (firstBrace !== -1 && lastBrace !== -1) {
-              text = text.substring(firstBrace, lastBrace + 1);
-            }
-            const parsed = tryRepairAndParseJson(text);
-            console.log(`%c[✨ ÉXITO EMERGENCIAL] Respondió Google Gemini 2.0 Flash usando Llave: ${keyInfo.label}`, "color: #10b981; font-weight: bold;");
-            lastWorkingModel = "gemini-2.0-flash";
-            return parsed as DidacticSequence;
-          }
-        }
-      } catch (emergencyErr) {
-        // Continuar con la siguiente llave
-      }
-    }
-  }
 
   console.warn("🛡️ [Escudo de Autoreparación Activo] Generando planeación de respaldo pedagógico institucional...");
   return buildFailSafeSequence(input);
@@ -946,32 +706,14 @@ export let lastWorkingModel = "omni-model";
 // =========================================================================
 
 export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence): Promise<EvaluationItem[]> => {
-  const provider = import.meta.env.VITE_AI_PROVIDER || 'openai';
-  const baseUrl = import.meta.env.VITE_AI_BASE_URL || 'https://api.groq.com/openai/v1';
-  const customModel = import.meta.env.VITE_AI_MODEL || 'openai/gpt-oss-120b';
-
   const availableKeys = getAvailableKeysInfo();
 
   if (availableKeys.length === 0) {
     throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
   }
 
-  // Modelos a probar en orden de prioridad
-  let rawModelsToTry = [customModel];
-  if (provider === 'google') {
-    rawModelsToTry.push("gemini-2.0-flash", "gemini-1.5-pro");
-  } else if (baseUrl.includes('openrouter')) {
-    rawModelsToTry.push(
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "nvidia/nemotron-3.5-lightning:free",
-      "openrouter/free"
-    );
-  } else {
-    rawModelsToTry.push("llama-3.3-70b-versatile", "llama-3.1-8b-instant");
-  }
-
-  const modelsToTry = Array.from(new Set(rawModelsToTry));
+  // Monopolio DeepSeek para el examen
+  const modelsToTry = ["deepseek-chat"];
 
   const prompt = `
   Actúa como un experto en evaluación educativa del ICFES (Colombia).
@@ -1028,30 +770,28 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           let text = "";
           let tokensUsed = 0;
 
-          if (provider === 'openai') {
-            const res = await fetch(`${baseUrl}/chat/completions`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${key}`
-              },
-              body: JSON.stringify({
-                model: modelName,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.2, // Un poco más bajo para exámenes rigurosos
-                max_tokens: 4000
-              })
-            });
+          const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${key}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.0,
+              max_tokens: 4000
+            })
+          });
 
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(`Error API Groq/OpenAI ${res.status}: ${errData?.error?.message || res.statusText}`);
-            }
-
-            const data = await res.json();
-            text = data.choices?.[0]?.message?.content || "";
-            tokensUsed = data?.usage?.total_tokens || 0;
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
           }
+
+          const data = await res.json();
+          text = data.choices?.[0]?.message?.content || "";
+          tokensUsed = data?.usage?.total_tokens || 0;
 
           if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
 
