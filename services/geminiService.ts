@@ -351,8 +351,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
       "glosario": [{ "termino": "string", "definicion": "string" }],
       "aula_invertida": "string"
     }
-  ` : '';
+  `;
 
+  const prompt = `
     ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM EDITION)
     Eres la Autoridad Pedagógica y Curricular Suprema de la I.E. Guaimaral. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
 
