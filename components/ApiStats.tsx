@@ -87,7 +87,13 @@ export const ApiStats: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const providerName = import.meta.env.VITE_AI_PROVIDER === 'google' ? 'Google Gemini Native' : 'Groq Cloud Omni-Layer';
+    const currentProvider = import.meta.env.VITE_AI_PROVIDER;
+    const currentBaseUrl = import.meta.env.VITE_AI_BASE_URL || '';
+    const providerName = currentProvider === 'google' 
+        ? 'Google Gemini Native' 
+        : (currentProvider === 'deepseek' || currentBaseUrl.includes('deepseek'))
+        ? 'DeepSeek Direct API ($5 USD Créditos Oficiales)'
+        : 'Groq / OpenRouter Cloud Omni-Layer';
 
     return (
         <div className="w-full bg-white/40 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-10 shadow-2xl mb-12 animate-fade-in-up relative overflow-hidden group transition-all duration-500 hover:shadow-blue-500/10 hover:border-blue-200/50">
