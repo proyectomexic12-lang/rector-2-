@@ -289,8 +289,8 @@ function App() {
                 authService.isUserUnlimited(currentUser) ? (
                   <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
                     <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Plan:</span>
-                    <span className="text-xs font-black bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1 uppercase tracking-wider">
-                      <span>∞</span> {
+                    <span className="text-xs font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
+                      <Sparkles size={12} /> {
                         currentUser.role === 'admin' ? 'ADMINISTRADOR' :
                         currentUser.subscription_months === 6 ? 'SEMESTRAL' :
                         currentUser.subscription_months === 3 ? 'TRIMESTRAL' :
@@ -374,7 +374,7 @@ function App() {
         )}
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
 
         {/* Tabs Content */}
         {!sequence && (

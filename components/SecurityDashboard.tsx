@@ -18,8 +18,9 @@ export const SecurityDashboard: React.FC = () => {
     }, []);
 
     const getSeverityStyle = (severity: string) => {
-        if (severity === 'high') return 'bg-red-50 text-red-700 border-red-100 shadow-sm';
-        return 'bg-amber-50 text-amber-700 border-amber-100 shadow-sm';
+        if (severity === 'high') return 'bg-red-50 text-red-700 border-red-200 shadow-sm';
+        if (severity === 'medium') return 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm';
+        return 'bg-emerald-50/80 text-emerald-900 border-emerald-200/60 shadow-sm';
     };
 
     return (
@@ -82,17 +83,20 @@ export const SecurityDashboard: React.FC = () => {
                                     <p className="text-slate-400 text-sm font-medium">El sistema opera bajo los parámetros de seguridad esperados.</p>
                                 </div>
                             ) : (
-                                logs.map((log, i) => (
+                                logs.map((log, i) => {
+                                    const isHigh = log.severity === 'high';
+                                    const isMedium = log.severity === 'medium';
+                                    return (
                                     <div key={i} className={`p-6 rounded-[2rem] border-2 ${getSeverityStyle(log.severity)} flex items-start gap-5 transition-all hover:shadow-md hover:scale-[1.01]`}>
-                                        <div className={`p-3 rounded-2xl ${log.severity === 'high' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
-                                            {log.severity === 'high' ? <UserX size={20} /> : <AlertCircle size={20} />}
+                                        <div className={`p-3 rounded-2xl shrink-0 ${isHigh ? 'bg-red-600 text-white' : isMedium ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white'}`}>
+                                            {isHigh ? <UserX size={20} /> : isMedium ? <AlertCircle size={20} /> : <ShieldCheck size={20} />}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="font-black text-sm text-slate-900 tracking-tight">{log.email}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 bg-white/50 px-2 py-1 rounded-md">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                <span className="text-[10px] font-bold text-slate-500 bg-white/70 px-2 py-1 rounded-md border border-slate-200/50">{new Date(log.timestamp).toLocaleTimeString()}</span>
                                             </div>
-                                            <p className="text-sm font-semibold text-slate-700 leading-relaxed mb-3">{log.event}</p>
+                                            <p className="text-sm font-semibold text-slate-800 leading-relaxed mb-3">{log.event}</p>
                                             <div className="flex items-center gap-6 border-t border-black/5 pt-3">
                                                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                                                     <Globe size={12} className="text-blue-500" /> {log.ip || 'INTERNAL_ACCESS'}
@@ -103,7 +107,8 @@ export const SecurityDashboard: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>
