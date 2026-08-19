@@ -150,10 +150,8 @@ export const tryRepairAndParseJson = (raw: string): any => {
   }
 };
 
-let canSyncApiKeyLogs = true;
-
 const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string, tokensUsed: number = 0) => {
-  if (!supabase || !canSyncApiKeyLogs) return;
+  if (!supabase) return;
   try {
     const cleanMsg = errorMsg 
       ? (typeof errorMsg === 'string' ? errorMsg.slice(0, 300) : String(errorMsg?.message || errorMsg).slice(0, 300))
@@ -162,7 +160,7 @@ const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', err
       ? `Respuesta de: ${modelName || 'Desconocido'} (${tokensUsed} tokens)`
       : `Respuesta de: ${modelName || 'Desconocido'}`;
 
-    const { error } = await supabase.from('api_key_logs').insert([
+    await supabase.from('api_key_logs').insert([
       {
         key_name: keyLabel,
         status,
@@ -170,11 +168,8 @@ const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', err
         action: actionDesc
       }
     ]);
-    if (error) {
-      canSyncApiKeyLogs = false;
-    }
   } catch (e) {
-    canSyncApiKeyLogs = false;
+    console.warn("Log API key error:", e);
   }
 };
 
