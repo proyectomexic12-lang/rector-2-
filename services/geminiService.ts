@@ -538,16 +538,34 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           let text = "";
           let tokensUsed = 0;
 
-        if (provider === 'openai') {
-          // Conexión API OpenAI-Compatible (Groq / OpenRouter / DeepSeek)
-          const res = await fetch(`${baseUrl}/chat/completions`, {
+        if (provider === 'openai' || provider === 'deepseek') {
+          // Detectar dinámicamente la URL Base y modelo óptimo según el tipo de llave
+          let activeBaseUrl = baseUrl;
+          let activeModel = modelName;
+
+          if (key.startsWith('sk-') && !key.startsWith('sk-or-v1-') && !key.startsWith('gsk_')) {
+            // Llave nativa Oficial de DeepSeek (api.deepseek.com)
+            activeBaseUrl = 'https://api.deepseek.com/v1';
+            activeModel = modelName.includes('/') ? 'deepseek-chat' : modelName;
+          } else if (key.startsWith('sk-or-v1-')) {
+            // Llave de OpenRouter
+            activeBaseUrl = 'https://openrouter.ai/api/v1';
+          } else if (key.startsWith('gsk_')) {
+            // Llave de Groq
+            activeBaseUrl = 'https://api.groq.com/openai/v1';
+            activeModel = modelName.includes('/') ? 'llama-3.3-70b-versatile' : modelName;
+          }
+
+          console.log(`[🔍 Orquestador Híbrido] Conectando a ${activeBaseUrl} usando modelo ${activeModel} con llave ${label}...`);
+
+          const res = await fetch(`${activeBaseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${key}`
             },
             body: JSON.stringify({
-              model: modelName,
+              model: activeModel,
               messages: [{ role: "user", content: prompt }],
               temperature: 0.1,
               max_tokens: 4096
