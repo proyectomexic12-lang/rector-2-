@@ -3,10 +3,11 @@ import ReactDOM from 'react-dom';
 import { authService, User, deobfuscate } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import { AREAS, GRADOS } from '../constants';
-import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap, LogIn } from 'lucide-react';
+import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap, LogIn, Search } from 'lucide-react';
 
 export const UserManagement: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState<Record<string, any>>({});
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
@@ -226,6 +227,25 @@ export const UserManagement: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Filter & Counter Bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 relative z-10">
+                    <div className="relative w-full sm:w-80 group/search">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-600 transition-colors">
+                            <Search size={16} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar por docente o correo..."
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200/80 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                        Docentes Registrados: <span className="text-blue-600 font-bold text-xs">{users.filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())).length}</span> / {users.length}
+                    </div>
+                </div>
+
                 {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -239,7 +259,9 @@ export const UserManagement: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="text-sm font-medium text-slate-600">
-                            {users.map((user, i) => {
+                            {users
+                                .filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                                .map((user, i) => {
                                 const isUserUnlimited = authService.isUserUnlimited(user);
                                 return (
                                 <React.Fragment key={i}>
