@@ -1,9 +1,7 @@
 /* Estilos base para I.E. Guaimaral - Docente AI Pro */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --primary: #2563eb;

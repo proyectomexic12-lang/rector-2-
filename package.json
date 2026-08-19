@@ -18,6 +18,8 @@
     "react-dom": "^19.2.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.8",
