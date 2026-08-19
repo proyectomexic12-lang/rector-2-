@@ -486,7 +486,14 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
         // Normalizador defensivo de arreglos para evitar que React lance TypeError .map de undefined
         if (parsed) {
           parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
-          parsed.actividades = Array.isArray(parsed.actividades) ? parsed.actividades : [];
+          parsed.actividades = Array.isArray(parsed.actividades) 
+            ? parsed.actividades.map((act: any, aIdx: number) => ({
+                ...act,
+                sesion: act.sesion || (aIdx + 1),
+                materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Materiales pedagógicos del aula"]),
+                preguntas_socraticas: Array.isArray(act.preguntas_socraticas) ? act.preguntas_socraticas : (act.preguntas_socraticas ? [String(act.preguntas_socraticas)] : [])
+              }))
+            : [];
           parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
           parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
           parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];

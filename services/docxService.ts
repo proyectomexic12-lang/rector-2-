@@ -60,11 +60,15 @@ export const generateDocx = async (data: DidacticSequence, input: SequenceInput)
     if (act.fase_cierre) rows.push(createRow("Fase de Cierre (Transferencia)", act.fase_cierre));
     if (act.descripcion && !act.fase_inicio) rows.push(createRow("Descripción", act.descripcion));
     
-    if (act.preguntas_socraticas && act.preguntas_socraticas.length > 0) {
-      rows.push(createRow("Preguntas Socráticas", act.preguntas_socraticas.join(" | ")));
+    if (act.preguntas_socraticas) {
+      const qs = Array.isArray(act.preguntas_socraticas) ? act.preguntas_socraticas.join(" | ") : String(act.preguntas_socraticas);
+      if (qs.trim().length > 0) rows.push(createRow("Preguntas Socráticas", qs));
     }
     if (act.adi_especifico) rows.push(createRow("Momento ADI / Corporiedad", act.adi_especifico));
-    if (act.materiales && act.materiales.length > 0) rows.push(createRow("Materiales", act.materiales.join(", ")));
+    if (act.materiales) {
+      const mats = Array.isArray(act.materiales) ? act.materiales.join(", ") : String(act.materiales);
+      if (mats.trim().length > 0) rows.push(createRow("Materiales", mats));
+    }
     if (act.imprimibles) rows.push(createRow("Imprimibles / Recursos", act.imprimibles));
 
     return rows;

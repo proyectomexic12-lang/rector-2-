@@ -496,7 +496,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
 
                 <div className="flex gap-2 text-[10px] text-gray-600 bg-white p-1 rounded border border-gray-100 italic">
                   <span className="font-bold text-gray-800">Materiales:</span>
-                  {act.materiales.join(', ')}
+                  {Array.isArray(act.materiales) ? act.materiales.join(', ') : (act.materiales || 'Materiales pedagógicos del aula')}
                 </div>
 
                 {act.adi_especifico && (
