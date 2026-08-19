@@ -95,6 +95,8 @@ alter table app_users add column if not exists unlimited_start_date timestamptz 
 alter table app_users add column if not exists monthly_price numeric default 15000;
 alter table app_users add column if not exists subscription_months int default 1;
 alter table app_users add column if not exists created_at timestamptz default now();
+alter table api_key_logs add column if not exists action text;
+alter table api_key_logs add column if not exists error_message text;
 
 -- ✅ PASO 9: TRIGGER AUTOMÁTICO DE BACKUP AL ELIMINAR REGISTROS
 create or replace function fn_backup_deleted_record()

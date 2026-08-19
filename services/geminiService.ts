@@ -200,19 +200,26 @@ const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', err
       ? `Respuesta de: ${modelName || 'Desconocido'} (${tokensUsed} tokens)`
       : `Respuesta de: ${modelName || 'Desconocido'}`;
 
-    const payload: any = {
+    const payloadWithAction: any = {
       key_name: keyLabel,
       status,
       action: actionDesc
     };
-    if (cleanMsg) payload.error_message = cleanMsg;
+    if (cleanMsg) payloadWithAction.error_message = cleanMsg;
 
-    const { error } = await supabase.from('api_key_logs').insert([payload]);
-    if (error) {
-      console.warn("Cloud log warning:", error.message);
+    const { error } = await supabase.from('api_key_logs').insert([payloadWithAction]);
+    
+    // Si la tabla api_key_logs en Supabase no tiene la columna 'action', reintentamos automáticamente sin ella
+    if (error && (error.message?.includes('action') || error.code === 'PGRST204')) {
+      const fallbackPayload: any = {
+        key_name: keyLabel,
+        status
+      };
+      if (cleanMsg) fallbackPayload.error_message = cleanMsg;
+      await supabase.from('api_key_logs').insert([fallbackPayload]);
     }
   } catch (e) {
-    // Silencioso para no interrumpir el flujo principal
+    // Silencioso para cero interrupciones al usuario
   }
 };
 
