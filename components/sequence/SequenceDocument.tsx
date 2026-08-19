@@ -187,7 +187,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
             <div className="p-2 text-[11px]">
               <p className="text-[9px] text-gray-400 mb-1 no-print italic">Usa el Refinamiento IA para ajustar la lista de contenidos.</p>
               <ul className="list-disc list-inside grid grid-cols-2 gap-x-4">
-                {editableData.contenidos.map((c, i) => <li key={i}>{c}</li>)}
+                {(editableData.contenidos || []).map((c, i) => <li key={i}>{c}</li>)}
               </ul>
             </div>
           </div>
@@ -245,7 +245,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
             <HeaderBox className="border-0 bg-[#EDF7ED]">DESCRIPCIÓN DEL RECURSO</HeaderBox>
           </div>
           <div className="border-l border-r border-b border-gray-400 institutional-section">
-            {editableData.recursos.map((rec, i) => {
+            {(editableData.recursos || []).map((rec, i) => {
               // Regex simple para encontrar URL en la descripción
               const urlMatch = rec.descripcion.match(/(https?:\/\/[^\s]+)/);
               const foundUrl = urlMatch ? urlMatch[0] : null;
@@ -399,7 +399,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
         <div className={`mt-6 pt-2 border-t-2 border-dashed border-gray-300 font-sans print:mt-4 print:pt-1 ${activeView === 'estudiante' ? 'hidden print:block' : ''}`}>
           <h3 className="text-center font-bold text-gray-400 uppercase text-[10px] mb-4">- ANEXO 1: DESGLOSE DE SESIONES -</h3>
           <div className="grid gap-2 print:gap-1">
-            {editableData.actividades.map((act, idx) => (
+            {(editableData.actividades || []).map((act, idx) => (
               <div key={idx} className="border border-gray-300 rounded p-3 bg-gray-50 break-inside-avoid shadow-sm group activity-block">
                 <div className="font-bold text-sm mb-1 text-black flex justify-between">
                   <span>Sesión {act.sesion} ({act.tiempo})</span>
@@ -460,7 +460,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
                   <div className="mb-3 bg-orange-50 p-2 rounded border border-orange-200">
                     <span className="font-bold text-[11px] text-orange-800 uppercase tracking-wider mb-1 block">🤔 Preguntas Socráticas (Guía para el Docente)</span>
                     <ul className="list-disc pl-4 text-[11px] text-orange-900 leading-relaxed">
-                      {act.preguntas_socraticas.map((q, qidx) => (
+                      {(act.preguntas_socraticas || []).map((q, qidx) => (
                         <li key={qidx}>
                           <EditableContent
                             value={q}
@@ -536,7 +536,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
                   </tr>
                 </thead>
                 <tbody>
-                  {editableData.rubrica.map((rub, i) => (
+                  {(editableData.rubrica || []).map((rub, i) => (
                     <tr key={i} className="bg-white">
                       <td className="font-bold text-gray-900 border-b border-gray-300">
                         <EditableContent
@@ -626,7 +626,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
             )}
 
             <div className="grid grid-cols-1 gap-2 print:gap-1">
-              {editableData.evaluacion.map((ev, i) => (
+              {(editableData.evaluacion || []).map((ev, i) => (
                 <div key={i} className="border border-gray-300 p-3 rounded bg-gray-50 break-inside-avoid shadow-sm group evaluation-card">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
@@ -691,7 +691,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
                 <Lock size={12} className="text-blue-400" /> Clave de Respuestas (Teacher Only)
               </h5>
               <div className="grid grid-cols-5 gap-2">
-                {editableData.evaluacion.map((ev, i) => (
+                {(editableData.evaluacion || []).map((ev, i) => (
                   <div key={i} className="flex gap-2 text-[10px]">
                     <span className="text-slate-500">{i + 1}.</span>
                     <span className="font-bold text-blue-400">{ev.respuesta_correcta || 'N/A'}</span>
@@ -757,7 +757,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
 
           <div className="space-y-4">
             <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-1 mb-2">Actividades a Desarrollar</h4>
-            {editableData.taller_imprimible.ejercicios.map((ej, i) => (
+            {(editableData.taller_imprimible?.ejercicios || []).map((ej, i) => (
               <div key={i} className="pl-2 border-l-2 border-gray-100 pb-2">
                 <div className="flex gap-3">
                   <span className="font-bold text-gray-400 text-xs">{i + 1}.</span>

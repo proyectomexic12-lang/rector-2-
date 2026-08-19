@@ -684,8 +684,30 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
         }
 
+        // Normalizador defensivo de arreglos para evitar que React lance TypeError .map de undefined
+        if (parsed) {
+          parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
+          parsed.actividades = Array.isArray(parsed.actividades) ? parsed.actividades : [];
+          parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
+          parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
+          parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];
+          parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
+
+          if (!parsed.taller_imprimible) {
+            parsed.taller_imprimible = {
+              introduccion: "Taller pedagógico de aplicación",
+              instrucciones: "Resuelve las actividades con dedicación.",
+              bitacora_test_inicial: "Saberes previos del tema",
+              ejercicios: ["Ejercicio de práctica 1"],
+              reto_creativo: "Reto creativo de aplicación"
+            };
+          } else if (!Array.isArray(parsed.taller_imprimible.ejercicios)) {
+            parsed.taller_imprimible.ejercicios = [parsed.taller_imprimible.ejercicios || "Ejercicio de práctica 1"];
+          }
+        }
+
         // Auto-corrección y saneamiento de la Rúbrica (Garantiza los 4 niveles colombianos Decreto 1290)
-        if (parsed && Array.isArray(parsed.rubrica)) {
+        if (parsed && Array.isArray(parsed.rubrica) && parsed.rubrica.length > 0) {
           parsed.rubrica = parsed.rubrica.map((item: any) => {
             const crit = item.criterio || "Criterio de Evaluación";
             const bajoClean = (item.bajo && item.bajo.trim().length > 0) 
