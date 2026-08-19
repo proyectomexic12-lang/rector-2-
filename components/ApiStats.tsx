@@ -52,13 +52,19 @@ export const ApiStats: React.FC = () => {
                     .gte('timestamp', todayStart);
 
                 // Last Action
-                const { data: lastActionData } = await supabase
-                    .from('api_key_logs')
-                    .select('timestamp, action')
-                    .eq('key_name', label)
-                    .order('timestamp', { ascending: false })
-                    .limit(1)
-                    .single();
+                let lastActionData: any = null;
+                try {
+                    const { data } = await supabase
+                        .from('api_key_logs')
+                        .select('timestamp')
+                        .eq('key_name', label)
+                        .order('timestamp', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    lastActionData = data;
+                } catch (e) {
+                    // Silencioso
+                }
 
                 newCloudMetrics[label] = {
                     success: success || 0,
