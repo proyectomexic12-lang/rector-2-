@@ -103,6 +103,30 @@ getAvailableKeysInfo().forEach(k => {
   };
 });
 
+export const resetApiMetrics = async () => {
+  try {
+    localStorage.removeItem('guaimaral_api_metrics_v2');
+    Object.keys(apiMetrics).forEach(key => delete apiMetrics[key]);
+    getAvailableKeysInfo().forEach(k => {
+      apiMetrics[k.id] = {
+        requests: 0,
+        success: 0,
+        errors: 0,
+        tokens: 0,
+        lastUsed: "",
+        label: k.label,
+        errorLogs: []
+      };
+    });
+    saveMetricsToStorage();
+    if (supabase) {
+      await supabase.from('api_key_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    }
+  } catch (e) {
+    console.warn("Reset metrics error:", e);
+  }
+};
+
 const sanitizeInput = (text: string | undefined): string => {
   if (!text) return "";
   return text.trim().replace(/['"<>]/g, "");

@@ -1,5 +1,5 @@
-import { Cpu, Zap, Info, BarChart, Server } from 'lucide-react';
-import { modelHealthStatus, apiMetrics, getAvailableKeysInfo } from '../services/geminiService';
+import { Cpu, Zap, Info, BarChart, Server, RotateCcw } from 'lucide-react';
+import { modelHealthStatus, apiMetrics, getAvailableKeysInfo, resetApiMetrics } from '../services/geminiService';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
@@ -9,6 +9,15 @@ export const ApiStats: React.FC = () => {
     const [cloudMetrics, setCloudMetrics] = useState<any>(null);
 
     const keysInfo = getAvailableKeysInfo();
+
+    const handleResetMetrics = async () => {
+        if (window.confirm("¿Deseas reiniciar los contadores de métricas e historial de fallos antiguos?")) {
+            await resetApiMetrics();
+            setCloudMetrics(null);
+            await fetchGlobalMetrics();
+            setTick(t => t + 1);
+        }
+    };
 
     const fetchGlobalMetrics = async () => {
         if (!supabase || keysInfo.length === 0) return;
@@ -130,14 +139,23 @@ export const ApiStats: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 bg-white/50 px-5 py-3 rounded-2xl border border-white/50 backdrop-blur-sm self-start md:self-center">
-                    <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rotación Failover</span>
-                        <span className="text-sm font-black text-green-600">{keysInfo.length} LLAVES EN LINEA</span>
-                    </div>
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-30"></div>
-                        <div className="relative w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-sm"></div>
+                <div className="flex flex-wrap items-center gap-3 self-start md:self-center">
+                    <button
+                        onClick={handleResetMetrics}
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 text-[10px] font-black uppercase tracking-wider rounded-2xl transition-all shadow-sm active:scale-95"
+                        title="Limpiar fallos antiguos y reiniciar contadores de métricas"
+                    >
+                        <RotateCcw size={14} className="text-blue-600" /> Reiniciar Contadores
+                    </button>
+                    <div className="flex items-center gap-4 bg-white/50 px-5 py-3 rounded-2xl border border-white/50 backdrop-blur-sm">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rotación Failover</span>
+                            <span className="text-sm font-black text-green-600">{keysInfo.length} LLAVES EN LINEA</span>
+                        </div>
+                        <div className="relative flex items-center justify-center">
+                            <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-30"></div>
+                            <div className="relative w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-sm"></div>
+                        </div>
                     </div>
                 </div>
             </div>
