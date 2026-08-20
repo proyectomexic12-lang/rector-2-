@@ -282,16 +282,16 @@ function App() {
             <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block"></div>
 
             {/* User Profile & Credits */}
-            <div className="flex items-center gap-3 pl-2">
+            <div className="flex items-center gap-1.5 sm:gap-3 pl-1 sm:pl-2 shrink-0">
               
-              {/* Subscription Badge (Para todos los usuarios autenticados) */}
+              {/* Subscription Badge */}
               {currentUser && (
                 authService.isUserUnlimited(currentUser) ? (
-                  <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
+                  <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
                     <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Plan:</span>
-                    <span className="text-xs font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
-                      <Sparkles size={12} /> {
-                        currentUser.role === 'admin' ? 'ADMINISTRADOR' :
+                    <span className="text-[9px] sm:text-xs font-black bg-emerald-600 text-white px-2 sm:px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1 uppercase tracking-wider">
+                      <Sparkles size={11} /> {
+                        currentUser.role === 'admin' ? 'ADMIN' :
                         currentUser.subscription_months === 6 ? 'SEMESTRAL' :
                         currentUser.subscription_months === 3 ? 'TRIMESTRAL' :
                         currentUser.subscription_months === 1 ? 'MENSUAL' : 'ILIMITADO'
@@ -299,11 +299,10 @@ function App() {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1.5 rounded-xl border border-red-200 shadow-sm animate-pulse" title="No cuentas con una suscripción activa">
-                    <AlertTriangle size={14} className="text-red-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block text-red-600">Estado:</span>
-                    <span className="text-[10px] font-black bg-red-600 text-white px-2 py-0.5 rounded-md shadow-sm uppercase tracking-widest">
-                      SIN SUSCRIPCIÓN
+                  <div className="flex items-center gap-1 bg-red-50 text-red-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-red-200 shadow-sm animate-pulse" title="No cuentas con una suscripción activa">
+                    <AlertTriangle size={12} className="text-red-500 shrink-0" />
+                    <span className="text-[9px] font-black bg-red-600 text-white px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm uppercase tracking-widest">
+                      SIN PAGO
                     </span>
                   </div>
                 )
@@ -316,18 +315,18 @@ function App() {
 
               <button
                 onClick={() => setShowProfile(!showProfile)}
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-sm ${showProfile ? 'bg-indigo-600 text-white shadow-indigo-500/30' : 'bg-white text-slate-400 hover:text-indigo-600 border border-slate-200'}`}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all shadow-sm shrink-0 ${showProfile ? 'bg-indigo-600 text-white shadow-indigo-500/30' : 'bg-white text-slate-500 hover:text-indigo-600 border border-slate-200'}`}
                 title="Mi Cuenta"
               >
-                <UserIcon size={18} />
+                <UserIcon size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
 
               <button
                 onClick={handleAppLogout}
-                className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-red-50 text-red-600 border border-red-100 sm:bg-white sm:text-slate-400 sm:border-slate-200 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm flex items-center justify-center shrink-0"
                 title="Cerrar Sesión"
               >
-                <LogOut size={18} />
+                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
             </div>
           </div>
@@ -337,36 +336,44 @@ function App() {
         {showProfile && currentUser && (
           <div className="fixed inset-0 sm:absolute sm:inset-auto sm:top-full sm:right-4 mt-0 sm:mt-4 z-50 flex items-center justify-center sm:block">
             {/* Backdrop for mobile */}
-            <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm sm:hidden" onClick={() => setShowProfile(false)}></div>
+            <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm sm:hidden" onClick={() => setShowProfile(false)}></div>
 
-            <div className="relative w-[90%] max-w-[400px] sm:w-96 bg-white rounded-[2.5rem] shadow-2xl p-8 border border-slate-100 animate-fade-in-up overflow-hidden">
+            <div className="relative w-[92%] max-w-[400px] sm:w-96 bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl p-6 sm:p-8 border border-slate-100 animate-fade-in-up overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
-                  <Shield size={24} />
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner shrink-0">
+                  <Shield size={22} />
                 </div>
                 <div>
-                  <h3 className="font-black text-xl text-slate-800 tracking-tight">Mi Cuenta</h3>
+                  <h3 className="font-black text-lg sm:text-xl text-slate-800 tracking-tight">Mi Cuenta</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Configuración de Seguridad</p>
                 </div>
               </div>
 
-              <div className="space-y-1 mb-8">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="space-y-1 mb-6">
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Usuario Identificado</span>
-                  <span className="block text-sm font-bold text-slate-700 truncate">{currentUser.email}</span>
+                  <span className="block text-xs sm:text-sm font-bold text-slate-700 truncate">{currentUser.email}</span>
                 </div>
               </div>
 
               <PasswordChange email={currentUser.email} />
 
-              <div className="mt-8 pt-6 border-t border-slate-100 flex justify-center">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                 <button
                   onClick={() => setShowProfile(false)}
-                  className="px-6 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all uppercase tracking-widest"
+                  className="px-4 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all uppercase tracking-widest"
                 >
-                  Cerrar Panel
+                  Cerrar
+                </button>
+
+                <button
+                  onClick={() => { setShowProfile(false); handleAppLogout(); }}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-red-600/20 flex items-center gap-1.5 uppercase tracking-widest"
+                >
+                  <LogOut size={14} />
+                  <span>Salir</span>
                 </button>
               </div>
             </div>
