@@ -477,8 +477,25 @@ function App() {
                         <span className="text-[10px] text-blue-200 uppercase tracking-[0.3em] font-bold mb-1 opacity-80">Llave / Celular</span>
                         320 595 7019
                       </div>
-                      <p className="text-xs sm:text-sm text-red-100 font-bold uppercase tracking-wider">
-                        Envía el pantallazo del pago a este mismo número por WhatsApp para activación inmediata.
+                      <p className="text-xs sm:text-sm text-emerald-200 font-black uppercase tracking-wider bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/30">
+                        ⚡ Activación Automática: Al realizar el pago, tu suscripción y el acceso a planeaciones sin límites se activan automáticamente al instante.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* AVISO A DOCENTES SUBSCRIBIERTOS (POLÍTICA DISPOSITIVOS) */}
+                {currentUser && authService.isUserUnlimited(currentUser) && (
+                  <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-sm">
+                    <div className="bg-emerald-600 text-white p-2.5 rounded-xl shrink-0 shadow-md">
+                      <ShieldCheck size={22} />
+                    </div>
+                    <div className="text-center sm:text-left flex-1">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-emerald-800 mb-1">
+                        ℹ️ Uso de Cuenta & Licencia Personal Docente
+                      </h4>
+                      <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-700">
+                        <strong>Queridos profesores:</strong> Por su suscripción tienen derecho a utilizar su cuenta personal en <strong>1 Celular y 1 Computador Personal</strong> para realizar sus planeaciones. Recordamos que el acceso es personal e intransferible; cualquier manejo indebido o préstamo de credenciales será analizado por la administración institucional.
                       </p>
                     </div>
                   </div>
