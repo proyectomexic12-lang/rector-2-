@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
-import { Database, FileText, Download, Calendar, User, Search, Trash2, Activity, Clock, BarChart3, TrendingUp } from 'lucide-react';
+import { Database, FileText, Download, Calendar, User, Search, Trash2, Activity, Clock, BarChart3, TrendingUp, Lock } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { User as UserType } from '../services/authService';
 
-export const AdminSequenceViewer: React.FC<{ userEmail?: string }> = ({ userEmail }) => {
+interface AdminSequenceViewerProps {
+    userEmail?: string;
+    user?: UserType | null;
+    creditsLeft?: number | null;
+}
+
+export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEmail, user, creditsLeft }) => {
     const [sequences, setSequences] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [stats, setStats] = useState<any>(null);
+
+    // Unpaid/expired teacher detection: non-admin, non-unlimited user with 0 credits left
+    const isUnlimited = user ? authService.isUserUnlimited(user) : true;
+    const isUnpaidTeacher = userEmail && user && user.role !== 'admin' && !isUnlimited && (creditsLeft === 0 || creditsLeft === null);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -117,6 +127,23 @@ export const AdminSequenceViewer: React.FC<{ userEmail?: string }> = ({ userEmai
             {isLoading ? (
                 <div className="flex justify-center py-20">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            ) : isUnpaidTeacher ? (
+                <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-[2rem] p-8 sm:p-12 text-center shadow-2xl relative overflow-hidden my-6 border border-indigo-900">
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-red-500/10 rounded-full blur-3xl"></div>
+                    <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-red-500/30">
+                        <Lock size={32} />
+                    </div>
+                    <h4 className="text-2xl font-black tracking-tight mb-3">
+                        🔒 Historial de Planeaciones Protegido
+                    </h4>
+                    <p className="text-slate-300 text-sm max-w-xl mx-auto leading-relaxed mb-6 font-medium">
+                        Tus planeaciones guardadas anteriormente se encuentran protegidas en el repositorio de la I.E. Guaimaral. Para volver a acceder, visualizarlas o descargarlas, debes renovar tu suscripción o solicitar la activación al Administrador.
+                    </p>
+                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl max-w-md mx-auto border border-white/10 text-xs text-slate-200">
+                        <p className="font-bold text-white mb-1">💳 Restablecimiento Automático</p>
+                        <p>Tan pronto como el Administrador active tu cuenta o recargue tus créditos, todas tus planeaciones anteriores se restablecerán automáticamente.</p>
+                    </div>
                 </div>
             ) : filteredSequences.length === 0 ? (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-slate-400">

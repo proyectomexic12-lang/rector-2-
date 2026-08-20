@@ -382,7 +382,11 @@ function App() {
             {activeTab === 'monitor' && currentUser?.role === 'admin' && <ApiStats />}
             {activeTab === 'users' && currentUser?.role === 'admin' && <UserManagement />}
             {activeTab === 'history' && (
-              <AdminSequenceViewer userEmail={currentUser?.role === 'admin' ? undefined : currentUser?.email} />
+              <AdminSequenceViewer
+                userEmail={currentUser?.role === 'admin' ? undefined : currentUser?.email}
+                user={currentUser}
+                creditsLeft={creditsLeft}
+              />
             )}
             {activeTab === 'security' && currentUser?.role === 'admin' && <SecurityDashboard />}
 
