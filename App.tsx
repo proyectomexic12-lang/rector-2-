@@ -7,7 +7,7 @@ import { AdminSequenceViewer } from './components/AdminSequenceViewer';
 import { SecurityDashboard } from './components/SecurityDashboard';
 import { SequenceInput } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService } from './services/authService';
 import { useAuth } from './context/AuthContext';
