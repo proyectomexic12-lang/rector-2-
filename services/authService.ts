@@ -243,6 +243,79 @@ export const authService = {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
     },
 
+    // --- ANTI-ACCOUNT SHARING SYSTEM (CONTROL DE DISPOSITIVOS Y SESIÓN ÚNICA) ---
+    getDeviceId: (): string => {
+        let devId = localStorage.getItem('guaimaral_device_id');
+        if (!devId) {
+            devId = 'DEV-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now();
+            localStorage.setItem('guaimaral_device_id', devId);
+        }
+        return devId;
+    },
+
+    registerSession: async (email: string): Promise<string> => {
+        const lowEmail = email.toLowerCase().trim();
+        const devId = authService.getDeviceId();
+        const sessionToken = `ST-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        
+        localStorage.setItem(`guaimaral_session_token`, sessionToken);
+        localStorage.setItem(`guaimaral_active_session_${lowEmail}`, sessionToken);
+
+        if (supabase) {
+            try {
+                await supabase.from('active_sessions').upsert({
+                    email: lowEmail,
+                    session_token: sessionToken,
+                    device_id: devId,
+                    user_agent: navigator.userAgent.substring(0, 100),
+                    updated_at: new Date().toISOString()
+                });
+            } catch (e) { }
+        }
+
+        console.log(`🛡️ Sesión activa registrada para ${lowEmail}: ${sessionToken}`);
+        return sessionToken;
+    },
+
+    validateSession: async (email: string): Promise<boolean> => {
+        if (!email) return true;
+        const lowEmail = email.toLowerCase().trim();
+        const localToken = localStorage.getItem(`guaimaral_session_token`);
+        if (!localToken) return true;
+
+        const activeLocal = localStorage.getItem(`guaimaral_active_session_${lowEmail}`);
+        if (activeLocal && activeLocal !== localToken) {
+            return false;
+        }
+
+        if (supabase) {
+            try {
+                const { data } = await supabase
+                    .from('active_sessions')
+                    .select('session_token')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+
+                if (data && data.session_token && data.session_token !== localToken) {
+                    return false;
+                }
+            } catch (e) { }
+        }
+
+        return true;
+    },
+
+    revokeSessions: async (email: string) => {
+        const lowEmail = email.toLowerCase().trim();
+        localStorage.removeItem(`guaimaral_active_session_${lowEmail}`);
+        if (supabase) {
+            try {
+                await supabase.from('active_sessions').delete().eq('email', lowEmail);
+            } catch (e) { }
+        }
+        console.log(`🔒 Sesiones inactivadas para ${lowEmail}.`);
+    },
+
     updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number, password?: string }) => {
         const lowEmail = email.toLowerCase().trim();
         console.log(`🛠️ Iniciando guardado para: ${lowEmail}`, settings);

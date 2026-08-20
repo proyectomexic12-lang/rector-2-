@@ -93,6 +93,22 @@ function App() {
     }
   }, [activeTab, isAuthenticated]);
 
+  // 1.6 Periodic Anti-Account Sharing Session Validation
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.email && currentUser.role !== 'admin') {
+      const checkSession = async () => {
+        const isValid = await authService.validateSession(currentUser.email);
+        if (!isValid) {
+          alert("🚨 Sesión Inactivada por Seguridad\n\nTu cuenta ha sido iniciada desde otro dispositivo o navegador. Por políticas de la I.E. Guaimaral, no está permitido compartir cuentas entre docentes. Cada profesor debe usar su propia cuenta personal.");
+          handleAppLogout();
+        }
+      };
+
+      const interval = setInterval(checkSession, 12000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, currentUser?.email]);
+
   // 2. Persistencia de entrada (No persiste contenido generado)
   useEffect(() => {
     if (isAuthenticated && currentUser) {
@@ -117,6 +133,17 @@ function App() {
 
     setIsLoading(true);
     setError(null);
+
+    // ANTI-CUENTA COMPARTIDA: Verificar si otra persona inició sesión con este correo
+    if (currentUser?.email && currentUser.role !== 'admin') {
+      const isSessionValid = await authService.validateSession(currentUser.email);
+      if (!isSessionValid) {
+        alert("🚨 Sesión Inactivada por Seguridad\n\nTu cuenta ha sido iniciada desde otro dispositivo. Por políticas institucionales de la I.E. Guaimaral, no está permitido compartir cuentas entre docentes. Cada profesor debe usar su propia cuenta personal.");
+        handleAppLogout();
+        setIsLoading(false);
+        return;
+      }
+    }
 
     // CRÉDITOS SEMANALES: Bloqueo si el usuario supera su límite (Exento si es ilimitado o admin)
     const isUnlimitedUser = currentUser && authService.isUserUnlimited(currentUser);
