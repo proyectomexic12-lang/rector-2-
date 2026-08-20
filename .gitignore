@@ -23,4 +23,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-# *.sql removed to allow database guides
+# Credentials & Scratch files
+CREDENCIALES_PROFESORES.txt
+scratch_*
+fetch_passwords.mjs
+test_gemini.mjs
+DEBUG_SESSION.js

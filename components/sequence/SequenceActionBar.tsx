@@ -1,17 +1,33 @@
-import React from 'react';
-import { Printer, FileDown, CheckCircle, PenTool } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, FileDown, BookOpen, GraduationCap, Copy, ArrowLeft, FileText, ChevronDown } from 'lucide-react';
+import { generateDocx } from '../../services/docxService';
+import { DidacticSequence, SequenceInput } from '../../types';
 
 interface SequenceActionBarProps {
   onReset: () => void;
   onPrint: (mode: 'all' | 'planning' | 'anexos') => void;
+  activeView: 'docente' | 'estudiante';
+  setActiveView: (view: 'docente' | 'estudiante') => void;
+  editableData?: DidacticSequence;
+  input?: SequenceInput;
 }
 
-export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({ onReset, onPrint }) => {
+export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
+  onReset,
+  onPrint,
+  activeView,
+  setActiveView,
+  editableData,
+  input
+}) => {
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
+
   const handleCopyText = () => {
     const el = document.getElementById('preview-container');
     if (el) {
       navigator.clipboard.writeText(el.innerText);
-      alert("¡Texto copiado al portapapeles!");
+      alert("¡Texto de la planeación copiado al portapapeles!");
     }
   };
 
@@ -21,7 +37,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({ onReset, o
     
     const opt = {
       margin:       10,
-      filename:     'Planeacion_Docente_Guaimaral.pdf',
+      filename:     `Planeacion_${input?.tema || 'Guaimaral'}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -32,78 +48,142 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({ onReset, o
       // @ts-ignore
       window.html2pdf().set(opt).from(element).save();
     } else {
-      alert("La librería de PDF está cargando, intenta en un segundo.");
+      alert("La librería de PDF está cargando, por favor intenta en un segundo.");
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!editableData || !input) return;
+    try {
+      setIsExportingDocx(true);
+      await generateDocx(editableData, input);
+    } catch (e) {
+      console.error("Error al exportar DOCX:", e);
+      alert("No se pudo generar el archivo Word (.docx). Revisa la consola.");
+    } finally {
+      setIsExportingDocx(false);
     }
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-md sticky top-20 z-40 p-3 rounded-2xl shadow-lg border border-white/50 mb-8 no-print flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:shadow-xl ring-1 ring-blue-50">
-      <div className="flex items-center gap-4 pl-2">
-        <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-2.5 rounded-xl text-white shadow-lg shadow-green-500/30">
-          <CheckCircle className="h-6 w-6" />
-        </div>
-        <div>
-          <h2 className="text-xl font-black text-gray-800 tracking-tight">Secuencia Lista</h2>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <p className="text-xs font-bold uppercase text-green-600 tracking-wider">Formato Institucional v2.1</p>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-3 w-full md:w-auto">
+    <div className="bg-slate-900/90 backdrop-blur-xl sticky top-4 z-50 p-2.5 sm:p-3 rounded-2xl shadow-2xl border border-white/10 mb-6 no-print flex flex-col md:flex-row items-center justify-between gap-3 text-white transition-all">
+      
+      {/* Izquierda: Botón Volver + Badge Minimalista */}
+      <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
         <button
           onClick={() => {
-            if (confirm("Si vuelves al inicio, se borrará lo hecho anteriormente. ¿Estás seguro?")) {
+            if (confirm("¿Estás seguro de regresar al inicio? Se descompilará la vista actual.")) {
               onReset();
             }
           }}
-          className="flex-1 md:flex-none justify-center flex items-center gap-2 px-6 py-3 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all font-bold shadow-sm"
+          className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all border border-slate-700/50 hover:text-white flex items-center gap-2 text-xs font-bold"
+          title="Regresar al inicio"
         >
-          <span className="text-lg">↩️</span>
-          <span className="hidden sm:inline">Volver</span>
+          <ArrowLeft size={16} />
+          <span className="hidden sm:inline">Inicio</span>
+        </button>
+
+        <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/50">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">I.E. Guaimaral Pro</span>
+        </div>
+      </div>
+
+      {/* Centro: Selector de Vista Minimalista (Segmented Control) */}
+      <div className="bg-slate-800/90 p-1 rounded-xl border border-slate-700/60 flex items-center gap-1 w-full md:w-auto justify-center">
+        <button
+          onClick={() => setActiveView('docente')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+            activeView === 'docente'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+          }`}
+        >
+          <BookOpen size={14} />
+          <span>Vista Docente</span>
         </button>
 
         <button
-          onClick={handleCopyText}
-          className="flex-1 md:flex-none justify-center flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900 transition-all font-bold shadow-sm"
-          title="Copiar todo el texto"
+          onClick={() => setActiveView('estudiante')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+            activeView === 'estudiante'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+          }`}
         >
-          <span className="text-lg">📋</span>
-          <span className="hidden sm:inline">Copiar</span>
+          <GraduationCap size={15} />
+          <span>Taller Fotocopia</span>
+        </button>
+      </div>
+
+      {/* Derecha: Acciones de Exportación & Impresión Minimalistas */}
+      <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+        <button
+          onClick={handleCopyText}
+          className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700/50 transition-all text-xs font-bold flex items-center gap-1.5"
+          title="Copiar texto"
+        >
+          <Copy size={14} />
+          <span className="hidden xl:inline">Copiar</span>
         </button>
 
-        <div className="flex flex-wrap gap-2">
+        {editableData && (
           <button
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all font-bold shadow-lg shadow-indigo-500/30"
+            onClick={handleDownloadDocx}
+            disabled={isExportingDocx}
+            className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            title="Descargar en Microsoft Word (.docx)"
           >
-            <FileDown className="h-5 w-5" />
-            PDF Nativo
+            <FileText size={14} />
+            <span>{isExportingDocx ? 'Word...' : 'DOCX'}</span>
           </button>
-          
+        )}
+
+        <button
+          onClick={handleDownloadPDF}
+          className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
+          title="Descargar PDF"
+        >
+          <FileDown size={14} />
+          <span>PDF</span>
+        </button>
+
+        {/* Menú Desplegable Imprimir */}
+        <div className="relative">
           <button
-            onClick={() => onPrint('all')}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 active:scale-95 transition-all font-bold shadow-lg shadow-slate-500/30"
+            onClick={() => setShowPrintMenu(!showPrintMenu)}
+            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
           >
-            <Printer className="h-5 w-5" />
-            Imprimir Todo
+            <Printer size={14} />
+            <span>Imprimir</span>
+            <ChevronDown size={12} />
           </button>
-          <button
-            onClick={() => onPrint('planning')}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all font-bold shadow-lg shadow-blue-500/30"
-          >
-            <PenTool className="h-5 w-5" />
-            Sólo Planeación
-          </button>
-          <button
-            onClick={() => onPrint('anexos')}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all font-bold shadow-lg shadow-indigo-500/30"
-          >
-            <FileDown className="h-5 w-5" />
-            Sólo Anexos
-          </button>
+
+          {showPrintMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-1.5 z-50 text-xs font-bold space-y-1 animate-fade-in-up">
+              <button
+                onClick={() => { onPrint('all'); setShowPrintMenu(false); }}
+                className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+              >
+                🖨️ Todo el Documento
+              </button>
+              <button
+                onClick={() => { onPrint('planning'); setShowPrintMenu(false); }}
+                className="w-full text-left px-3 py-2 text-blue-400 hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2"
+              >
+                📘 Solo Planeación Docente
+              </button>
+              <button
+                onClick={() => { onPrint('anexos'); setShowPrintMenu(false); }}
+                className="w-full text-left px-3 py-2 text-emerald-400 hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2"
+              >
+                📝 Solo Taller Estudiante
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   );
 };

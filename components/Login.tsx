@@ -54,107 +54,98 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-outfit p-0 sm:p-6 md:p-12 overflow-hidden selection:bg-blue-100 relative">
+        <div className="min-h-screen h-screen bg-slate-50 flex items-center justify-center font-outfit p-3 sm:p-6 overflow-hidden selection:bg-blue-100 relative">
             {/* Ambient Background Fallback Mesh */}
-            <div className="absolute inset-0 bg-mesh-gradient opacity-30 mix-blend-multiply"></div>
+            <div className="absolute inset-0 bg-mesh-gradient opacity-30 mix-blend-multiply pointer-events-none"></div>
 
-            {/* Main Container mirroring the split layout of the reference */}
-            <div className="w-full max-w-[1100px] h-full min-h-[600px] bg-white/80 backdrop-blur-2xl sm:rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white flex flex-col md:flex-row overflow-hidden relative z-10">
+            {/* Main Container */}
+            <div className="w-full max-w-[920px] bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-white flex flex-col md:flex-row overflow-hidden relative z-10 my-auto">
 
-                {/* Left Side: Illustration & Branding (Inspired by the drawing) */}
-                <div className="w-full md:w-1/2 bg-[#f0f7ff]/50 relative p-12 flex flex-col items-center justify-center overflow-hidden">
-                    {/* Abstract Decorative Elements (Circles/Waves from image) */}
-                    <div className="absolute bottom-[-50px] right-[-50px] w-64 h-64 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute top-[-50px] left-[-50px] w-64 h-64 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                {/* Left Side: Branding & Illustration */}
+                <div className="w-full md:w-5/12 bg-[#f0f7ff]/80 relative p-5 sm:p-6 flex flex-col items-center justify-center overflow-hidden border-b md:border-b-0 md:border-r border-blue-50 shrink-0">
+                    <div className="absolute bottom-[-30px] right-[-30px] w-40 h-40 bg-blue-400/20 rounded-full blur-2xl pointer-events-none"></div>
+                    <div className="absolute top-[-30px] left-[-30px] w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none"></div>
 
-                    {/* Central Illustration Area */}
-                    <div className="relative z-10 w-full max-w-sm">
-                        <div className="relative flex flex-col items-center">
-                            {/* Institutions Logo with Halo */}
-                            <div className="relative mb-8 group">
-                                <div className="absolute inset-0 bg-blue-400 blur-3xl opacity-20 group-hover:opacity-40 transition-all duration-700"></div>
-                                <div className="relative w-32 h-32 bg-white rounded-[2.5rem] p-5 shadow-2xl border border-blue-50 overflow-hidden flex items-center justify-center transform hover:rotate-3 transition-transform">
-                                    <img src="/logo_guaimaral.png" alt="Logo Institucional" className="w-full h-full object-contain" />
-                                </div>
+                    <div className="relative z-10 w-full flex flex-row md:flex-col items-center justify-between md:justify-center text-left md:text-center gap-4">
+                        <div className="relative group shrink-0">
+                            <div className="absolute inset-0 bg-blue-400 blur-xl opacity-20 group-hover:opacity-40 transition-all duration-700"></div>
+                            <div className="relative w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 shadow-lg border border-blue-50 flex items-center justify-center transform hover:rotate-3 transition-transform">
+                                <img src="/logo_guaimaral.png" alt="Logo Institucional" className="w-full h-full object-contain" />
                             </div>
+                        </div>
 
-                            {/* Visual Teaser */}
-                            <div className="text-center space-y-4">
-                                <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight">
-                                    Docente <span className="text-blue-600">AI</span> Pro
-                                </h2>
-                                <p className="text-slate-500 font-medium max-w-[280px] mx-auto text-sm leading-relaxed">
-                                    Transformando la planeación pedagógica con inteligencia artificial avanzada.
-                                </p>
+                        <div>
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-tight mb-1">
+                                Docente <span className="text-blue-600">AI</span> Pro
+                            </h2>
+                            <p className="text-slate-500 font-medium text-xs max-w-[240px] leading-relaxed hidden sm:block">
+                                Planificación Didáctica con Inteligencia Artificial
+                            </p>
+                        </div>
+
+                        <div className="hidden md:flex flex-wrap justify-center gap-1.5 mt-2">
+                            <div className="px-2.5 py-1 bg-white rounded-lg shadow-2xs border border-slate-100 flex items-center gap-1">
+                                <ShieldCheck size={12} className="text-blue-500" />
+                                <span className="text-[8px] font-black text-slate-700 uppercase tracking-wider">Acceso Seguro</span>
                             </div>
-
-                            {/* Floating Stats or Tags like in image */}
-                            <div className="mt-12 flex gap-3">
-                                <div className="px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center gap-2 animate-float">
-                                    <ShieldCheck size={14} className="text-blue-500" />
-                                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">Acceso Seguro</span>
-                                </div>
-                                <div className="px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center gap-2 animate-float [animation-delay:1s]">
-                                    <School size={14} className="text-indigo-500" />
-                                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">I.E. Guaimaral</span>
-                                </div>
+                            <div className="px-2.5 py-1 bg-white rounded-lg shadow-2xs border border-slate-100 flex items-center gap-1">
+                                <School size={12} className="text-indigo-500" />
+                                <span className="text-[8px] font-black text-slate-700 uppercase tracking-wider">I.E. Guaimaral</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right Side: Login Form (Clean & Professional) */}
-                <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center bg-white">
-                    <div className="max-w-sm mx-auto w-full">
-                        <div className="mb-10 text-center md:text-left">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Ingreso de Personal</h1>
-                            <p className="text-slate-400 text-sm font-medium">Ingresa tus credenciales institucionales para continuar.</p>
+                {/* Right Side: Login Form */}
+                <div className="w-full md:w-7/12 p-5 sm:p-8 flex flex-col justify-center bg-white">
+                    <div className="max-w-xs sm:max-w-sm mx-auto w-full">
+                        <div className="mb-4 text-center md:text-left">
+                            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-0.5">Ingreso de Personal</h1>
+                            <p className="text-slate-400 text-xs font-medium">Ingresa tus credenciales institucionales.</p>
                         </div>
 
-                        <form onSubmit={handleLogin} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1 flex items-center gap-2">
-                                    <Mail size={12} className="text-blue-500" /> Correo Electrónico
+                        <form onSubmit={handleLogin} className="space-y-3">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[1.5px] ml-1 flex items-center gap-1">
+                                    <Mail size={11} className="text-blue-500" /> Correo Electrónico
                                 </label>
-                                <div className="relative group">
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="ejemplo@guaimaral.edu.co"
-                                        className="w-full pl-5 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-sm"
-                                    />
-                                </div>
+                                <input
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="ejemplo@guaimaral.edu.co"
+                                    className="w-full pl-3.5 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-xs"
+                                />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1 flex items-center gap-2">
-                                    <Lock size={12} className="text-blue-500" /> Contraseña
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[1.5px] ml-1 flex items-center gap-1">
+                                    <Lock size={11} className="text-blue-500" /> Contraseña
                                 </label>
-                                <div className="relative group">
+                                <div className="relative">
                                     <input
                                         type={isPasswordVisible ? "text" : "password"}
                                         required
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
-                                        className="w-full pl-5 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-sm"
+                                        className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-xs"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors p-1"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors p-1"
                                         title={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
                                     >
-                                        {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        {isPasswordVisible ? <EyeOff size={15} /> : <Eye size={15} />}
                                     </button>
                                 </div>
                             </div>
 
                             {error && (
-                                <div className="bg-red-50 text-red-600 text-xs font-bold p-4 rounded-3xl flex items-center gap-3 border border-red-100 animate-shake">
-                                    <AlertTriangle size={14} className="shrink-0" />
+                                <div className="bg-red-50 text-red-600 text-[11px] font-bold p-3 rounded-xl flex items-center gap-2 border border-red-100 animate-shake">
+                                    <AlertTriangle size={13} className="shrink-0" />
                                     {error}
                                 </div>
                             )}
@@ -162,47 +153,46 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full relative py-5 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all overflow-hidden ${isLoading
+                                className={`w-full py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all ${isLoading
                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                    : 'bg-blue-600 text-white shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] hover:bg-blue-700 hover:shadow-[0_25px_50px_-10px_rgba(37,99,235,0.5)] hover:-translate-y-1 active:scale-[0.98]'
+                                    : 'bg-blue-600 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 hover:-translate-y-0.5 active:scale-[0.98]'
                                     }`}
                             >
-                                <div className="relative z-10 flex items-center justify-center gap-3">
+                                <div className="flex items-center justify-center gap-2">
                                     {isLoading ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                            <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                                             <span>Autenticando...</span>
                                         </>
                                     ) : (
                                         <>
-                                            Acceder al Panel <ArrowRight size={16} />
+                                            Acceder al Panel <ArrowRight size={14} />
                                         </>
                                     )}
                                 </div>
                             </button>
                         </form>
 
-                        <div className="mt-12 text-center">
+                        <div className="mt-4 text-center">
                             <button
                                 onClick={() => setShowPasswordHint(!showPasswordHint)}
-                                className="text-xs text-slate-400 hover:text-blue-600 transition-colors font-bold inline-flex items-center gap-2"
+                                className="text-[10px] text-slate-400 hover:text-blue-600 transition-colors font-bold inline-flex items-center gap-1"
                             >
-                                <Info size={14} /> ¿Problemas con tu acceso?
+                                <Info size={12} /> ¿Problemas para ingresar?
                             </button>
 
                             {showPasswordHint && (
-                                <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left animate-fade-in-up">
-                                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                                        Favor contactar al área de sistemas de la institución para restablecer credenciales.
+                                <div className="mt-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-left animate-fade-in-up">
+                                    <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+                                        Favor contactar a la Rectoría / Coordinación de la I.E. Guaimaral para restablecer tu contraseña.
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Footer Rights */}
-                        <div className="mt-auto pt-10 text-center">
-                            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">
-                                &copy; {new Date().getFullYear()} Francisco de Paula Santander
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">
+                                &copy; {new Date().getFullYear()} I.E. Guaimaral • San José de Cúcuta
                             </p>
                         </div>
                     </div>

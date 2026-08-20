@@ -191,8 +191,8 @@ function App() {
       <header className="relative z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 no-print transition-all duration-300 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 cursor-pointer group" onClick={handleFullReset}>
-            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
-              <img src="/logo_guaimaral.png" alt="Logo" className="w-10 h-10 object-contain" />
+            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500 w-12 h-12 flex items-center justify-center shrink-0">
+              <img src="/logo_guaimaral.png" alt="Logo" className="institutional-logo w-10 h-10 object-contain" style={{ maxWidth: '40px', maxHeight: '40px' }} />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none group-hover:text-blue-700 transition-colors">

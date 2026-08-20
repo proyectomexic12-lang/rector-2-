@@ -19,7 +19,8 @@ export const UserManagement: React.FC = () => {
     const [tempStartDate, setTempStartDate] = useState<string>('');
     const [tempMonthlyPrice, setTempMonthlyPrice] = useState<number>(15000);
     const [tempSubscriptionMonths, setTempSubscriptionMonths] = useState<number>(1);
-    const [activeModalTab, setActiveModalTab] = useState<'areas' | 'grados' | 'creditos'>('areas');
+    const [tempPassword, setTempPassword] = useState<string>('');
+    const [activeModalTab, setActiveModalTab] = useState<'areas' | 'grados' | 'creditos' | 'seguridad'>('areas');
     const [userSequences, setUserSequences] = useState<Record<string, any[]>>({});
     const [isLoadingSeqs, setIsLoadingSeqs] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -117,7 +118,7 @@ export const UserManagement: React.FC = () => {
         setIsRefreshing(false);
     };
 
-    const openManagement = (user: User, initialTab: 'areas' | 'grados' | 'creditos' = 'areas') => {
+    const openManagement = (user: User, initialTab: 'areas' | 'grados' | 'creditos' | 'seguridad' = 'areas') => {
         if (initialTab === 'creditos' && !isCreditsUnlocked) {
             setTargetUserForCredits(user);
             setCreditPasswordInput('');
@@ -134,6 +135,7 @@ export const UserManagement: React.FC = () => {
         setTempStartDate(user.unlimited_start_date ? user.unlimited_start_date.substring(0, 10) : new Date().toISOString().substring(0, 10));
         setTempMonthlyPrice(user.monthly_price || 15000);
         setTempSubscriptionMonths(user.subscription_months || 1);
+        setTempPassword('');
         setActiveModalTab(initialTab);
     };
 
@@ -151,7 +153,7 @@ export const UserManagement: React.FC = () => {
         }
     };
 
-    const handleTabSwitch = (tab: 'areas' | 'grados' | 'creditos') => {
+    const handleTabSwitch = (tab: 'areas' | 'grados' | 'creditos' | 'seguridad') => {
         if (tab === 'creditos' && !isCreditsUnlocked) {
             setTargetUserForCredits(areaManagementUser);
             setCreditPasswordInput('');
@@ -178,11 +180,12 @@ export const UserManagement: React.FC = () => {
                 custom_credits: tempCustomCredits,
                 unlimited_start_date: tempIsUnlimited ? (tempStartDate ? tempStartDate.substring(0, 10) + 'T12:00:00' : new Date().toISOString()) : null,
                 monthly_price: tempMonthlyPrice,
-                subscription_months: tempSubscriptionMonths
+                subscription_months: tempSubscriptionMonths,
+                password: tempPassword.trim().length > 0 ? tempPassword.trim() : undefined
             });
             setAreaManagementUser(null);
             await fetchUsers();
-            alert("✅ Cambios y permisos guardados correctamente.");
+            alert("✅ Cambios, permisos y seguridad guardados correctamente.");
         } catch (error) {
             console.error(error);
             alert("❌ Error al guardar los cambios en la nube. Intenta de nuevo.");
@@ -455,8 +458,8 @@ export const UserManagement: React.FC = () => {
 
             {/* MODAL CONFIGURACIÓN DOCENTE — FUERA del div con backdrop-blur para que el fixed funcione correctamente */}
             {areaManagementUser && ReactDOM.createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '32px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '24px', backgroundColor: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(6px)' }}>
-                    <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(6px)' }} className="p-2 sm:p-6">
+                    <div className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
 
                         {/* Header */}
                         <header className="bg-slate-900 px-8 pt-7 pb-0 text-white rounded-t-3xl shrink-0">
@@ -476,21 +479,21 @@ export const UserManagement: React.FC = () => {
                                 </button>
                             </div>
                             <div className="flex gap-1 border-b border-white/10">
-                                {(['areas', 'grados', 'creditos'] as const).map(tab => (
+                                {(['areas', 'grados', 'creditos', 'seguridad'] as const).map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => handleTabSwitch(tab)}
                                         className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] transition-all border-b-2 -mb-[2px] ${activeModalTab === tab ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-300'
                                             }`}
                                     >
-                                        {tab === 'areas' ? `Materias (${tempAreas.length})` : tab === 'grados' ? `Grados (${tempGrados.length})` : `💳 Créditos`}
+                                        {tab === 'areas' ? `Materias (${tempAreas.length})` : tab === 'grados' ? `Grados (${tempGrados.length})` : tab === 'creditos' ? `💳 Créditos` : `🔑 Seguridad / PIN`}
                                     </button>
                                 ))}
                             </div>
                         </header>
 
                         {/* Barra acciones */}
-                        {activeModalTab !== 'creditos' ? (
+                        {activeModalTab === 'areas' || activeModalTab === 'grados' ? (
                             <div className="px-8 py-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                     {activeModalTab === 'areas' ? tempAreas.length : tempGrados.length} de {activeModalTab === 'areas' ? AREAS.length : GRADOS.length} seleccionados
@@ -500,17 +503,23 @@ export const UserManagement: React.FC = () => {
                                     <button onClick={() => handleClearAll(activeModalTab)} className="text-[9px] font-black text-red-500 uppercase bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all">✕ Ninguno</button>
                                 </div>
                             </div>
-                        ) : (
+                        ) : activeModalTab === 'creditos' ? (
                             <div className="px-8 py-3 border-b border-amber-100 flex items-center justify-between shrink-0 bg-amber-50/50">
                                 <p className="text-[9px] font-black text-amber-800 uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles size={12} className="text-amber-600" /> Administración de Créditos Gratuitos & Semanales
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="px-8 py-3 border-b border-indigo-100 flex items-center justify-between shrink-0 bg-indigo-50/50">
+                                <p className="text-[9px] font-black text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                                    <Shield size={12} className="text-indigo-600" /> Control de Contraseñas, Reset PIN y Desbloqueos de Seguridad
                                 </p>
                             </div>
                         )}
 
                         {/* Contenido scrollable */}
                         <div className="flex-1 overflow-y-auto p-8" style={{ minHeight: 0 }}>
-                            {activeModalTab !== 'creditos' ? (
+                            {activeModalTab === 'areas' || activeModalTab === 'grados' ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {(activeModalTab === 'areas' ? AREAS : GRADOS).map((item) => {
                                         const isSelected = (activeModalTab === 'areas' ? tempAreas : tempGrados).includes(item);
@@ -531,6 +540,58 @@ export const UserManagement: React.FC = () => {
                                             </button>
                                         );
                                     })}
+                                </div>
+                            ) : activeModalTab === 'seguridad' ? (
+                                <div className="space-y-6 max-w-xl mx-auto">
+                                    <div className="p-6 rounded-3xl border border-indigo-200 bg-indigo-50/50 shadow-sm space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-indigo-600 text-white p-3 rounded-2xl">
+                                                <Key size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base font-black text-slate-800">Cambiar Contraseña / PIN del Docente</h4>
+                                                <p className="text-xs text-slate-500 font-medium">Establece una nueva clave de acceso para {areaManagementUser.name}.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <label className="text-[10px] font-black text-indigo-900 uppercase tracking-wider block mb-2">Nueva Contraseña / PIN:</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ej: guaimaral2026"
+                                                value={tempPassword}
+                                                onChange={(e) => setTempPassword(e.target.value)}
+                                                className="w-full bg-white border border-indigo-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            <p className="text-[10px] font-medium text-slate-500 mt-1.5">
+                                                Dejar en blanco si deseas mantener la contraseña actual del docente.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-emerald-100 text-emerald-700 p-3 rounded-2xl">
+                                                    <Shield size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-slate-800">Desbloquear Cuenta Bloqueada</h4>
+                                                    <p className="text-xs text-slate-500 font-medium">Elimina bloqueos por múltiples intentos fallidos de contraseña.</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    authService.unlockUserLockout(areaManagementUser.email);
+                                                    alert(`✅ Se han eliminado los bloqueos para la cuenta de ${areaManagementUser.name}.`);
+                                                }}
+                                                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-600/20"
+                                            >
+                                                Desbloquear
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-6 max-w-2xl mx-auto">

@@ -9,10 +9,21 @@ interface SequenceDocumentProps {
   input: SequenceInput;
   handleUpdateField: (path: string, value: any) => void;
   printMode: 'all' | 'planning' | 'anexos';
+  activeView?: 'docente' | 'estudiante';
+  setActiveView?: (view: 'docente' | 'estudiante') => void;
 }
 
-export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData, input, handleUpdateField, printMode }) => {
-  const [activeView, setActiveView] = useState<'docente' | 'estudiante'>('docente');
+export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
+  editableData,
+  input,
+  handleUpdateField,
+  printMode,
+  activeView: propActiveView,
+  setActiveView: propSetActiveView
+}) => {
+  const [internalActiveView, setInternalActiveView] = useState<'docente' | 'estudiante'>('docente');
+  const activeView = propActiveView || internalActiveView;
+  const setActiveView = propSetActiveView || setInternalActiveView;
   const [isGeneratingIcfes, setIsGeneratingIcfes] = useState(false);
   const [icfesError, setIcfesError] = useState('');
 
@@ -95,8 +106,8 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
       <div className={`${planningClass} ${activeView === 'estudiante' ? 'hidden print:block' : ''}`}>
         {/* ENCABEZADO INSTITUCIONAL */}
         <div className="flex gap-4 items-center mb-4 border-b-2 border-slate-900 pb-2 print:mb-2 print:pb-1">
-          <div className="w-24 h-24 flex items-center justify-center flex-shrink-0">
-            <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="w-full h-full object-contain" />
+          <div className="w-20 h-20 flex items-center justify-center shrink-0">
+            <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="institutional-logo w-20 h-20 object-contain" style={{ maxWidth: '80px', maxHeight: '80px' }} />
           </div>
 
           <div className="flex-grow text-center">
@@ -704,63 +715,76 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
       </div>
       {/* --- FIN ANEXOS --- */}
 
-      {/* --- SECCIÓN TALLER IMPRIMIBLE (AMBOS, PERO ESTUDIANTE LO VE PRIMERO) --- */}
-      <div className={`mt-8 pt-4 border-t-4 border-double border-gray-400 ${anexosClass} print:mt-4 print:pt-2 print:break-before-page`}>
-        <div className="flex justify-between items-start mb-6 border-b border-slate-200 pb-4 print:mb-2 print:pb-2">
-          <div className="flex gap-4 items-center">
-            <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
-              <img src="/logo_guaimaral.png" alt="Logo" className="w-full h-full object-contain" />
+      {/* --- SECCIÓN TALLER IMPRIMIBLE (AMBOS, PERO ESTUDIANTE LO VE PRIMERO EN SU VISTA) --- */}
+      <div className={`mt-8 pt-4 border-t-4 border-double border-slate-800 ${anexosClass} print:mt-4 print:pt-2 print:break-before-page`}>
+        {/* ENCABEZADO OFICIAL DE FOTOCOPIA */}
+        <div className="border-2 border-slate-900 mb-4 p-3 bg-slate-50/50">
+          <div className="flex gap-4 items-center border-b border-slate-400 pb-2 mb-2">
+            <div className="w-14 h-14 flex items-center justify-center shrink-0">
+              <img src="/logo_guaimaral.png" alt="Logo" className="institutional-logo w-14 h-14 object-contain" style={{ maxWidth: '56px', maxHeight: '56px' }} />
             </div>
-            <div>
-              <h3 className="font-black text-xl uppercase leading-none text-slate-800">Taller de Aplicación</h3>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Guía de Aprendizaje Institucional</p>
+            <div className="flex-grow">
+              <h3 className="font-black text-base uppercase leading-none text-slate-900">INSTITUCIÓN EDUCATIVA GUAIMARAL</h3>
+              <p className="text-[10px] text-slate-700 font-bold uppercase tracking-wider mt-1">Guía & Taller de Aprendizaje Autónomo • {input.area}</p>
+            </div>
+            <div className="text-right border-l border-slate-400 pl-3 text-[9px] font-bold text-slate-600">
+              <p className="uppercase">Código: FORM-GA-04</p>
+              <p className="uppercase mt-0.5">Versión: 3.0</p>
             </div>
           </div>
-          <div className="text-right text-[10px] text-gray-600">
-            <p>Nombre: _________________________________________________</p>
-            <p className="mt-2">Grado: {input.grado} | Fecha: ___________________</p>
+
+          <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-800 font-bold">
+            <div>Estudiante: <span className="font-normal border-b border-slate-400 inline-block w-3/4">___________________________________________</span></div>
+            <div>Grado: <span className="font-black text-blue-900">{input.grado}</span> | Fecha: <span className="font-normal border-b border-slate-400 inline-block w-1/2">___________________</span></div>
           </div>
         </div>
 
-        <div className="space-y-4 print:space-y-2">
-          <div>
-            <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-1 mb-2">Introducción</h4>
+        <div className="space-y-4 print:space-y-3">
+          {/* I. INTRODUCCIÓN E INSTRUCCIONES */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-300">
+            <h4 className="font-black text-xs uppercase tracking-wider text-slate-900 mb-1 flex items-center gap-1.5">
+              <span>📌</span> I. Marco General & Objetivos
+            </h4>
             <EditableContent
               value={editableData.taller_imprimible.introduccion}
               onSave={(val) => handleUpdateField('taller_imprimible.introduccion', val)}
-              className="text-xs italic text-gray-600 leading-relaxed"
+              className="text-xs text-slate-700 leading-relaxed mb-2"
             />
+            <div className="text-[10px] font-bold text-slate-600 bg-white p-2 rounded border border-slate-200">
+              <span className="font-black text-slate-800">Instrucciones: </span>
+              <EditableContent
+                value={editableData.taller_imprimible.instrucciones}
+                onSave={(val) => handleUpdateField('taller_imprimible.instrucciones', val)}
+                className="inline border-0 p-0 text-slate-700 font-medium"
+              />
+            </div>
           </div>
 
-          <div>
-            <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-1 mb-2">Instrucciones</h4>
-            <EditableContent
-              value={editableData.taller_imprimible.instrucciones}
-              onSave={(val) => handleUpdateField('taller_imprimible.instrucciones', val)}
-              className="text-xs text-gray-700 font-medium"
-            />
-          </div>
-
+          {/* II. BITÁCORA / TEST INICIAL (LÍNEA BASE) */}
           {editableData.taller_imprimible.bitacora_test_inicial && (
-            <div className="bg-yellow-50/50 p-4 rounded-lg border border-yellow-200">
-              <h4 className="font-bold text-sm text-yellow-900 mb-2 flex items-center gap-2">
-                <PenTool size={16} /> Bitácora de Test Inicial (Línea Base)
+            <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-300">
+              <h4 className="font-black text-xs uppercase tracking-wider text-amber-950 mb-1 flex items-center gap-1.5">
+                <PenTool size={14} className="text-amber-700" /> II. Bitácora de Saberes Previos (Test Inicial)
               </h4>
               <EditableContent
                 value={editableData.taller_imprimible.bitacora_test_inicial}
                 onSave={(val) => handleUpdateField('taller_imprimible.bitacora_test_inicial', val)}
-                className="text-xs text-slate-800 font-medium"
+                className="text-xs text-slate-800 font-medium leading-relaxed"
               />
-              <div className="mt-3 border-b-2 border-dashed border-gray-300 h-8 w-full"></div>
+              <div className="mt-3 border-b border-dashed border-slate-400 h-6 w-full"></div>
+              <div className="mt-2 border-b border-dashed border-slate-400 h-6 w-full"></div>
             </div>
           )}
 
-          <div className="space-y-4">
-            <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-1 mb-2">Actividades a Desarrollar</h4>
+          {/* III. ACTIVIDADES A DESARROLLAR (FOTOCOPIA) */}
+          <div className="space-y-3">
+            <h4 className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-800 pb-1 mb-2">
+              III. Guía de Trabajo & Ejercicios Prácticos
+            </h4>
             {(editableData.taller_imprimible?.ejercicios || []).map((ej, i) => (
-              <div key={i} className="pl-2 border-l-2 border-gray-100 pb-2">
-                <div className="flex gap-3">
-                  <span className="font-bold text-gray-400 text-xs">{i + 1}.</span>
+              <div key={i} className="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs">
+                <div className="flex gap-2">
+                  <span className="font-black text-blue-700 text-xs">{i + 1}.</span>
                   <EditableContent
                     value={ej}
                     onSave={(val) => {
@@ -768,28 +792,68 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({ editableData
                       newEjs[i] = val;
                       handleUpdateField('taller_imprimible.ejercicios', newEjs);
                     }}
-                    className="text-xs text-gray-800 leading-relaxed"
+                    className="text-xs text-slate-800 font-bold leading-relaxed flex-grow"
                   />
                 </div>
-                <div className="mt-4 border-b border-dashed border-gray-200 h-12 w-full"></div>
+                <div className="mt-3 border-b border-dashed border-slate-300 h-8 w-full"></div>
+                <div className="mt-2 border-b border-dashed border-slate-300 h-8 w-full"></div>
               </div>
             ))}
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h4 className="font-bold text-sm text-blue-900 mb-2 flex items-center gap-2">
-              <PenTool size={16} /> Reto Creativo
+          {/* IV. RETO CREATIVO (HOTS) */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-200">
+            <h4 className="font-black text-xs uppercase tracking-wider text-blue-950 mb-1 flex items-center gap-1.5">
+              <span>🚀</span> IV. Reto Creativo de Aplicación & Pensamiento Crítico
             </h4>
             <EditableContent
               value={editableData.taller_imprimible.reto_creativo}
               onSave={(val) => handleUpdateField('taller_imprimible.reto_creativo', val)}
-              className="text-xs text-slate-700 italic"
+              className="text-xs text-slate-800 italic leading-relaxed"
             />
+            <div className="mt-3 border-b border-dashed border-blue-300 h-10 w-full"></div>
+          </div>
+
+          {/* V. MATRIZ DE AUTOEVALUACIÓN DEL ESTUDIANTE */}
+          <div className="mt-4 border border-slate-300 rounded-lg p-3 bg-slate-50/50">
+            <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-800 mb-2">
+              V. Matriz de Autoevaluación del Estudiante
+            </h4>
+            <table className="w-full text-[9px] border border-slate-300 bg-white">
+              <thead className="bg-slate-100 text-slate-800 font-black uppercase">
+                <tr className="border-b border-slate-300">
+                  <th className="p-1.5 text-left">Criterio de Evaluación</th>
+                  <th className="p-1.5 text-center w-16">Logrado</th>
+                  <th className="p-1.5 text-center w-16">En Proceso</th>
+                  <th className="p-1.5 text-center w-16">Apoyo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-slate-700 font-medium">
+                <tr>
+                  <td className="p-1.5">1. Comprendí el tema principal y las instrucciones requeridas.</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                </tr>
+                <tr>
+                  <td className="p-1.5">2. Desarrollé los ejercicios prácticos con esfuerzo y dedicación.</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                </tr>
+                <tr>
+                  <td className="p-1.5">3. Demostré creatividad y pensamiento crítico en el reto de aprendizaje.</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                  <td className="p-1.5 text-center border-l border-slate-200">[  ]</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <p className="mt-12 text-center text-[9px] text-gray-400 uppercase tracking-widest italic no-print print:mt-4">
-          "Educar es dar al cuerpo y al alma toda la belleza y perfección de que son capaces"
+        <p className="mt-8 text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest italic no-print print:mt-4">
+          "Calidad humana y excelencia académica para la vida — I.E. Guaimaral 2026"
         </p>
       </div>
       {/* --- FIN TALLER --- */}

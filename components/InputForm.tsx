@@ -56,13 +56,13 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 relative z-10">
         
         {/* PANEL IZQUIERDO: Configuración (2 Columnas en XL) */}
-        <div className="xl:col-span-2 bg-white/70 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden group">
+        <div className="xl:col-span-2 bg-white/80 backdrop-blur-xl p-5 sm:p-8 lg:p-10 rounded-3xl sm:rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden group">
           {/* Fondo Decorativo */}
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-100/40 to-indigo-100/40 rounded-full -mr-48 -mt-48 opacity-50 z-0 pointer-events-none blur-3xl transition-transform duration-700 group-hover:scale-110"></div>
           
           <div className="relative z-10 mb-8 border-b border-gray-100/80 pb-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            <div className="bg-gradient-to-br from-white to-blue-50 p-3 rounded-3xl shadow-lg border border-white transform hover:scale-105 hover:-rotate-3 transition-all duration-300">
-              <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="w-20 h-20 object-contain drop-shadow-md" />
+            <div className="bg-gradient-to-br from-white to-blue-50 p-3 rounded-3xl shadow-lg border border-white transform hover:scale-105 hover:-rotate-3 transition-all duration-300 w-24 h-24 flex items-center justify-center shrink-0">
+              <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="institutional-logo w-20 h-20 object-contain drop-shadow-md" style={{ maxWidth: '80px', maxHeight: '80px' }} />
             </div>
             <div className="text-center sm:text-left flex-1 mt-2">
               <h2 className="text-3xl font-black text-slate-800 flex items-center justify-center sm:justify-start gap-3 tracking-tight">

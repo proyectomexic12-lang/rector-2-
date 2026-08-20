@@ -16,6 +16,7 @@ interface SequencePreviewProps {
 export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, onRefine, onReset }) => {
   const [isRefining, setIsRefining] = useState(false);
   const [printMode, setPrintMode] = useState<'all' | 'planning' | 'anexos'>('all');
+  const [activeView, setActiveView] = useState<'docente' | 'estudiante'>('docente');
   
   const [editableData, setEditableData] = useState<DidacticSequence>(() => ({
     ...data,
@@ -74,7 +75,11 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
 
       <SequenceActionBar 
         onReset={onReset} 
-        onPrint={handlePrint} 
+        onPrint={handlePrint}
+        activeView={activeView}
+        setActiveView={setActiveView}
+        editableData={editableData}
+        input={input}
       />
 
       <SequenceRefinement 
@@ -87,6 +92,8 @@ export const SequencePreview: React.FC<SequencePreviewProps> = ({ data, input, o
         input={input}
         handleUpdateField={handleUpdateField}
         printMode={printMode}
+        activeView={activeView}
+        setActiveView={setActiveView}
       />
     </div>
   );

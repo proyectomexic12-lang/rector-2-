@@ -44,22 +44,22 @@ export const SequenceRefinement: React.FC<SequenceRefinementProps> = ({ onRefine
         ))}
       </div>
 
-      <div className="flex gap-2 relative z-10">
+      <div className="flex flex-col sm:flex-row gap-2 relative z-10">
         <input
           type="text"
           value={refinementText}
           onChange={(e) => setRefinementText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleRefineSubmit()}
           placeholder="Ej: 'Añade una actividad de cierre más dinámica'..."
-          className="flex-1 bg-white border border-blue-200 rounded-xl px-5 py-3 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 font-medium shadow-sm transition-all"
+          className="flex-1 bg-white border border-blue-200 rounded-xl px-4 sm:px-5 py-3 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 font-medium text-xs sm:text-sm shadow-sm transition-all"
         />
         <button
           onClick={handleRefineSubmit}
           disabled={!refinementText.trim() || isRefining}
-          className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:opacity-70 disabled:grayscale transform active:scale-95"
+          className="bg-blue-700 hover:bg-blue-800 text-white px-6 sm:px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale transform active:scale-95 text-xs sm:text-sm"
         >
-          <Send size={18} />
-          Refinar
+          <Send size={16} />
+          <span>{isRefining ? 'Refinando...' : 'Refinar'}</span>
         </button>
       </div>
     </div>

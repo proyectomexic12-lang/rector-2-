@@ -441,7 +441,8 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
             const data = await res.json();
             text = data.choices?.[0]?.message?.content || "";
-            tokensUsed = data?.usage?.total_tokens || 0;
+            const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
+            tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
           } catch (fetchError: any) {
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
@@ -553,7 +554,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             modelHealthStatus[modelName] = "offline";
             
             if (!apiMetrics[keyId]) {
-              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
             }
             apiMetrics[keyId].requests++;
             apiMetrics[keyId].errors++;
@@ -790,7 +791,8 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
 
           const data = await res.json();
           text = data.choices?.[0]?.message?.content || "";
-          tokensUsed = data?.usage?.total_tokens || 0;
+          const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
+          tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
 
           if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
 
@@ -841,7 +843,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
           
           if (attempt === maxRetries || isFatalApiError) {
             if (!apiMetrics[keyId]) {
-              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, lastUsed: "", label, errorLogs: [] };
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
             }
             apiMetrics[keyId].requests++;
             apiMetrics[keyId].errors++;

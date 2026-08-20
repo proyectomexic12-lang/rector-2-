@@ -227,6 +227,12 @@ export const authService = {
         localStorage.setItem(key, JSON.stringify(data));
     },
 
+    unlockUserLockout: (email: string) => {
+        const key = `${STORAGE_KEYS.LOCKOUT}_${email.toLowerCase().trim()}`;
+        localStorage.removeItem(key);
+        console.log(`🔓 Cuenta de ${email} desbloqueada manualmente.`);
+    },
+
     getSecurityLogs: async () => {
         if (supabase) {
             try {
@@ -237,7 +243,7 @@ export const authService = {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
     },
 
-    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number }) => {
+    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number, password?: string }) => {
         const lowEmail = email.toLowerCase().trim();
         console.log(`🛠️ Iniciando guardado para: ${lowEmail}`, settings);
 
@@ -245,6 +251,9 @@ export const authService = {
         if (settings.areas) localStorage.setItem(`guaimaral_areas_${lowEmail}`, JSON.stringify(settings.areas));
         if (settings.grados) localStorage.setItem(`guaimaral_grados_${lowEmail}`, JSON.stringify(settings.grados));
         if (settings.is_unlimited !== undefined) localStorage.setItem(`guaimaral_unlimited_${lowEmail}`, JSON.stringify(settings.is_unlimited));
+        if (settings.password && settings.password.trim().length > 0) {
+            localStorage.setItem(`guaimaral_custom_pass_${lowEmail}`, obfuscate(settings.password.trim()));
+        }
 
         // 2. Cloud (Supabase)
         if (supabase) {
@@ -258,25 +267,29 @@ export const authService = {
 
                 if (fetchError) throw fetchError;
 
+                const updatePayload: any = {
+                    areas: settings.areas,
+                    grados: settings.grados,
+                    is_unlimited: settings.is_unlimited,
+                    custom_credits: settings.custom_credits,
+                    unlimited_start_date: settings.unlimited_start_date,
+                    monthly_price: settings.monthly_price,
+                    subscription_months: settings.subscription_months
+                };
+
+                if (settings.password && settings.password.trim().length > 0) {
+                    updatePayload.password = obfuscate(settings.password.trim());
+                }
+
                 if (existingUser) {
-                    // Si existe, actualizamos áreas, grados y plan de créditos (Protegemos el password)
                     const { error: updateError } = await supabase
                         .from('app_users')
-                        .update({
-                            areas: settings.areas,
-                            grados: settings.grados,
-                            is_unlimited: settings.is_unlimited,
-                            custom_credits: settings.custom_credits,
-                            unlimited_start_date: settings.unlimited_start_date,
-                            monthly_price: settings.monthly_price,
-                            subscription_months: settings.subscription_months
-                        })
+                        .update(updatePayload)
                         .eq('email', lowEmail);
 
                     if (updateError) throw updateError;
-                    console.log("✅ Actualización en la nube exitosa (Áreas/Grados)");
+                    console.log("✅ Actualización en la nube exitosa (Áreas/Grados/Password)");
                 } else {
-                    // Si NO existe, lo creamos de cero usando AUTHORIZED_USERS
                     const authUser = AUTHORIZED_USERS.find(u => u.email.toLowerCase() === lowEmail);
                     if (authUser) {
                         const { error: insertError } = await supabase
@@ -285,7 +298,7 @@ export const authService = {
                                 email: lowEmail,
                                 name: authUser.name,
                                 role: authUser.role,
-                                password: obfuscate('docente2026'), // Password temporal
+                                password: settings.password ? obfuscate(settings.password.trim()) : obfuscate('guaimaral2026'),
                                 areas: settings.areas || [],
                                 grados: settings.grados || [],
                                 is_unlimited: settings.is_unlimited ?? authUser.is_unlimited ?? false,
@@ -834,13 +847,6 @@ export const authService = {
         }
     },
 
-    getUserStorageKey: (baseKey: string): string => {
-        const user = authService.getCurrentUser();
-        if (!user) return baseKey;
-        // Create a simple alphanumeric hash from email for the key
-        const hash = user.email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0).toString(16);
-        return `${baseKey}_${hash}`;
-    },
 
     // --- REAL-TIME PRESENCE (PRESENCE MANAGER) ---
     _presenceChannel: null as any,

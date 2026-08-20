@@ -16,11 +16,41 @@
   box-sizing: border-box;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   font-family: 'Outfit', 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8fafc;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.institutional-logo {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.responsive-table {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  #preview-container {
+    padding: 0.75rem !important;
+    font-size: 0.9em;
+    border-radius: 1rem !important;
+  }
 }
 
 .font-outfit {

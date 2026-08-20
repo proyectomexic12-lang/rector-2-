@@ -27,7 +27,7 @@ export const BulkGenerator: React.FC = () => {
     setIsProcessing(true);
     setProgress({ current: 0, total: temas.length });
     
-    const newResults = temas.map(t => ({ tema: t, status: 'pending' as const }));
+    const newResults: { tema: string; status: 'pending' | 'success' | 'error' }[] = temas.map(t => ({ tema: t, status: 'pending' }));
     setResults(newResults);
 
     for (let i = 0; i < temas.length; i++) {
