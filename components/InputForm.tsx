@@ -313,19 +313,25 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
             
             {/* Main CTA Button inside the right panel for better visual flow */}
             {(() => {
+              const subStatus = user ? authService.getSubscriptionStatus(user) : null;
+              const isExpired = subStatus ? subStatus.status === 'vencido' && user?.role !== 'admin' : false;
               const isUnlimited = user ? authService.isUserUnlimited(user) : false;
-              const isBlockedByCredits = !isUnlimited && creditsLeft === 0;
+              const isBlockedByCredits = !isUnlimited && creditsLeft === 0 && !isExpired;
+              const isDisabled = isLoading || isBlockedByCredits || isExpired;
+
               return (
                 <button
                   onClick={handleValidationAndGenerate}
-                  disabled={isLoading || isBlockedByCredits}
-                  className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isLoading || isBlockedByCredits
+                  disabled={isDisabled}
+                  className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isDisabled
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:-translate-y-1 hover:shadow-blue-500/40 border border-blue-500/30'
                     }`}
                 >
                   {isLoading ? (
                     "Procesando..."
+                  ) : isExpired ? (
+                    "Suscripción Vencida (En Mora)"
                   ) : isBlockedByCredits ? (
                     "Créditos Agotados"
                   ) : (

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { SubscriptionStatus } from '../types';
 
 /**
  * AuthService (Híbrido: Local + Supabase)
@@ -101,22 +102,156 @@ export const AUTHORIZED_USERS: User[] = [
 ];
 
 export const authService = {
-    isUserUnlimited: (user: User | null | undefined): boolean => {
-        if (!user || !user.email || typeof user.email !== 'string') return false;
-        const lowEmail = user.email.toLowerCase().trim();
-        if (user.role === 'admin' || lowEmail.includes('demo')) return true;
-        if (user.is_unlimited === true) return true;
-
-        const authUser = AUTHORIZED_USERS.find(u => u.email && u.email.toLowerCase() === lowEmail);
-        if (authUser && (authUser as any).is_unlimited === true) return true;
-
-        const localUnlimited = localStorage.getItem(`guaimaral_unlimited_${lowEmail}`);
-        if (localUnlimited) {
-            try { if (JSON.parse(localUnlimited) === true) return true; } catch (e) {}
+    getSubscriptionStatus: (user: User | null | undefined): SubscriptionStatus => {
+        const defaultPrice = 15000;
+        if (!user || !user.email) {
+            return {
+                status: 'sin_plan',
+                isUnlimited: false,
+                isValid: false,
+                startDate: null,
+                nextBillingDate: null,
+                nextBillingDateStr: '',
+                monthlyPrice: defaultPrice,
+                monthsPaid: 1,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
         }
 
-        return false;
+        const lowEmail = user.email.toLowerCase().trim();
+        if (user.role === 'admin' || lowEmail.includes('demo')) {
+            return {
+                status: 'admin',
+                isUnlimited: true,
+                isValid: true,
+                startDate: user.unlimited_start_date || new Date().toISOString(),
+                nextBillingDate: null,
+                nextBillingDateStr: 'Acceso Admin Ilimitado',
+                monthlyPrice: 0,
+                monthsPaid: 12,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        const authUser = AUTHORIZED_USERS.find(u => u.email && u.email.toLowerCase() === lowEmail);
+        const isUnlimFlag = user.is_unlimited === true || (authUser && (authUser as any).is_unlimited === true);
+
+        if (!isUnlimFlag) {
+            return {
+                status: 'sin_plan',
+                isUnlimited: false,
+                isValid: false,
+                startDate: null,
+                nextBillingDate: null,
+                nextBillingDateStr: '',
+                monthlyPrice: user.monthly_price || defaultPrice,
+                monthsPaid: user.subscription_months || 1,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        const startDateStr = user.unlimited_start_date || (authUser as any)?.unlimited_start_date || new Date().toISOString();
+        const start = startDateStr.includes('T') ? new Date(startDateStr) : new Date(startDateStr + 'T12:00:00');
+        const monthsPaid = user.subscription_months || (authUser as any)?.subscription_months || 1;
+        const monthlyPrice = user.monthly_price || (authUser as any)?.monthly_price || defaultPrice;
+
+        const nextBilling = new Date(start);
+        nextBilling.setMonth(nextBilling.getMonth() + monthsPaid);
+
+        const now = new Date();
+        const nextStr = nextBilling.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        if (now <= nextBilling) {
+            return {
+                status: 'vigente',
+                isUnlimited: true,
+                isValid: true,
+                startDate: startDateStr,
+                nextBillingDate: nextBilling,
+                nextBillingDateStr: nextStr,
+                monthlyPrice,
+                monthsPaid,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        } else {
+            // EXPIRED / EN MORA
+            const diffTime = now.getTime() - nextBilling.getTime();
+            const daysOverdue = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+            const monthsOverdue = Math.max(1, Math.ceil(daysOverdue / 30));
+            const totalDebt = monthsOverdue * monthlyPrice;
+
+            return {
+                status: 'vencido',
+                isUnlimited: false,
+                isValid: false, // BLOQUEADO POR VENCIMIENTO Y MORA
+                startDate: startDateStr,
+                nextBillingDate: nextBilling,
+                nextBillingDateStr: nextStr,
+                monthlyPrice,
+                monthsPaid,
+                daysOverdue,
+                monthsOverdue,
+                totalDebt
+            };
+        }
     },
+
+    isUserUnlimited: (user: User | null | undefined): boolean => {
+        const subStatus = authService.getSubscriptionStatus(user);
+        return subStatus.isValid;
+    },
+
+    registerPayment: async (email: string, monthsToAdd: number = 1, pricePerMonth: number = 15000) => {
+        const lowEmail = email.toLowerCase().trim();
+        const nowIso = new Date().toISOString();
+
+        // Update local storage if currentUser
+        const current = authService.getCurrentUser();
+        if (current && current.email.toLowerCase() === lowEmail) {
+            const updated: User = {
+                ...current,
+                is_unlimited: true,
+                unlimited_start_date: nowIso,
+                subscription_months: monthsToAdd,
+                monthly_price: pricePerMonth
+            };
+            localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updated)));
+        }
+
+        // Update Cloud in Supabase
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('app_users')
+                    .update({
+                        is_unlimited: true,
+                        unlimited_start_date: nowIso,
+                        subscription_months: monthsToAdd,
+                        monthly_price: pricePerMonth
+                    })
+                    .eq('email', lowEmail);
+
+                if (error) throw error;
+
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `Pago de Suscripción Registrado: ${monthsToAdd} mes(es) por $${(monthsToAdd * pricePerMonth).toLocaleString('es-CO')} COP`
+                }]);
+            } catch (e) {
+                console.error("Error al registrar pago en Supabase:", e);
+                throw e;
+            }
+        }
+    },
+
 
     // --- PASSWORD MANAGEMENT ---
     changePassword: async (email: string, newPass: string) => {

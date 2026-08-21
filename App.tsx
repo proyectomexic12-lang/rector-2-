@@ -5,6 +5,7 @@ import { SequencePreview } from './components/SequencePreview';
 import { UserManagement, PasswordChange } from './components/UserManagement';
 import { AdminSequenceViewer } from './components/AdminSequenceViewer';
 import { SecurityDashboard } from './components/SecurityDashboard';
+import { SubscriptionBlockModal } from './components/SubscriptionBlockModal';
 import { SequenceInput } from './types';
 import { generateDidacticSequence } from './services/geminiService';
 import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck } from 'lucide-react';
@@ -123,7 +124,15 @@ function App() {
     setInput(initialInput);
   };
 
+  const subscriptionStatus = currentUser ? authService.getSubscriptionStatus(currentUser) : null;
+  const isSubscriptionExpired = subscriptionStatus ? subscriptionStatus.status === 'vencido' && currentUser?.role !== 'admin' : false;
+
   const handleGenerate = async (refinementConfig?: { instruction: string }) => {
+    if (isSubscriptionExpired) {
+      toast("Tu suscripción mensual ha vencido. Ponte al día con tu saldo acumulado para continuar.", 'error');
+      return;
+    }
+
     const now = Date.now();
     if (now - lastGenTime < 10000 && !refinementConfig) {
       toast("Por seguridad, espera unos segundos antes de generar.", 'error');
@@ -219,14 +228,14 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 cursor-pointer group" onClick={handleFullReset}>
             <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500 w-12 h-12 flex items-center justify-center shrink-0">
-              <img src="/logo_guaimaral.png" alt="Logo" className="institutional-logo w-10 h-10 object-contain" style={{ maxWidth: '40px', maxHeight: '40px' }} />
+              <img src="/logo.png" alt="Clases Ideal Logo" className="institutional-logo w-10 h-10 object-contain rounded-lg" style={{ maxWidth: '40px', maxHeight: '40px' }} />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none group-hover:text-blue-700 transition-colors">
-                I.E. Guaimaral
+                Clases Ideal
               </h1>
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-[2px] mt-1">
-                AI <span className="text-blue-600">Planner</span>
+                AI <span className="text-blue-600">SaaS Platform</span>
               </p>
             </div>
           </div>
@@ -624,6 +633,16 @@ function App() {
               <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
             </span>
           </a>
+        )}
+
+        {/* Modal Bloqueo por Mora y Suscripción Vencida */}
+        {isSubscriptionExpired && currentUser && subscriptionStatus && (
+          <SubscriptionBlockModal
+            user={currentUser}
+            subscriptionStatus={subscriptionStatus}
+            onLogout={handleAppLogout}
+            onRefresh={() => refreshUser()}
+          />
         )}
       </main>
     </div>

@@ -25,6 +25,27 @@ export const UserManagement: React.FC = () => {
     const [isLoadingSeqs, setIsLoadingSeqs] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    // REGISTRO DE PAGOS Y SUSCRIPCIONES
+    const [paymentUser, setPaymentUser] = useState<User | null>(null);
+    const [paymentMonths, setPaymentMonths] = useState<number>(1);
+    const [paymentPrice, setPaymentPrice] = useState<number>(15000);
+    const [isRegisteringPayment, setIsRegisteringPayment] = useState<boolean>(false);
+
+    const handleConfirmPayment = async () => {
+        if (!paymentUser) return;
+        setIsRegisteringPayment(true);
+        try {
+            await authService.registerPayment(paymentUser.email, paymentMonths, paymentPrice);
+            alert(`✅ Pago registrado con éxito para ${paymentUser.name}. Suscripción renovada por ${paymentMonths} mes(es).`);
+            setPaymentUser(null);
+            await fetchUsers();
+        } catch (e) {
+            alert("❌ Error al registrar pago en la nube.");
+        } finally {
+            setIsRegisteringPayment(false);
+        }
+    };
+
     const formatCOP = (val?: number | null) => {
         const num = val !== undefined && val !== null && !isNaN(val) ? val : 15000;
         return '$' + num.toLocaleString('es-CO') + ' COP';
@@ -266,6 +287,7 @@ export const UserManagement: React.FC = () => {
                                 .filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
                                 .map((user, i) => {
                                 const isUserUnlimited = authService.isUserUnlimited(user);
+                                const subStatus = authService.getSubscriptionStatus(user);
                                 return (
                                 <React.Fragment key={i}>
                                     <tr className={`group transition-colors border-b border-slate-100 ${expandedUser === user.email ? 'bg-indigo-50/30' : 'hover:bg-white/50'}`}>
@@ -300,16 +322,28 @@ export const UserManagement: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="py-4 text-center">
-                                            {isUserUnlimited ? (
+                                            {subStatus.status === 'admin' ? (
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200 shadow-sm">
+                                                        👑 Admin Ilimitado
+                                                    </span>
+                                                </div>
+                                            ) : subStatus.status === 'vencido' ? (
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-700 bg-red-50 px-2.5 py-1 rounded-full border border-red-200 shadow-sm animate-pulse">
+                                                        🚨 EN MORA ({subStatus.monthsOverdue} mes(es))
+                                                    </span>
+                                                    <span className="text-[9px] font-black text-red-600">
+                                                        Debe: {formatCOP(subStatus.totalDebt)} ({subStatus.daysOverdue}d retraso)
+                                                    </span>
+                                                </div>
+                                            ) : subStatus.status === 'vigente' ? (
                                                 <div className="flex flex-col items-center gap-0.5">
                                                     <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-sm">
-                                                        <span>∞</span> Ilimitado ({formatCOP(user.monthly_price)} / {user.subscription_months === 3 ? '3 meses' : user.subscription_months === 6 ? '6 meses' : 'mes'})
+                                                        <span>🟢</span> Vigente ({formatCOP(subStatus.monthlyPrice)}/mes)
                                                     </span>
                                                     <span className="text-[9px] font-bold text-slate-500">
-                                                        📅 Próximo pago: {getNextBillingDateStr(user.unlimited_start_date, user.subscription_months || 1)}
-                                                    </span>
-                                                    <span className="text-[8px] font-bold text-slate-400">
-                                                        {user.stats?.week || 0} gastados esta semana
+                                                        📅 Próximo pago: {subStatus.nextBillingDateStr}
                                                     </span>
                                                 </div>
                                             ) : (
@@ -329,8 +363,23 @@ export const UserManagement: React.FC = () => {
                                                 <button onClick={() => handleDirectLogin(user)} title={`Ingresar directamente como ${user.name}`} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-1.5 shadow-sm">
                                                     <LogIn size={12} /> Entrar
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setPaymentUser(user);
+                                                        setPaymentMonths(subStatus.status === 'vencido' ? subStatus.monthsOverdue : 1);
+                                                        setPaymentPrice(subStatus.monthlyPrice || 15000);
+                                                    }}
+                                                    title="Registrar Pago o Renovar Suscripción"
+                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shadow-sm ${
+                                                        subStatus.status === 'vencido'
+                                                            ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 animate-pulse'
+                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                    }`}
+                                                >
+                                                    <CreditCard size={12} /> {subStatus.status === 'vencido' ? 'Cobrar Mora' : 'Pago'}
+                                                </button>
                                                 <button onClick={() => openManagement(user, 'creditos')} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all flex items-center gap-1.5 shadow-sm">
-                                                    <CreditCard size={12} /> Créditos
+                                                    <CreditCard size={12} /> Plan
                                                 </button>
                                                 <button onClick={() => openManagement(user, 'areas')} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-200 bg-white text-slate-600 hover:border-blue-600 hover:text-blue-600 transition-all flex items-center gap-2">
                                                     <Shield size={12} /> Permisos
@@ -825,6 +874,103 @@ export const UserManagement: React.FC = () => {
                             </div>
                         </footer>
 
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Modal de Registro de Pago de Mensualidad y Cancelación de Mora */}
+            {paymentUser && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white text-center">
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-white/30">
+                                <CreditCard size={28} />
+                            </div>
+                            <h3 className="text-xl font-black">Registrar Pago / Renovar</h3>
+                            <p className="text-emerald-100 text-xs font-semibold mt-0.5">{paymentUser.name} ({paymentUser.email})</p>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {(() => {
+                                const pStatus = authService.getSubscriptionStatus(paymentUser);
+                                return pStatus.status === 'vencido' ? (
+                                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-xs">
+                                        <div className="font-bold text-red-900 mb-1 flex items-center gap-1.5">
+                                            <AlertTriangle size={14} className="text-red-600" />
+                                            Docente en Mora ({pStatus.monthsOverdue} mes(es) acumulados)
+                                        </div>
+                                        <div className="text-red-700 font-semibold">
+                                            Saldo acumulado adeudado: <span className="font-black text-red-800 text-sm">{formatCOP(pStatus.totalDebt)}</span>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 mt-1">
+                                            Al registrar el pago, la suscripción se renovará activando la cuenta inmediatamente.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-900 font-semibold">
+                                        Suscripción al día. Puedes registrar una renovación de cuotas mensuales.
+                                    </div>
+                                );
+                            })()}
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                                    Meses a Renovar / Cancelar:
+                                </label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[1, 2, 3, 6].map(m => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => setPaymentMonths(m)}
+                                            className={`py-2.5 rounded-xl font-black text-xs border transition-all ${paymentMonths === m
+                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
+                                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-400'
+                                            }`}
+                                        >
+                                            {m} {m === 1 ? 'Mes' : 'Meses'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                                    Valor Mensual COP:
+                                </label>
+                                <input
+                                    type="number"
+                                    value={paymentPrice}
+                                    onChange={(e) => setPaymentPrice(parseInt(e.target.value) || 15000)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+
+                            <div className="bg-slate-100 rounded-2xl p-4 text-center">
+                                <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Recibido a Registrar:</div>
+                                <div className="text-2xl font-black text-emerald-700 mt-0.5">
+                                    {formatCOP(paymentMonths * paymentPrice)}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setPaymentUser(null)}
+                                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black uppercase tracking-wider rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleConfirmPayment}
+                                    disabled={isRegisteringPayment}
+                                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5"
+                                >
+                                    {isRegisteringPayment ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                                    Confirmar Pago
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>,
                 document.body

@@ -83,3 +83,18 @@ export interface TallerImprimible {
   ejercicios: string[];
   reto_creativo: string;
 }
+
+export interface SubscriptionStatus {
+  status: 'admin' | 'vigente' | 'vencido' | 'sin_plan';
+  isUnlimited: boolean;
+  isValid: boolean; // True si admin o plan vigente no vencido
+  startDate: string | null;
+  nextBillingDate: Date | null;
+  nextBillingDateStr: string;
+  monthlyPrice: number;
+  monthsPaid: number;
+  daysOverdue: number;
+  monthsOverdue: number;
+  totalDebt: number;
+}
+

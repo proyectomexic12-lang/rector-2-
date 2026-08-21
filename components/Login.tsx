@@ -70,16 +70,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         <div className="relative group shrink-0">
                             <div className="absolute inset-0 bg-blue-400 blur-xl opacity-20 group-hover:opacity-40 transition-all duration-700"></div>
                             <div className="relative w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 shadow-lg border border-blue-50 flex items-center justify-center transform hover:rotate-3 transition-transform">
-                                <img src="/logo_guaimaral.png" alt="Logo Institucional" className="w-full h-full object-contain" />
+                                <img src="/logo.png" alt="Clases Ideal Logo" className="w-full h-full object-contain rounded-2xl" />
                             </div>
                         </div>
 
                         <div>
                             <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-tight mb-1">
-                                Docente <span className="text-blue-600">AI</span> Pro
+                                Clases Ideal <span className="text-blue-600">AI</span>
                             </h2>
                             <p className="text-slate-500 font-medium text-xs max-w-[240px] leading-relaxed hidden sm:block">
-                                Planificación Didáctica con Inteligencia Artificial
+                                Plataforma SaaS de Planificación Educativa Inteligente
                             </p>
                         </div>
 
