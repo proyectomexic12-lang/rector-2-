@@ -96,6 +96,22 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
             loadThread(selectedTeacherEmail);
             scrollToBottom();
         }
+
+        const interval = setInterval(() => {
+            fetchAllConversations();
+            if (selectedTeacherEmail) {
+                chatService.getConversation(selectedTeacherEmail).then(msgs => {
+                    setMessages(prev => {
+                        if (prev.length !== msgs.length || (msgs.length > 0 && prev[prev.length - 1]?.id !== msgs[msgs.length - 1]?.id)) {
+                            return msgs;
+                        }
+                        return prev;
+                    });
+                });
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
     }, [selectedTeacherEmail]);
 
     useEffect(() => {

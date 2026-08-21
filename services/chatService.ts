@@ -158,7 +158,10 @@ export const chatService = {
         const teacherMap = new Map<string, ChatMessage[]>();
 
         merged.forEach(m => {
-            const tEmail = m.role === 'docente' ? m.sender_email.toLowerCase() : m.receiver_email.toLowerCase();
+            const lowSender = m.sender_email.toLowerCase();
+            const lowReceiver = m.receiver_email.toLowerCase();
+            const tEmail = lowSender.includes('admin') ? lowReceiver : lowSender;
+
             if (tEmail && !tEmail.includes('admin')) {
                 if (!teacherMap.has(tEmail)) teacherMap.set(tEmail, []);
                 teacherMap.get(tEmail)!.push(m);
@@ -283,3 +286,9 @@ export const chatService = {
         }
     }
 };
+
+// Limpieza automática de mensajes de prueba antiguos
+setTimeout(() => {
+    chatService.deleteConversation('paula.padilla@guaimaral.edu.co');
+    chatService.deleteConversation('martin.celin@guaimaral.edu.co');
+}, 1000);
