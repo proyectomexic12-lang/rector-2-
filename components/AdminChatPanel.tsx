@@ -3,7 +3,7 @@ import { User, authService } from '../services/authService';
 import { chatService } from '../services/chatService';
 import { presenceService } from '../services/presenceService';
 import { ChatMessage, ChatConversation } from '../types';
-import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle, Circle, Trash2 } from 'lucide-react';
+import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle, Circle, Trash2, ArrowLeft } from 'lucide-react';
 
 interface AdminChatPanelProps {
     currentUser: User;
@@ -26,7 +26,8 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
         const convs = await chatService.getAllConversationsForAdmin(allUsers);
         setConversations(convs);
 
-        if (!selectedTeacherEmail && convs.length > 0) {
+        // En pantallas de escritorio (md+), seleccionar el primer docente por defecto. En movil dejar null para ver la lista primero.
+        if (!selectedTeacherEmail && convs.length > 0 && window.innerWidth >= 768) {
             setSelectedTeacherEmail(convs[0].teacher_email);
         }
         setIsLoading(false);
@@ -133,7 +134,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
     return (
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl overflow-hidden h-[calc(100vh-170px)] max-h-[750px] min-h-[500px] flex flex-col md:flex-row">
             {/* Sidebar Izquierdo: Lista de Docentes */}
-            <div className="w-full md:w-80 lg:w-96 bg-slate-50/70 border-r border-slate-200/80 flex flex-col shrink-0">
+            <div className={`w-full md:w-80 lg:w-96 bg-slate-50/70 border-r border-slate-200/80 flex-col shrink-0 ${selectedTeacherEmail ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-slate-200/80 space-y-3">
                     <div className="flex items-center justify-between">
                         <h2 className="font-black text-slate-800 text-base flex items-center gap-2">
@@ -214,13 +215,20 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
             </div>
 
             {/* Main Chat Thread Area */}
-            <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
+            <div className={`flex-1 flex-col bg-white h-full overflow-hidden ${!selectedTeacherEmail ? 'hidden md:flex' : 'flex'}`}>
                 {selectedTeacherEmail ? (
                     <>
                         {/* Selected Header */}
                         <div className="p-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700">
+                            <div className="flex items-center gap-2.5">
+                                <button
+                                    onClick={() => setSelectedTeacherEmail(null)}
+                                    className="md:hidden p-2 text-indigo-600 hover:bg-indigo-100/60 rounded-xl transition-all flex items-center justify-center shrink-0"
+                                    title="Volver a la lista de docentes"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 shrink-0">
                                     {selectedTeacherObj ? selectedTeacherObj.name.charAt(0) : '?'}
                                 </div>
                                 <div>
