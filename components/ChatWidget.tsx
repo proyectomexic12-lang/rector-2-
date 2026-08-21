@@ -16,6 +16,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [isSending, setIsSending] = useState(false);
 
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         if (!user || user.role === 'admin') return;
         const timer = setTimeout(() => {
@@ -55,9 +58,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
             if (channel) channel.unsubscribe();
         };
     }, [user?.email]);
-
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = (smooth = true) => {
         setTimeout(() => {

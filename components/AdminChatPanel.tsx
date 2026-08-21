@@ -18,6 +18,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
     const [isLoading, setIsLoading] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const fetchAllConversations = async () => {
         setIsLoading(true);
@@ -67,9 +68,6 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
             if (channel) channel.unsubscribe();
         };
     }, []);
-
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = (smooth = true) => {
         setTimeout(() => {
