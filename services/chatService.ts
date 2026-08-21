@@ -259,5 +259,27 @@ export const chatService = {
             .subscribe();
 
         return channel;
+    },
+
+    // 6. Delete conversation for a teacher
+    deleteConversation: async (teacherEmail: string) => {
+        const lowTeacher = teacherEmail.toLowerCase().trim();
+
+        // Local storage update
+        const localMsgs: ChatMessage[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_CHAT_KEY) || '[]');
+        const filteredLocal = localMsgs.filter(m =>
+            m.sender_email.toLowerCase() !== lowTeacher && m.receiver_email.toLowerCase() !== lowTeacher
+        );
+        localStorage.setItem(LOCAL_STORAGE_CHAT_KEY, JSON.stringify(filteredLocal));
+
+        // Supabase Cloud delete
+        if (supabase) {
+            try {
+                await supabase
+                    .from('chat_messages')
+                    .delete()
+                    .or(`sender_email.eq.${lowTeacher},receiver_email.eq.${lowTeacher}`);
+            } catch (e) {}
+        }
     }
 };

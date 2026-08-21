@@ -70,6 +70,7 @@ export interface User {
 export const AUTHORIZED_USERS: User[] = [
     // Administrador
     { name: 'Admin', email: 'admin@guaimaral.edu.co', role: 'admin', is_unlimited: true },
+    { name: 'Jesús', email: 'jesus@guaimaral.edu.co', role: 'docente', is_unlimited: true },
     { name: 'Docente Demo (Ilimitado)', email: 'demo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
 
     // Guaimaral Bachillerato (Orden Alfabético)
@@ -303,6 +304,7 @@ export const authService = {
 
         // C. Default Hardcoded Passwords
         if (role === 'admin') return inputPass === 'admin2026';
+        if (email.toLowerCase() === 'jesus@guaimaral.edu.co') return inputPass === '1' || inputPass === 'guaimaral2026';
         if (email === 'docente@guaimaral.edu.co') return inputPass === '123456';
         return inputPass === 'guaimaral2026';
     },

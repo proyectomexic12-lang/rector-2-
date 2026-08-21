@@ -3,7 +3,7 @@ import { User, authService } from '../services/authService';
 import { chatService } from '../services/chatService';
 import { presenceService } from '../services/presenceService';
 import { ChatMessage, ChatConversation } from '../types';
-import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle, Circle } from 'lucide-react';
+import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle, Circle, Trash2 } from 'lucide-react';
 
 interface AdminChatPanelProps {
     currentUser: User;
@@ -30,6 +30,15 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
             setSelectedTeacherEmail(convs[0].teacher_email);
         }
         setIsLoading(false);
+    };
+
+    const handleDeleteChat = async () => {
+        if (!selectedTeacherEmail) return;
+        if (window.confirm(`¿Estás seguro de vaciar el historial de chat con ${selectedTeacherEmail}?`)) {
+            await chatService.deleteConversation(selectedTeacherEmail);
+            setMessages([]);
+            await fetchAllConversations();
+        }
     };
 
     const loadThread = async (teacherEmail: string) => {
@@ -227,20 +236,30 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
                                 </div>
                             </div>
 
-                            {/* Badge de suscripción del docente */}
-                            {selectedSubStatus && (
-                                <div className="text-right">
-                                    {selectedSubStatus.status === 'vencido' ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200 animate-pulse">
-                                            🚨 EN MORA (${selectedSubStatus.totalDebt.toLocaleString('es-CO')} COP)
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                                            🟢 Suscripción Vigente
-                                        </span>
-                                    )}
-                                </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                                {/* Badge de suscripción del docente */}
+                                {selectedSubStatus && (
+                                    <div className="text-right">
+                                        {selectedSubStatus.status === 'vencido' ? (
+                                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200 animate-pulse">
+                                                🚨 EN MORA (${selectedSubStatus.totalDebt.toLocaleString('es-CO')} COP)
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                                                🟢 Suscripción Vigente
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={handleDeleteChat}
+                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition-all"
+                                    title="Vaciar historial de mensajes con este docente"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Thread Message Stream */}
