@@ -165,11 +165,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
                     {/* Header */}
                     <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 text-white flex items-center justify-between shadow-md relative overflow-hidden">
                         <div className="flex items-center gap-3 relative z-10">
-                            <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold shadow-inner">
                                 <ShieldCheck size={22} className="text-emerald-400" />
                             </div>
                             <div>
-                                <h3 className="font-black text-sm tracking-wide">Soporte Administración</h3>
+                                <h3 className="font-black text-sm tracking-wide flex items-center gap-1.5">
+                                    <span>Soporte Administración</span>
+                                </h3>
                                 <p className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                                     En línea para ayudarte
@@ -180,15 +182,20 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
                         <button
                             onClick={() => setIsOpen(false)}
                             className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-all"
+                            title="Cerrar chat"
                         >
                             <X size={20} />
                         </button>
                     </div>
 
-                    {/* Mensaje de bienvenida */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2.5 border-b border-indigo-100/60 text-[11px] text-indigo-950 flex items-center gap-2 font-medium">
-                        <Sparkles size={14} className="text-indigo-600 shrink-0" />
-                        <span>Canal oficial de soporte pedagógico y administrativo.</span>
+                    {/* Banner de Contexto del Docente */}
+                    <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-4 py-2 border-b border-indigo-100 text-[11px] text-indigo-950 flex items-center justify-between font-medium">
+                        <div className="flex items-center gap-1.5 truncate">
+                            <Sparkles size={13} className="text-indigo-600 shrink-0 animate-pulse" />
+                            <span className="truncate font-semibold text-slate-700">
+                                👨‍🏫 {user.name} <span className="text-slate-400">({user.areas && user.areas.length > 0 ? user.areas[0] : 'Soporte Directo'})</span>
+                            </span>
+                        </div>
                     </div>
 
                     {/* Chat Messages */}
