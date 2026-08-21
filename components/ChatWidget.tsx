@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../services/authService';
 import { chatService } from '../services/chatService';
+import { aiAgentService } from '../services/aiAgentService';
 import { ChatMessage } from '../types';
-import { MessageSquare, X, Send, Bot, ShieldCheck, Sparkles, Check, CheckCheck, Clock } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, ShieldCheck, Sparkles, Check, CheckCheck, Clock, Loader2 } from 'lucide-react';
 
 interface ChatWidgetProps {
     user: User;
@@ -15,6 +16,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
     const [input, setInput] = useState('');
     const [unreadCount, setUnreadCount] = useState(0);
     const [isSending, setIsSending] = useState(false);
+    const [isAiTyping, setIsAiTyping] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -92,10 +94,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
             const sentMsg = await chatService.sendMessage(user, 'admin@guaimaral.edu.co', text);
             setMessages(prev => [...prev, sentMsg]);
             scrollToBottom();
+
+            // Generar Respuesta Automática del Agente de IA
+            setIsAiTyping(true);
+            const aiReply = await aiAgentService.generateResponse(user, text);
+            const aiMsg = await chatService.sendAiAgentMessage(user, aiReply);
+            setMessages(prev => [...prev, aiMsg]);
+            scrollToBottom();
         } catch (err) {
             console.error("Error al enviar mensaje:", err);
         } finally {
             setIsSending(false);
+            setIsAiTyping(false);
         }
     };
 
@@ -241,6 +251,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
                                     </div>
                                 );
                             })
+                        )}
+                        {isAiTyping && (
+                            <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-xs text-indigo-900 font-semibold w-fit animate-pulse shadow-sm">
+                                <Bot size={18} className="text-indigo-600 animate-bounce" />
+                                <div className="flex flex-col">
+                                    <span className="font-black text-[10px] text-indigo-700 uppercase tracking-wider">Asistente Rector AI</span>
+                                    <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
+                                        Escribiendo respuesta... <Loader2 size={12} className="animate-spin text-indigo-600" />
+                                    </span>
+                                </div>
+                            </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>

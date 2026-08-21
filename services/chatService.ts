@@ -56,6 +56,45 @@ export const chatService = {
         return newMsg;
     },
 
+    // 1.5 Send AI Agent Response
+    sendAiAgentMessage: async (docente: User, aiReplyText: string): Promise<ChatMessage> => {
+        const newMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            sender_email: ADMIN_EMAIL,
+            sender_name: '🤖 Asistente Rector AI',
+            receiver_email: docente.email.toLowerCase().trim(),
+            message: aiReplyText,
+            role: 'admin',
+            is_read: false,
+            timestamp: new Date().toISOString()
+        };
+
+        // Respaldo Local
+        try {
+            const allLocal: ChatMessage[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_CHAT_KEY) || '[]');
+            allLocal.push(newMsg);
+            localStorage.setItem(LOCAL_STORAGE_CHAT_KEY, JSON.stringify(allLocal));
+        } catch (e) {}
+
+        // Supabase Cloud
+        if (supabase) {
+            try {
+                await supabase.from('chat_messages').insert([{
+                    id: newMsg.id,
+                    sender_email: newMsg.sender_email,
+                    sender_name: newMsg.sender_name,
+                    receiver_email: newMsg.receiver_email,
+                    message: newMsg.message,
+                    role: newMsg.role,
+                    is_read: false,
+                    timestamp: newMsg.timestamp
+                }]);
+            } catch (e) {}
+        }
+
+        return newMsg;
+    },
+
     // 2. Get Messages for a specific Teacher conversation
     getConversation: async (teacherEmail: string): Promise<ChatMessage[]> => {
         const lowTeacher = teacherEmail.toLowerCase().trim();
