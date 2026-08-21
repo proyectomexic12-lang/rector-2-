@@ -10,11 +10,19 @@ interface ChatWidgetProps {
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [showWelcomePrompt, setShowWelcomePrompt] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [unreadCount, setUnreadCount] = useState(0);
     const [isSending, setIsSending] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!user || user.role === 'admin') return;
+        const timer = setTimeout(() => {
+            setShowWelcomePrompt(true);
+        }, 6000);
+        return () => clearTimeout(timer);
+    }, [user?.email]);
 
     const loadMessages = async () => {
         const msgs = await chatService.getConversation(user.email);
@@ -95,6 +103,40 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
 
     return (
         <div className="fixed bottom-6 left-6 z-50">
+            {/* Tooltip Flotante de Invitación al Chat (Aparece a los 6s) */}
+            {showWelcomePrompt && !isOpen && (
+                <div className="absolute bottom-20 left-0 w-80 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/50 text-white rounded-3xl p-4 shadow-2xl animate-fade-in-up flex flex-col gap-3 relative z-50">
+                    <button
+                        onClick={() => setShowWelcomePrompt(false)}
+                        className="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all"
+                        title="Cerrar aviso"
+                    >
+                        <X size={14} />
+                    </button>
+                    <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center shrink-0 text-xl shadow-inner">
+                            👋
+                        </div>
+                        <div className="text-xs">
+                            <p className="font-black text-indigo-200 text-sm">¡Hola {user.name.split(' ')[0]}!</p>
+                            <p className="text-[11px] text-slate-300 mt-1 leading-relaxed font-medium">
+                                Puedes escribirle directamente a la <strong>Administración</strong> para saludarlo, resolver dudas o consultar inquietudes en tiempo real.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setIsOpen(true);
+                            setShowWelcomePrompt(false);
+                        }}
+                        className="w-full py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        <MessageSquare size={16} />
+                        Escribir a Administración
+                    </button>
+                </div>
+            )}
+
             {/* Widget Button */}
             {!isOpen && (
                 <button
