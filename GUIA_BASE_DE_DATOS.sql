@@ -86,6 +86,18 @@ create table if not exists deleted_records_backup (
   deleted_at timestamptz default now()
 );
 
+-- ✅ PASO 7.5: TABLA DE MENSAJES Y CHAT DOCENTE-ADMIN
+create table if not exists chat_messages (
+  id uuid default gen_random_uuid() primary key,
+  sender_email text not null,
+  sender_name text not null,
+  receiver_email text not null,
+  message text not null,
+  role text not null check (role in ('admin', 'docente')),
+  is_read boolean default false,
+  timestamp timestamptz default now()
+);
+
 -- ✅ PASO 8: ASEGURAR COLUMNAS SI LA TABLA YA EXISTÍA
 alter table app_users add column if not exists areas text[] default '{}';
 alter table app_users add column if not exists grados text[] default '{}';
@@ -125,6 +137,7 @@ alter table api_key_logs enable row level security;
 alter table generated_sequences enable row level security;
 alter table security_logs enable row level security;
 alter table deleted_records_backup enable row level security;
+alter table chat_messages enable row level security;
 
 create policy "guaimaral_users_all" on app_users for all using (true) with check (true);
 create policy "guaimaral_logs_all" on usage_logs for all using (true) with check (true);
@@ -132,10 +145,11 @@ create policy "guaimaral_api_all" on api_key_logs for all using (true) with chec
 create policy "guaimaral_seqs_all" on generated_sequences for all using (true) with check (true);
 create policy "guaimaral_security_all" on security_logs for all using (true) with check (true);
 create policy "guaimaral_backup_all" on deleted_records_backup for all using (true) with check (true);
+create policy "guaimaral_chat_all" on chat_messages for all using (true) with check (true);
 
 -- ✅ PASO 11: PUBLICACIÓN CANAL REALTIME
 drop publication if exists supabase_realtime;
-create publication supabase_realtime for table app_users, usage_logs, api_key_logs, generated_sequences;
+create publication supabase_realtime for table app_users, usage_logs, api_key_logs, generated_sequences, chat_messages;
 
 -- ✅ PASO 12: REGISTRO E INSERTADO INICIAL DE DOCENTES CON PLANES E ILIMITADOS
 insert into app_users (email, password, name, role, areas, grados, is_unlimited, unlimited_start_date, monthly_price, subscription_months) values

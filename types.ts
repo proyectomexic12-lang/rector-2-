@@ -98,3 +98,24 @@ export interface SubscriptionStatus {
   totalDebt: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  sender_email: string;
+  sender_name: string;
+  receiver_email: string;
+  message: string;
+  role: 'docente' | 'admin';
+  is_read: boolean;
+  timestamp: string;
+}
+
+export interface ChatConversation {
+  teacher_email: string;
+  teacher_name: string;
+  last_message: string;
+  last_timestamp: string;
+  unread_count: number;
+  messages: ChatMessage[];
+}
+
+

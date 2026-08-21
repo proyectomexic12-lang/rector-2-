@@ -6,11 +6,13 @@ import { UserManagement, PasswordChange } from './components/UserManagement';
 import { AdminSequenceViewer } from './components/AdminSequenceViewer';
 import { SecurityDashboard } from './components/SecurityDashboard';
 import { SubscriptionBlockModal } from './components/SubscriptionBlockModal';
+import { AdminChatPanel } from './components/AdminChatPanel';
+import { ChatWidget } from './components/ChatWidget';
 import { SequenceInput } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Login } from './components/Login';
-import { authService } from './services/authService';
+import { authService, User } from './services/authService';
 import { useAuth } from './context/AuthContext';
 import { useSequence } from './context/SequenceContext';
 import { useToast } from './context/ToastContext';
@@ -34,7 +36,8 @@ function App() {
   // UX State
   const { toast } = useToast();
   const [loadingStep, setLoadingStep] = useState(0);
-  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat'>('create');
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showProfile, setShowProfile] = useState(false);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 
@@ -92,7 +95,10 @@ function App() {
     if (activeTab === 'create' && isAuthenticated) {
       refreshUser();
     }
-  }, [activeTab, isAuthenticated]);
+    if (currentUser?.role === 'admin') {
+      authService.getAllUsersWithStats().then(setAllUsers);
+    }
+  }, [activeTab, isAuthenticated, currentUser?.email]);
 
   // 1.6 Periodic Anti-Account Sharing Session Validation
   useEffect(() => {
@@ -275,6 +281,13 @@ function App() {
                     <Database size={20} />
                   </button>
                   <button
+                    onClick={() => setActiveTab('chat')}
+                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'chat' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    title="Chat y Consultas de Docentes"
+                  >
+                    <MessageSquare size={20} />
+                  </button>
+                  <button
                     onClick={() => setActiveTab('security')}
                     className={`p-2.5 rounded-xl transition-all ${activeTab === 'security' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
                     title="Seguridad Administrativa"
@@ -432,6 +445,7 @@ function App() {
               />
             )}
             {activeTab === 'security' && currentUser?.role === 'admin' && <SecurityDashboard />}
+            {activeTab === 'chat' && currentUser?.role === 'admin' && <AdminChatPanel currentUser={currentUser} allUsers={allUsers} />}
 
             {activeTab === 'create' && (
               <>
@@ -634,6 +648,9 @@ function App() {
             </span>
           </a>
         )}
+
+        {/* Widget Flotante de Chat para Docentes */}
+        {currentUser && <ChatWidget user={currentUser} />}
 
         {/* Modal Bloqueo por Mora y Suscripción Vencida */}
         {isSubscriptionExpired && currentUser && subscriptionStatus && (
