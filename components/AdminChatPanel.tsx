@@ -122,7 +122,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
     );
 
     return (
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl overflow-hidden min-h-[600px] flex flex-col md:flex-row">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl overflow-hidden h-[calc(100vh-170px)] max-h-[750px] min-h-[500px] flex flex-col md:flex-row">
             {/* Sidebar Izquierdo: Lista de Docentes */}
             <div className="w-full md:w-80 lg:w-96 bg-slate-50/70 border-r border-slate-200/80 flex flex-col shrink-0">
                 <div className="p-4 border-b border-slate-200/80 space-y-3">
@@ -201,7 +201,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
             </div>
 
             {/* Main Chat Thread Area */}
-            <div className="flex-1 flex flex-col bg-white">
+            <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
                 {selectedTeacherEmail ? (
                     <>
                         {/* Selected Header */}

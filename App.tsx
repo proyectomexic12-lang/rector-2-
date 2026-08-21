@@ -629,8 +629,8 @@ function App() {
           </div>
         )}
 
-        {/* Botón Flotante de WhatsApp Solo para Usuarios VIP */}
-        {currentUser && authService.isUserUnlimited(currentUser) && (
+        {/* Botón Flotante de WhatsApp Solo para Docentes VIP */}
+        {currentUser && currentUser.role !== 'admin' && authService.isUserUnlimited(currentUser) && (
           <a
             href="https://wa.me/573205957019?text=Hola,%20soy%20usuario%20Premium%20de%20la%20plataforma%20Guaimaral%20AI.%20Necesito%20soporte%20o%20tengo%20una%20sugerencia:"
             target="_blank"
