@@ -68,14 +68,29 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
         };
     }, []);
 
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = (smooth = true) => {
+        setTimeout(() => {
+            if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTo({
+                    top: chatContainerRef.current.scrollHeight,
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            }
+        }, 50);
+    };
+
     useEffect(() => {
         if (selectedTeacherEmail) {
             loadThread(selectedTeacherEmail);
+            scrollToBottom();
         }
     }, [selectedTeacherEmail]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        scrollToBottom();
     }, [messages.length]);
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -89,6 +104,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
         try {
             const sentMsg = await chatService.sendMessage(currentUser, selectedTeacherEmail, text);
             setMessages(prev => [...prev, sentMsg]);
+            scrollToBottom();
             fetchAllConversations();
         } catch (err) {
             console.error("Error al enviar mensaje desde Admin:", err);
@@ -221,7 +237,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
                         </div>
 
                         {/* Thread Message Stream */}
-                        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
+                        <div ref={chatContainerRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
                             {messages.length === 0 ? (
                                 <div className="py-20 text-center text-slate-400 text-xs">
                                     No hay mensajes previos con este docente. Escribe el primer mensaje a continuación.

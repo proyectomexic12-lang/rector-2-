@@ -48,13 +48,27 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
         };
     }, [user?.email]);
 
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = (smooth = true) => {
+        setTimeout(() => {
+            if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTo({
+                    top: chatContainerRef.current.scrollHeight,
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            }
+        }, 50);
+    };
+
     useEffect(() => {
         if (isOpen && unreadCount > 0) {
             chatService.markAsRead(user.email, 'docente');
             setUnreadCount(0);
         }
         if (isOpen) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            scrollToBottom();
         }
     }, [isOpen, messages.length]);
 
@@ -69,6 +83,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
         try {
             const sentMsg = await chatService.sendMessage(user, 'admin@guaimaral.edu.co', text);
             setMessages(prev => [...prev, sentMsg]);
+            scrollToBottom();
         } catch (err) {
             console.error("Error al enviar mensaje:", err);
         } finally {
@@ -135,7 +150,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
                     </div>
 
                     {/* Chat Messages */}
-                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+                    <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
                         {messages.length === 0 ? (
                             <div className="py-12 text-center text-slate-400 text-xs space-y-2">
                                 <MessageSquare size={36} className="mx-auto text-slate-300" />
