@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../services/authService';
 import { chatService } from '../services/chatService';
 import { aiAgentService } from '../services/aiAgentService';
+import { presenceService } from '../services/presenceService';
 import { ChatMessage } from '../types';
 import { MessageSquare, X, Send, Bot, ShieldCheck, Sparkles, Check, CheckCheck, Clock, Loader2 } from 'lucide-react';
 
@@ -20,6 +21,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    const adminPresence = presenceService.getUserStatus('admin@guaimaral.edu.co');
 
     useEffect(() => {
         if (!user || user.role === 'admin') return;
@@ -182,9 +185,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
                                 <h3 className="font-black text-sm tracking-wide flex items-center gap-1.5">
                                     <span>Soporte Administración</span>
                                 </h3>
-                                <p className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                                <p className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1.5 mt-0.5">
                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                                    En línea para ayudarte
+                                    <span>{adminPresence.isOnline ? '🟢 Administrador en línea' : '🤖 Asistente IA activo 24/7'}</span>
                                 </p>
                             </div>
                         </div>

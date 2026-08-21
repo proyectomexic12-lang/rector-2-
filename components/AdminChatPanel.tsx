@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, authService } from '../services/authService';
 import { chatService } from '../services/chatService';
+import { presenceService } from '../services/presenceService';
 import { ChatMessage, ChatConversation } from '../types';
-import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Search, Send, CheckCheck, Check, User as UserIcon, RefreshCw, ShieldCheck, Sparkles, AlertTriangle, Circle } from 'lucide-react';
 
 interface AdminChatPanelProps {
     currentUser: User;
@@ -113,6 +114,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
 
     const selectedTeacherObj = allUsers.find(u => u.email.toLowerCase() === (selectedTeacherEmail || '').toLowerCase());
     const selectedSubStatus = selectedTeacherObj ? authService.getSubscriptionStatus(selectedTeacherObj) : null;
+    const selectedPresence = selectedTeacherEmail ? presenceService.getUserStatus(selectedTeacherEmail) : { isOnline: false, label: 'Desconectado' };
 
     const filteredConversations = conversations.filter(c =>
         c.teacher_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,6 +161,7 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
                     ) : (
                         filteredConversations.map((conv) => {
                             const isSelected = selectedTeacherEmail?.toLowerCase() === conv.teacher_email.toLowerCase();
+                            const isOnline = presenceService.isUserOnline(conv.teacher_email);
                             const timeStr = conv.last_timestamp
                                 ? new Date(conv.last_timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
                                 : '';
@@ -170,8 +173,11 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
                                     className={`w-full p-4 text-left flex items-start gap-3 transition-all relative ${isSelected ? 'bg-indigo-50/80 border-l-4 border-indigo-600' : 'hover:bg-white/80'
                                         }`}
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 shrink-0 mt-0.5">
-                                        {conv.teacher_name.charAt(0)}
+                                    <div className="relative shrink-0 mt-0.5">
+                                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">
+                                            {conv.teacher_name.charAt(0)}
+                                        </div>
+                                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} title={isOnline ? 'En línea' : 'Desconectado'} />
                                     </div>
 
                                     <div className="flex-1 min-w-0">
@@ -212,8 +218,11 @@ export const AdminChatPanel: React.FC<AdminChatPanelProps> = ({ currentUser, all
                                     <h3 className="font-bold text-slate-800 text-sm">
                                         {selectedTeacherObj ? selectedTeacherObj.name : selectedTeacherEmail}
                                     </h3>
-                                    <p className="text-[10px] text-slate-400 font-medium">
-                                        {selectedTeacherEmail}
+                                    <p className="text-[10px] font-medium flex items-center gap-1.5 mt-0.5">
+                                        <span className={`w-2 h-2 rounded-full ${selectedPresence.isOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                                        <span className={selectedPresence.isOnline ? 'text-emerald-600 font-bold' : 'text-slate-400'}>{selectedPresence.label}</span>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="text-slate-400">{selectedTeacherEmail}</span>
                                     </p>
                                 </div>
                             </div>

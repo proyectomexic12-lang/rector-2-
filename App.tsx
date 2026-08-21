@@ -13,6 +13,7 @@ import { generateDidacticSequence } from './services/geminiService';
 import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
+import { presenceService } from './services/presenceService';
 import { useAuth } from './context/AuthContext';
 import { useSequence } from './context/SequenceContext';
 import { useToast } from './context/ToastContext';
@@ -99,6 +100,14 @@ function App() {
       authService.getAllUsersWithStats().then(setAllUsers);
     }
   }, [activeTab, isAuthenticated, currentUser?.email]);
+
+  // 1.5.5 Presencia en tiempo real (Heartbeat En Línea)
+  useEffect(() => {
+    if (currentUser?.email) {
+      const stopHeartbeat = presenceService.startHeartbeat(currentUser.email);
+      return stopHeartbeat;
+    }
+  }, [currentUser?.email]);
 
   // 1.6 Periodic Anti-Account Sharing Session Validation
   useEffect(() => {
