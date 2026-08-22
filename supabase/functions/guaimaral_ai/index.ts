@@ -398,13 +398,6 @@ Deno.serve(async (req: Request) => {
                 return n.includes("video") || d.includes("video") || n.includes("youtube");
               });
 
-              const nonVideos = sequenceData.recursos.filter((r: any) => {
-                const n = (r?.nombre || "").toString().toLowerCase();
-                const d = (r?.descripcion || "").toString().toLowerCase();
-                return !n.includes("video") && !d.includes("video") && !n.includes("youtube");
-              });
-
-              // 1 Solo Video Principal
               if (videos.length > 0) {
                 cleanRecursos.push(videos[0]);
               } else {
@@ -413,50 +406,18 @@ Deno.serve(async (req: Request) => {
                   descripcion: `Tutorial audiovisual adaptado para niños y estudiantes de ${input.grado || ''}.`
                 });
               }
-
-              // Materiales de aula y taller imprimible (hasta 3 elementos reales de aula)
-              if (nonVideos.length > 0) {
-                cleanRecursos.push(...nonVideos.slice(0, 3));
-              } else {
-                cleanRecursos.push(
-                  {
-                    nombre: `Presentación / Esquema Visual: '${safeTema}'`,
-                    descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
-                  },
-                  {
-                    nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
-                    descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
-                  },
-                  {
-                    nombre: `Material Manipulativo y Recursos del Aula`,
-                    descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
-                  }
-                );
-              }
             } else {
               cleanRecursos = [
                 {
                   nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado || ''})'`,
                   descripcion: `Tutorial audiovisual adaptado para ${input.grado || ''}.`
-                },
-                {
-                  nombre: `Presentación / Esquema Visual: '${safeTema}'`,
-                  descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
-                },
-                {
-                  nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
-                  descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
-                },
-                {
-                  nombre: `Material Manipulativo y Recursos del Aula`,
-                  descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
                 }
               ];
             }
 
             sequenceData.recursos = cleanRecursos.map((r: any) => ({
-              nombre: (r?.nombre || "Recurso Pedagógico").toString(),
-              descripcion: (r?.descripcion || "Material de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
+              nombre: (r?.nombre || "Video Explicativo").toString(),
+              descripcion: (r?.descripcion || "Material audiovisual de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
             }));
 
             sequenceData.corporiedad_adi = sequenceData.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";

@@ -798,7 +798,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               return !n.includes("video") && !d.includes("video") && !n.includes("youtube");
             });
 
-            // 1 Solo Video Principal
+            // 1 Solo Video Principal (Único Recurso)
             if (videos.length > 0) {
               cleanRecursos.push(videos[0]);
             } else {
@@ -807,50 +807,18 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
                 descripcion: `Tutorial audiovisual adaptado para niños y estudiantes de ${input.grado}.`
               });
             }
-
-            // Materiales de aula y taller imprimible (hasta 3 elementos reales de aula)
-            if (nonVideos.length > 0) {
-              cleanRecursos.push(...nonVideos.slice(0, 3));
-            } else {
-              cleanRecursos.push(
-                {
-                  nombre: `Presentación / Esquema Visual: '${safeTema}'`,
-                  descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
-                },
-                {
-                  nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
-                  descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
-                },
-                {
-                  nombre: `Material Manipulativo y Recursos del Aula`,
-                  descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
-                }
-              );
-            }
           } else {
             cleanRecursos = [
               {
                 nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado})'`,
                 descripcion: `Tutorial audiovisual adaptado para ${input.grado}.`
-              },
-              {
-                nombre: `Presentación / Esquema Visual: '${safeTema}'`,
-                descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
-              },
-              {
-                nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
-                descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
-              },
-              {
-                nombre: `Material Manipulativo y Recursos del Aula`,
-                descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
               }
             ];
           }
 
           parsed.recursos = cleanRecursos.map((r: any) => ({
-            nombre: (r?.nombre || "Recurso Pedagógico").toString(),
-            descripcion: (r?.descripcion || "Material de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
+            nombre: (r?.nombre || "Video Explicativo").toString(),
+            descripcion: (r?.descripcion || "Material audiovisual de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
           }));
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
@@ -1040,10 +1008,7 @@ function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
       { 
         nombre: `Video Explicativo: '${tema} - Conceptos Clave (${grado})'`, 
         descripcion: `Material audiovisual didáctico adaptado para ${grado}.` 
-      },
-      { nombre: `Presentación en Diapositivas: '${tema}'`, descripcion: "Esquemas visuales y conceptos clave para la exposición dialogada en el aula." },
-      { nombre: "Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'", descripcion: "Guía fotocopiable con ejercicios contextualizados, bitácora y reto creativo." },
-      { nombre: "Material Manipulativo y Recursos del Aula", descripcion: "Material concreto, papelógrafos, marcadores y recursos didácticos del aula." }
+      }
     ],
     productos_asociados: `Taller del Estudiante completado con bitácora de evidencias sobre ${tema}`,
     instrumentos_evaluacion: "Rúbrica analítica Decreto 1290, cuestionario tipo Saber-ICFES y matriz de autoevaluación",
