@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { DidacticSequence, SequenceInput } from '../../types';
 import { Sparkles, PenTool, Lock, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
-import { ResourceViewer } from './ResourceViewer';
-import { generateExtendedIcfesExam } from '../../services/geminiService';
+import { generateExtendedIcfesExam, buildGradeAwareVideoQuery, resolveResourceAction } from '../../services/geminiService';
 
 interface SequenceDocumentProps {
   editableData: DidacticSequence;
@@ -31,7 +30,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
     try {
       setIsGeneratingIcfes(true);
       setIcfesError('');
-      const newEvaluacion = await generateExtendedIcfesExam(editableData);
+      const newEvaluacion = await generateExtendedIcfesExam(editableData, input);
       handleUpdateField('evaluacion', newEvaluacion);
     } catch (err: any) {
       setIcfesError(err.message || 'Error al generar examen ICFES');
@@ -259,25 +258,22 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
             {(editableData.recursos || []).map((rec, i) => {
               const nombreText = (rec?.nombre || "").toString();
               const descText = (rec?.descripcion || "").toString();
+              const cleanDesc = descText
+                .replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "")
+                .replace(/\s*\(Ver sección taller_imprimible\)/gi, "")
+                .replace(/\s*\(Ver en taller_imprimible\)/gi, "")
+                .trim();
 
-              // Extraer URL si existe en nombre o descripción
-              const textToSearch = `${nombreText} ${descText}`;
-              const urlMatch = textToSearch.match(/(https?:\/\/[^\s]+)/);
-              const foundUrl = urlMatch ? urlMatch[0] : null;
-
-              const isVideo = nombreText.toLowerCase().includes("video") || descText.toLowerCase().includes("video") || nombreText.toLowerCase().includes("youtube");
-              const rawTitle = nombreText.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
-              const searchQuery = rawTitle ? `${rawTitle} ${editableData.tema_principal || ''}` : `explicacion ${editableData.tema_principal || ''}`;
-              
-              const targetUrl = foundUrl || (
-                isVideo 
-                  ? `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
-                  : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || nombreText} ${editableData.tema_principal || ''}`)}`
+              const action = resolveResourceAction(
+                nombreText, 
+                descText, 
+                editableData.tema_principal || input.tema || '', 
+                input.grado || ''
               );
 
               return (
                 <div key={i} className="grid grid-cols-2 border-b border-gray-300 last:border-0 text-[10px]">
-                  <div className="p-1 border-r border-gray-300 font-medium flex flex-col justify-between">
+                  <div className="p-1.5 border-r border-gray-300 font-medium flex flex-col justify-between">
                     <EditableContent
                       value={rec.nombre}
                       onSave={(val) => {
@@ -286,39 +282,24 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                         handleUpdateField('recursos', newRecs);
                       }}
                     />
-                    <a
-                      href={targetUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`mt-1 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold text-white transition-all shadow-sm print:hidden w-fit ${
-                        isVideo 
-                          ? 'bg-red-600 hover:bg-red-700' 
-                          : 'bg-emerald-600 hover:bg-emerald-700'
-                      }`}
-                      title={isVideo ? "Abrir búsqueda de video real en YouTube" : "Abrir recurso o material en Google"}
-                    >
-                      {isVideo ? (
-                        <>
-                          <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                          </svg>
-                          <span>▶ Ver en YouTube ↗</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-3 h-3 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="2" y1="12" x2="22" y2="12"/>
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                          </svg>
-                          <span>🌐 Abrir Recurso en Web ↗</span>
-                        </>
-                      )}
-                    </a>
+                    {action.isVideo && action.url && (
+                      <a
+                        href={action.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-bold text-white bg-red-600 hover:bg-red-700 transition-all shadow-sm hover:scale-[1.02] active:scale-95 print:hidden w-fit"
+                        title="Abrir video explicativo en YouTube en nueva pestaña"
+                      >
+                        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                        <span>▶ Ver en YouTube ↗</span>
+                      </a>
+                    )}
                   </div>
-                  <div className="p-1 flex flex-col justify-center items-start">
+                  <div className="p-1.5 flex flex-col justify-center items-start">
                     <EditableContent
-                      value={rec.descripcion}
+                      value={cleanDesc || rec.descripcion}
                       className="w-full"
                       onSave={(val) => {
                         const newRecs = [...editableData.recursos];
@@ -326,7 +307,6 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                         handleUpdateField('recursos', newRecs);
                       }}
                     />
-                    {foundUrl && <ResourceViewer url={foundUrl} title={rec.nombre} />}
                   </div>
                 </div>
               );

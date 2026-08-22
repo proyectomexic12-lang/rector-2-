@@ -7,6 +7,7 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, ExternalHyperlink } from "docx";
 import { saveAs } from "file-saver";
 import { DidacticSequence, SequenceInput } from "../types";
+import { buildGradeAwareVideoQuery, resolveResourceAction } from "./geminiService";
 
 /**
  * Generates a formal .docx document based on the AI response.
@@ -231,35 +232,35 @@ export const generateDocx = async (data: DidacticSequence, input: SequenceInput)
           new Paragraph({ text: "" }),
           new Paragraph({ text: "RECURSOS Y MATERIALES MULTIMEDIA", heading: HeadingLevel.HEADING_3 }),
           ...(data.recursos || []).map(r => {
-            const textToSearch = `${r.nombre} ${r.descripcion}`;
-            const urlMatch = textToSearch.match(/(https?:\/\/[^\s]+)/);
-            const foundUrl = urlMatch ? urlMatch[0] : null;
-
-            const isVideo = r.nombre.toLowerCase().includes("video") || r.descripcion.toLowerCase().includes("video") || r.nombre.toLowerCase().includes("youtube");
-            const rawTitle = r.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
-            const searchQuery = rawTitle ? `${rawTitle} ${data.tema_principal || input.tema}` : `explicacion ${data.tema_principal || input.tema}`;
-            
-            const targetUrl = foundUrl || (
-              isVideo 
-                ? `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
-                : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || r.nombre} ${data.tema_principal || input.tema}`)}`
+            const action = resolveResourceAction(
+              r.nombre,
+              r.descripcion,
+              data.tema_principal || input.tema || '',
+              input.grado || ''
             );
 
-            return new Paragraph({
-              children: [
-                new TextRun({ text: `• ${r.nombre}: `, bold: true }),
-                new TextRun(r.descripcion + " "),
+            const children: any[] = [
+              new TextRun({ text: `• ${r.nombre}: `, bold: true }),
+              new TextRun(r.descripcion.replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").replace(/\s*\(Ver sección taller_imprimible\)/gi, "").replace(/\s*\(Ver en taller_imprimible\)/gi, "") + " ")
+            ];
+
+            if (action.isVideo && action.url) {
+              children.push(
                 new ExternalHyperlink({
                   children: [
                     new TextRun({
-                      text: isVideo ? "[▶ Ver Video en YouTube]" : "[🌐 Abrir Recurso en Web]",
-                      color: "0066CC",
+                      text: "[▶ Ver en YouTube]",
+                      color: "CC0000",
                       underline: {},
                     }),
                   ],
-                  link: targetUrl,
-                }),
-              ],
+                  link: action.url,
+                })
+              );
+            }
+
+            return new Paragraph({
+              children,
               spacing: { before: 80, after: 80 }
             });
           })

@@ -149,8 +149,8 @@ export const ApiStats: React.FC = () => {
                     </button>
                     <div className="flex items-center gap-4 bg-white/50 px-5 py-3 rounded-2xl border border-white/50 backdrop-blur-sm">
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rotación Failover</span>
-                            <span className="text-sm font-black text-green-600">{keysInfo.length} LLAVES EN LINEA</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{keysInfo.length > 1 ? "Rotación Failover" : "Canal DeepSeek"}</span>
+                            <span className="text-sm font-black text-green-600">{keysInfo.length} {keysInfo.length === 1 ? "LLAVE EN LÍNEA" : "LLAVES EN LÍNEA"}</span>
                         </div>
                         <div className="relative flex items-center justify-center">
                             <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-30"></div>
@@ -166,14 +166,17 @@ export const ApiStats: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <span className="text-2xl animate-bounce">⚠️</span>
                         <div>
-                            <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">Aviso de Cuota / Conmutación Activa</h4>
+                            <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">Aviso de Cuota / Conmutación</h4>
                             <p className="text-[11px] font-medium text-amber-800">
-                                Una de tus llaves registró error o límite de tasa (429). El orquestador activó el salto automático hacia las llaves restantes para que tus profesores no se detengan.
+                                {keysInfo.length > 1 
+                                    ? "Una de tus llaves registró error o límite de tasa (429). El orquestador activó el salto automático hacia las llaves restantes."
+                                    : "Tu llave DeepSeek registró reintentos o límites de tasa (429) en peticiones anteriores. Haz clic en 'Reiniciar Contadores' para restablecer las métricas."
+                                }
                             </p>
                         </div>
                     </div>
                     <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-3 py-1.5 rounded-xl whitespace-nowrap shadow-sm">
-                        Failover Protegido
+                        {keysInfo.length > 1 ? "Failover Protegido" : "DeepSeek Directo"}
                     </span>
                 </div>
             )}

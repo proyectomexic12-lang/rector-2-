@@ -13,9 +13,10 @@ export interface KeyConfigInfo {
 }
 
 const DEFAULT_KEY_LABELS = [
-  "Laura", "México", "Yarelis",
-  "Groq-Alpha", "Groq-Beta", "Groq-Gamma", "Groq-Delta",
-  "Groq-Epsilon", "Groq-Zeta", "Groq-Eta"
+  "DeepSeek Oficial",
+  "DeepSeek Respaldo 2",
+  "DeepSeek Respaldo 3",
+  "DeepSeek Respaldo 4"
 ];
 
 export function getAvailableKeysInfo(): KeyConfigInfo[] {
@@ -244,22 +245,230 @@ const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', err
 
 
 
+// Helper to categorize and parse Colombian school grades accurately
+export type GradeCategory = 'preescolar' | 'primaria_baja' | 'primaria_alta' | 'secundaria' | 'media' | 'multigrado';
+
+export interface GradeMetadata {
+  category: GradeCategory;
+  gradeLabel: string;
+  searchSuffix: string;
+  cleanGradeName: string;
+}
+
+export function getGradeCategory(grado: string): GradeMetadata {
+  const raw = (grado || '').toLowerCase().trim();
+  // Normalizar tildes y caracteres especiales
+  const g = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Multigrado
+  if (g.includes('multi')) {
+    return {
+      category: 'multigrado',
+      gradeLabel: 'Aula Multigrado Primaria',
+      searchSuffix: 'primaria para niños clase didactica explicacion infantil',
+      cleanGradeName: 'Multigrado Primaria'
+    };
+  }
+
+  // 2. Preescolar / Transición / Jardín
+  if (g.includes('transici') || g.includes('preescolar') || g.includes('jardin') || g.includes('parvulo') || g === '0' || g === '0°') {
+    return {
+      category: 'preescolar',
+      gradeLabel: 'Transición / Preescolar',
+      searchSuffix: 'para niños preescolar infantil cancion cuento educativo',
+      cleanGradeName: 'Preescolar'
+    };
+  }
+
+  // 3. Media Académica / Vocacional (10° y 11° - evaluar primero para evitar falso positivo con '1')
+  if (g.includes('undecim') || g.includes('once') || g === '11' || g === '11°' || g === '11ro' || g === '11vo' || g.includes('grado 11') || g.startsWith('11 ') || g.startsWith('11.')) {
+    return {
+      category: 'media',
+      gradeLabel: 'Grado 11° Media',
+      searchSuffix: 'grado 11 once bachillerato preparacion icfes saber 11 explicacion clase',
+      cleanGradeName: 'Undécimo (11°)'
+    };
+  }
+
+  if (g.includes('decim') || g === '10' || g === '10°' || g === '10mo' || g.includes('grado 10') || g.startsWith('10 ') || g.startsWith('10.')) {
+    return {
+      category: 'media',
+      gradeLabel: 'Grado 10° Media',
+      searchSuffix: 'grado 10 decimo bachillerato explicacion clase preparacion saber',
+      cleanGradeName: 'Décimo (10°)'
+    };
+  }
+
+  // 4. Primaria Baja (1° a 3°)
+  if (g.includes('primer') || g === '1' || g === '1°' || g === '1ro' || g.includes('grado 1') || g.startsWith('1 ') || g.startsWith('1.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 1° Primaria',
+      searchSuffix: 'para niños de 1 primaria primer grado educativo infantil explicacion facil',
+      cleanGradeName: 'Primero de Primaria'
+    };
+  }
+  if (g.includes('segund') || g === '2' || g === '2°' || g === '2do' || g.includes('grado 2') || g.startsWith('2 ') || g.startsWith('2.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 2° Primaria',
+      searchSuffix: 'para niños de 2 primaria segundo grado explicacion infantil didactica',
+      cleanGradeName: 'Segundo de Primaria'
+    };
+  }
+  if (g.includes('tercer') || g === '3' || g === '3°' || g === '3ro' || g.includes('grado 3') || g.startsWith('3 ') || g.startsWith('3.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 3° Primaria',
+      searchSuffix: 'para niños de 3 primaria tercer grado explicacion didactica',
+      cleanGradeName: 'Tercero de Primaria'
+    };
+  }
+
+  // 5. Primaria Alta (4° y 5°)
+  if (g.includes('cuart') || g === '4' || g === '4°' || g === '4to' || g.includes('grado 4') || g.startsWith('4 ') || g.startsWith('4.')) {
+    return {
+      category: 'primaria_alta',
+      gradeLabel: 'Grado 4° Primaria',
+      searchSuffix: 'para niños cuarto de primaria 4 grado explicacion didactica clase',
+      cleanGradeName: 'Cuarto de Primaria'
+    };
+  }
+  if (g.includes('quint') || g === '5' || g === '5°' || g === '5to' || g.includes('grado 5') || g.startsWith('5 ') || g.startsWith('5.')) {
+    return {
+      category: 'primaria_alta',
+      gradeLabel: 'Grado 5° Primaria',
+      searchSuffix: 'para niños quinto de primaria 5 grado clase explicativa',
+      cleanGradeName: 'Quinto de Primaria'
+    };
+  }
+
+  // 6. Secundaria Básica (6° a 9°)
+  if (g.includes('sext') || g === '6' || g === '6°' || g === '6to' || g.includes('grado 6') || g.startsWith('6 ') || g.startsWith('6.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 6° Secundaria',
+      searchSuffix: 'grado 6 sexto secundaria explicacion clase',
+      cleanGradeName: 'Sexto de Secundaria'
+    };
+  }
+  if (g.includes('septim') || g === '7' || g === '7°' || g === '7mo' || g.includes('grado 7') || g.startsWith('7 ') || g.startsWith('7.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 7° Secundaria',
+      searchSuffix: 'grado 7 septimo secundaria explicacion clase',
+      cleanGradeName: 'Séptimo de Secundaria'
+    };
+  }
+  if (g.includes('octav') || g === '8' || g === '8°' || g === '8vo' || g.includes('grado 8') || g.startsWith('8 ') || g.startsWith('8.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 8° Secundaria',
+      searchSuffix: 'grado 8 octavo secundaria explicacion clase',
+      cleanGradeName: 'Octavo de Secundaria'
+    };
+  }
+  if (g.includes('noven') || g === '9' || g === '9°' || g === '9no' || g.includes('grado 9') || g.startsWith('9 ') || g.startsWith('9.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 9° Secundaria',
+      searchSuffix: 'grado 9 noveno secundaria explicacion clase',
+      cleanGradeName: 'Noveno de Secundaria'
+    };
+  }
+
+  // Fallback para primaria genérica
+  if (g.includes('primaria')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Primaria',
+      searchSuffix: 'para niños de primaria explicacion infantil didactica',
+      cleanGradeName: 'Primaria'
+    };
+  }
+
+  return {
+    category: 'secundaria',
+    gradeLabel: `Grado ${grado}`,
+    searchSuffix: `grado ${grado} explicacion clase`,
+    cleanGradeName: `Grado ${grado}`
+  };
+}
+
+// Helper to build grade-aware YouTube search query for age-appropriate video resources
+export function buildGradeAwareVideoQuery(rawTitle: string, tema: string, grado: string): string {
+  // Limpiar título de prefijos como 'video:', comillas y signos
+  let cleanTitle = (rawTitle || '')
+    .replace(/^(video|video explicativo|video tutorial|tutorial|recurso audiovisual|recurso|material)\s*[:-]?\s*/i, '')
+    .replace(/['"«»“”]/g, '')
+    .trim();
+
+  const cleanTema = (tema || '').replace(/['"«»“”]/g, '').trim();
+  const gradeMeta = getGradeCategory(grado);
+
+  // Determinar núcleo de búsqueda
+  let coreTerm = cleanTitle;
+  if (!coreTerm) {
+    coreTerm = cleanTema || 'conceptos clave';
+  } else if (cleanTema && !coreTerm.toLowerCase().includes(cleanTema.toLowerCase())) {
+    coreTerm = `${coreTerm} ${cleanTema}`;
+  }
+
+  // Remover palabras numéricas o menciones contradictorias de grado dentro del coreTerm para evitar cruces
+  coreTerm = coreTerm
+    .replace(/\b(grado\s*\d+°?|\d+°?\s*grado|\b(primero|segundo|tercero|cuarto|quinto|sexto|septimo|séptimo|octavo|noveno|decimo|décimo|undecimo|undécimo|once)\b)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return `${coreTerm} ${gradeMeta.searchSuffix}`.replace(/\s+/g, ' ').trim();
+}
+
+export interface ResourceAction {
+  isVideo: boolean;
+  url: string | null;
+  label: string;
+}
+
+export function resolveResourceAction(nombreRaw: string, descripcionRaw: string, tema: string, grado: string): ResourceAction {
+  const nombre = (nombreRaw || '').toLowerCase();
+  const desc = (descripcionRaw || '').toLowerCase();
+
+  // 1. Detección exclusiva de Video -> YouTube Direct
+  if (nombre.includes("video") || desc.includes("video") || nombre.includes("youtube") || desc.includes("youtube")) {
+    const rawTitle = nombreRaw.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
+    const query = buildGradeAwareVideoQuery(rawTitle, tema, grado);
+    return {
+      isVideo: true,
+      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+      label: "▶ Ver en YouTube ↗"
+    };
+  }
+
+  // Cualquier otro recurso es texto didáctico limpio de aula sin botones ni badges
+  return {
+    isVideo: false,
+    url: null,
+    label: ""
+  };
+}
+
 // Helper functions for dynamic pedagogical contexts
 function getGradeContext(grado: string): string {
-  const gradoLower = grado.toLowerCase();
-  if (gradoLower.includes('preescolar') || gradoLower.includes('transición') || gradoLower.includes('1') || gradoLower.includes('2') || gradoLower.includes('3')) {
-    return "ENFOQUE DE PRIMARIA BÁSICA: Uso intensivo de material concreto, juegos de roles, canciones, y actividades motrices cortas. Lenguaje extremadamente afectivo y lúdico.";
+  const { category, gradeLabel } = getGradeCategory(grado);
+  switch (category) {
+    case 'preescolar':
+      return `ENFOQUE DE PREESCOLAR / TRANSICIÓN: Estimulación sensorial, juego estructurado, canciones infantiles, rondas, cuentos ilustrados, grafomotricidad y motricidad gruesa/fina. Lenguaje de ternura, lúdico y visual. CERO abstracciones teóricas.`;
+    case 'primaria_baja':
+      return `ENFOQUE DE PRIMARIA BÁSICA (1° a 3°): Uso intensivo de material concreto (bloques, fichas, regletas, dibujos), juegos de roles, canciones, retos de conteo/lectura inicial y actividades motrices cortas. Lenguaje afectivo, motivador y sumamente didáctico infantil.`;
+    case 'primaria_alta':
+      return `ENFOQUE DE PRIMARIA ALTA (4° y 5°): Transición al razonamiento lógico estructurado. Retos grupales, descubrimientos guiados, proyectos manuales, preguntas de indagación y resolución de problemas cotidianos contextualizados para niños.`;
+    case 'secundaria':
+      return `ENFOQUE DE SECUNDARIA BÁSICA (6° a 9°): Pensamiento crítico, debates, conexión con la realidad social y cotidiana, trabajo en equipo, argumentación fundamentada y desarrollo de la autonomía cognoscitiva.`;
+    case 'media':
+      return `ENFOQUE DE MEDIA ACADÉMICA / TÉCNICA (10° y 11°): Alto rigor conceptual pre-universitario, competencias Saber 11 / ICFES, análisis crítico de textos complejos, ensayos argumentativos, formulación de hipótesis y proyectos de vida.`;
+    case 'multigrado':
+      return `ENFOQUE MULTIGRADO PRIMARIA (Escuela Nueva / Altomira): Estrategia de aula unificada con actividades multinivel diferenciadas por ciclo (Transición a 5°), guías de autoaprendizaje y aprendizaje colaborativo entre pares de diferentes edades.`;
   }
-  if (gradoLower.includes('4') || gradoLower.includes('5')) {
-    return "ENFOQUE DE PRIMARIA ALTA: Transición al pensamiento lógico. Retos grupales, misterios, y proyectos manuales.";
-  }
-  if (gradoLower.includes('6') || gradoLower.includes('7') || gradoLower.includes('8') || gradoLower.includes('9')) {
-    return "ENFOQUE DE SECUNDARIA: Pensamiento crítico, debates, conexión con la rebeldía adolescente y problemas sociales reales. Fomentar la argumentación.";
-  }
-  if (gradoLower.includes('10') || gradoLower.includes('11')) {
-    return "ENFOQUE DE MEDIA TÉCNICA/ACADÉMICA: Rigor pre-universitario absoluto. Simulacros ICFES, ensayos argumentativos, pensamiento sistémico y formulación de proyectos de vida.";
-  }
-  return "ENFOQUE ESTÁNDAR: Adaptar pedagógicamente a la edad y nivel cognitivo esperado.";
 }
 
 function getAreaContext(area: string): string {
@@ -375,6 +584,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
     6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
     7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
+    8. **RECURSOS DIDÁCTICOS (1 SOLO VIDEO PRINCIPAL + MATERIALES REALES DE AULA):** En 'recursos', incluye EXACTAMENTE 1 video audiovisual principal explicativo de alta calidad adaptado al grado ${input.grado}. Los demás elementos deben ser presentaciones, guías impresas o materiales manipulativos de aula (CERO videos secundarios artificiales o forzados).
     9. **TALLER DE EXCELENCIA PARA EL ESTUDIANTE (VISTA ESTUDIANTE / GUÍA IMPRIMIBLE DE ALTO IMPACTO):**
        La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante, extremadamente rica en preguntas potentes, ejercicios contextualizados y retos cognitivos ajustados al grado ("Vista Estudiante"). Debe incluir:
        - 'introduccion': Texto introductorio motivador y cercano de 2 párrafos que conecte el tema con la vida real del estudiante.
@@ -572,62 +782,76 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               })
             : [];
           parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
-          parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
-          parsed.recursos = Array.isArray(parsed.recursos) && parsed.recursos.length >= 2
-            ? parsed.recursos.map((rec: any) => {
-                const nombre = (rec?.nombre || `Recurso Pedagógico de ${safeTema}`).toString();
-                let descripcion = (rec?.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`).toString();
-                
-                const isVideo = nombre.toLowerCase().includes("video") || descripcion.toLowerCase().includes("video") || nombre.toLowerCase().includes("youtube");
-                const hasUrl = /(https?:\/\/[^\s]+)/.test(`${nombre} ${descripcion}`);
-                
-                if (isVideo && !hasUrl) {
-                  const cleanQuery = nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim() || safeTema;
-                  const autoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`;
-                  descripcion += ` (Ver en YouTube: ${autoUrl})`;
-                }
+          // 4. Normalización estricta de Recursos: Exactamente 1 SOLO VIDEO PRINCIPAL + materiales de aula
+          let cleanRecursos: any[] = [];
 
-                return { nombre, descripcion };
-              })
-            : [
-                { 
-                  nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`, 
-                  descripcion: `Tutorial audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}` 
+          if (Array.isArray(parsed.recursos) && parsed.recursos.length > 0) {
+            const videos = parsed.recursos.filter((r: any) => {
+              const n = (r?.nombre || "").toString().toLowerCase();
+              const d = (r?.descripcion || "").toString().toLowerCase();
+              return n.includes("video") || d.includes("video") || n.includes("youtube");
+            });
+
+            const nonVideos = parsed.recursos.filter((r: any) => {
+              const n = (r?.nombre || "").toString().toLowerCase();
+              const d = (r?.descripcion || "").toString().toLowerCase();
+              return !n.includes("video") && !d.includes("video") && !n.includes("youtube");
+            });
+
+            // 1 Solo Video Principal
+            if (videos.length > 0) {
+              cleanRecursos.push(videos[0]);
+            } else {
+              cleanRecursos.push({
+                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado})'`,
+                descripcion: `Tutorial audiovisual adaptado para niños y estudiantes de ${input.grado}.`
+              });
+            }
+
+            // Materiales de aula y taller imprimible (hasta 3 elementos reales de aula)
+            if (nonVideos.length > 0) {
+              cleanRecursos.push(...nonVideos.slice(0, 3));
+            } else {
+              cleanRecursos.push(
+                {
+                  nombre: `Presentación / Esquema Visual: '${safeTema}'`,
+                  descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
                 },
-                { 
-                  nombre: `Video de Aplicación Práctica: 'Ejercicios Resueltos de ${safeTema}'`, 
-                  descripcion: `Demostración paso a paso de resolución de problemas situados. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}` 
+                {
+                  nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
+                  descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
                 },
-                { 
-                  nombre: `Presentación Interactiva / Canva: '${safeTema}'`, 
-                  descripcion: "Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase." 
+                {
+                  nombre: `Material Manipulativo y Recursos del Aula`,
+                  descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
                 }
-              ];
-
-          // Garantizar que SIEMPRE existan al menos 2 Videos explicativos en la lista unificada
-          const videoResources = parsed.recursos.filter((r: any) => {
-            const n = (r?.nombre || "").toString().toLowerCase();
-            const d = (r?.descripcion || "").toString().toLowerCase();
-            return n.includes("video") || d.includes("video") || n.includes("youtube");
-          });
-
-          if (videoResources.length === 0) {
-            parsed.recursos.unshift(
+              );
+            }
+          } else {
+            cleanRecursos = [
               {
-                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`,
-                descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}`
+                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado})'`,
+                descripcion: `Tutorial audiovisual adaptado para ${input.grado}.`
               },
               {
-                nombre: `Video Tutorial: 'Ejercicios de ${safeTema}'`,
-                descripcion: `Tutorial paso a paso para la resolución de problemas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}`
+                nombre: `Presentación / Esquema Visual: '${safeTema}'`,
+                descripcion: `Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase.`
+              },
+              {
+                nombre: `Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'`,
+                descripcion: `Guía fotocopiable con situaciones problema, bitácora de evidencias y reto creativo para el estudiante.`
+              },
+              {
+                nombre: `Material Manipulativo y Recursos del Aula`,
+                descripcion: `Material concreto, papelógrafos, marcadores y recursos del entorno escolar para el trabajo colaborativo.`
               }
-            );
-          } else if (videoResources.length === 1) {
-            parsed.recursos.splice(1, 0, {
-              nombre: `Video Tutorial Complementario: '${safeTema} en la Vida Real'`,
-              descripcion: `Explicación contextualizada de aplicación en situaciones cotidianas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} vida real`)}`
-            });
+            ];
           }
+
+          parsed.recursos = cleanRecursos.map((r: any) => ({
+            nombre: (r?.nombre || "Recurso Pedagógico").toString(),
+            descripcion: (r?.descripcion || "Material de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
+          }));
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
           // 5. Auditoría Institucional de Textos
@@ -813,8 +1037,13 @@ function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
       }
     ],
     recursos: [
-      { nombre: "Guía Didáctica Docente Platino", descripcion: "Orientación pedagógica detallada paso a paso para la facilitación de las sesiones." },
-      { nombre: "Taller Imprimible de Aprendizaje Autónomo", descripcion: "Guía fotocopiable con ejercicios contextualizados, bitácora y reto creativo." }
+      { 
+        nombre: `Video Explicativo: '${tema} - Conceptos Clave (${grado})'`, 
+        descripcion: `Material audiovisual didáctico adaptado para ${grado}.` 
+      },
+      { nombre: `Presentación en Diapositivas: '${tema}'`, descripcion: "Esquemas visuales y conceptos clave para la exposición dialogada en el aula." },
+      { nombre: "Guía de Trabajo: 'Taller Imprimible de Aprendizaje Autónomo'", descripcion: "Guía fotocopiable con ejercicios contextualizados, bitácora y reto creativo." },
+      { nombre: "Material Manipulativo y Recursos del Aula", descripcion: "Material concreto, papelógrafos, marcadores y recursos didácticos del aula." }
     ],
     productos_asociados: `Taller del Estudiante completado con bitácora de evidencias sobre ${tema}`,
     instrumentos_evaluacion: "Rúbrica analítica Decreto 1290, cuestionario tipo Saber-ICFES y matriz de autoevaluación",
@@ -834,9 +1063,7 @@ function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
       ],
       reto_creativo: `Diseña una infografía, afiche informativo o esquema innovador que resuma de forma gráfica y atractiva las enseñanzas principales de ${tema}.`
     },
-    alertas_generadas: [
-    ],
-    dba_utilizado: dba,
+    alertas_generadas: [],
     eje_crese_utilizado: crese,
     glosario: [
       { termino: tema, definicion: `Concepto pedagógico clave en ${area} para el grado ${grado}.` },
@@ -852,7 +1079,7 @@ export let lastWorkingModel = "omni-model";
 // GENERADOR DE EXÁMENES ICFES (NUEVA FASE 1)
 // =========================================================================
 
-export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence): Promise<EvaluationItem[]> => {
+export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, input?: SequenceInput): Promise<EvaluationItem[]> => {
   const availableKeys = getAvailableKeysInfo();
 
   if (availableKeys.length === 0) {
@@ -861,12 +1088,16 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
 
   // Monopolio DeepSeek para el examen
   const modelsToTry = ["deepseek-chat"];
+  const gradoStr = input?.grado || "";
+  const areaStr = input?.area || "";
 
   const prompt = `
   Actúa como un experto en evaluación educativa del ICFES (Colombia).
   Tu tarea es generar un examen riguroso de 10 preguntas de selección múltiple con única respuesta (opciones A, B, C, D) 
-  basado EXCLUSIVAMENTE en la siguiente planeación de clase:
+  basado EXCLUSIVAMENTE en la siguiente planeación de clase y rigurosamente adaptado al grado y nivel cognitivo escolar:
 
+  ${gradoStr ? `Grado Escolar: ${gradoStr} (${getGradeContext(gradoStr)})` : ''}
+  ${areaStr ? `Área del Conocimiento: ${areaStr}` : ''}
   Tema Principal: ${sequenceData.tema_principal}
   Objetivo: ${sequenceData.objetivo_aprendizaje}
   DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
@@ -881,6 +1112,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence):
   3. Cada pregunta debe tener 4 opciones (A, B, C, D) donde solo una es correcta.
   4. La respuesta correcta debe estar explícitamente indicada.
   5. Debes proporcionar una justificación pedagógica clara de por qué la respuesta correcta es la elegida.
+  6. ADAPTACIÓN COGNITIVA AL GRADO (${gradoStr || 'Nivel Escolar'}): El vocabulario, la extensión de las situaciones problema y la dificultad DEBEN corresponder con exactitud al grado escolar. Para Primaria (Transición a 5°), el lenguaje debe ser claro, comprensible y didáctico para niños, sin abstracciones universitarias.
 
   DEVUELVE ÚNICAMENTE UN ARRAY DE OBJETOS JSON CON ESTA ESTRUCTURA EXACTA:
   [

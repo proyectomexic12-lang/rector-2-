@@ -32,24 +32,8 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
   };
 
   const handleDownloadPDF = () => {
-    const element = document.getElementById('preview-container');
-    if (!element) return;
-    
-    const opt = {
-      margin:       10,
-      filename:     `Planeacion_${input?.tema || 'Guaimaral'}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // @ts-ignore
-    if (window.html2pdf) {
-      // @ts-ignore
-      window.html2pdf().set(opt).from(element).save();
-    } else {
-      alert("La librería de PDF está cargando, por favor intenta en un segundo.");
-    }
+    // Invoca la exportación a PDF nativa del navegador con resolución vectorial perfecta y saltos de página limpios
+    window.print();
   };
 
   const handleDownloadDocx = async () => {
