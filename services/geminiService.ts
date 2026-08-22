@@ -482,23 +482,29 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
         }
 
-        // Normalizador defensivo de arreglos para evitar que React lance TypeError .map de undefined
+        // =========================================================================
+        // 🛡️ MOTOR DE AUDITORÍA AUTÓNOMA Y CONTROL DE CALIDAD PEDAGÓGICA (5 NIVELES)
+        // =========================================================================
         if (parsed) {
-          parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
-          parsed.actividades = Array.isArray(parsed.actividades) 
-            ? parsed.actividades.map((act: any, aIdx: number) => ({
-                ...act,
-                sesion: act.sesion || (aIdx + 1),
-                materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Materiales pedagógicos del aula"]),
-                preguntas_socraticas: Array.isArray(act.preguntas_socraticas) ? act.preguntas_socraticas : (act.preguntas_socraticas ? [String(act.preguntas_socraticas)] : [])
-              }))
-            : [];
-          parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
-          parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
-          parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];
-          parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
+          // 1. Auditoría Curricular (DBA vs Orientación Pedagógica MEN)
+          if (!parsed.dba_utilizado || typeof parsed.dba_utilizado !== 'string' || parsed.dba_utilizado.trim().length < 5) {
+            if (hasDBA) {
+              parsed.dba_utilizado = (input.dba && input.dba.trim().length > 5)
+                ? input.dba
+                : `DBA #1 (MEN Colombia - ${input.area} Grado ${input.grado}): Identifica, comprende y analiza los referentes oficiales del MEN en relación con ${safeTema}.`;
+            } else {
+              parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): Promueve el análisis crítico, la indagación y la reflexión en torno a ${safeTema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
+            }
+          } else if (!hasDBA && (parsed.dba_utilizado.toLowerCase().includes("dba oficial") || parsed.dba_utilizado.toLowerCase().startsWith("dba"))) {
+            parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): ${parsed.dba_utilizado.replace(/^DBA\s*(Oficial\s*del\s*MEN\s*\([^)]*\))?\s*[:-]?\s*/i, "")}`;
+          }
 
-          // Normalizador defensivo para el Taller del Estudiante (Garantiza guía completa y extensa)
+          // 2. Auditoría de Inclusión (DUA / PIAR)
+          if (!parsed.adecuaciones_piar || typeof parsed.adecuaciones_piar !== 'string' || parsed.adecuaciones_piar.trim().length < 15) {
+            parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
+          }
+
+          // 3. Auditoría del Taller del Estudiante ("Vista Estudiante")
           if (!parsed.taller_imprimible || typeof parsed.taller_imprimible !== 'object') {
             parsed.taller_imprimible = {
               introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades de análisis y producción.`,
@@ -533,23 +539,22 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             }
           }
 
-          if (!parsed.adecuaciones_piar || typeof parsed.adecuaciones_piar !== 'string' || parsed.adecuaciones_piar.trim().length < 15) {
-            parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
-          }
+          // 4. Auditoría Estructural de Arreglos
+          parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
+          parsed.actividades = Array.isArray(parsed.actividades) 
+            ? parsed.actividades.map((act: any, aIdx: number) => ({
+                ...act,
+                sesion: act.sesion || (aIdx + 1),
+                materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Materiales pedagógicos del aula"]),
+                preguntas_socraticas: Array.isArray(act.preguntas_socraticas) ? act.preguntas_socraticas : (act.preguntas_socraticas ? [String(act.preguntas_socraticas)] : [])
+              }))
+            : [];
+          parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
+          parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
+          parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];
+          parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
-          // Garantía Inviolable de DBA Oficial (para materias básicas) u Orientaciones Pedagógicas del MEN (para Filosofía, Artística, etc.)
-          if (!parsed.dba_utilizado || typeof parsed.dba_utilizado !== 'string' || parsed.dba_utilizado.trim().length < 5) {
-            if (hasDBA) {
-              parsed.dba_utilizado = (input.dba && input.dba.trim().length > 5)
-                ? input.dba
-                : `DBA #1 (MEN Colombia - ${input.area} Grado ${input.grado}): Identifica, comprende y analiza los referentes oficiales del MEN en relación con ${safeTema}.`;
-            } else {
-              parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): Promueve el análisis crítico, la indagación y la reflexión filosófica en torno a ${safeTema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
-            }
-          } else if (!hasDBA && (parsed.dba_utilizado.toLowerCase().includes("dba oficial") || parsed.dba_utilizado.toLowerCase().startsWith("dba"))) {
-            // Si el área no utiliza DBA (ej. Filosofía), corregir automáticamente para no citar un DBA ficticio
-            parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): ${parsed.dba_utilizado.replace(/^DBA\s*(Oficial\s*del\s*MEN\s*\([^)]*\))?\s*[:-]?\s*/i, "")}`;
-          }
+          // 5. Auditoría Institucional de Textos
           parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
           parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
           parsed.objetivo_aprendizaje = parsed.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
