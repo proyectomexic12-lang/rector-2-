@@ -599,6 +599,19 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
                   descripcion: "Taller imprimible para el trabajo autónomo del estudiante." 
                 }
               ];
+
+          // Garantizar que SIEMPRE exista al menos 1 Video explicativo obligatorio en la lista unificada de recursos
+          const hasAnyVideoResource = parsed.recursos.some((r: any) => 
+            (r.nombre && r.nombre.toLowerCase().includes("video")) || 
+            (r.descripcion && r.descripcion.toLowerCase().includes("video"))
+          );
+
+          if (!hasAnyVideoResource) {
+            parsed.recursos.unshift({
+              nombre: `Video Explicativo: '${safeTema}'`,
+              descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}`
+            });
+          }
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
           // 5. Auditoría Institucional de Textos
