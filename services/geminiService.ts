@@ -660,10 +660,6 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
     console.warn("🛡️ [Escudo de Autoreparación Activo] Generando planeación de respaldo pedagógico institucional...");
     return buildFailSafeSequence(input);
-  } catch (globalErr) {
-    console.warn("🛡️ [Escudo de Autoreparación Activo] Generando planeación de respaldo pedagógico...", globalErr);
-    return buildFailSafeSequence(input);
-  }
 };
 
 // Generador de Respaldo Inmune (Escudo 100% Inmune a Fallas de Servidor o Red - Nivel Platinum)
