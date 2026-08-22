@@ -155,8 +155,39 @@ Deno.serve(async (req: Request) => {
 
           sequenceData = JSON.parse(text);
           if (sequenceData) {
+            if (!sequenceData.taller_imprimible || typeof sequenceData.taller_imprimible !== 'object') {
+              sequenceData.taller_imprimible = {
+                introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades.`,
+                instrucciones: "Lee con atención cada lectura o situación presentada, resuelve las preguntas con argumentos claros y realiza el reto creativo al finalizar.",
+                bitacora_test_inicial: `1. ¿Qué conocimientos previos tienes sobre ${safeTema} y dónde lo has observado en tu vida cotidiana?\n2. ¿Por qué consideras importante comprender este tema?`,
+                ejercicios: [
+                  `Actividad 1 (Análisis de Caso): Lee el escenario sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones fundamentadas.`,
+                  `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los componentes esenciales de ${safeTema} y elabora un esquema explicativo.`,
+                  `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales aplicando los estándares trabajados en clase sobre ${safeTema}.`,
+                  `Actividad 4 (Resolución de Problemas): Analiza el siguiente caso de estudio relacionado con ${safeTema} y explica el procedimiento de solución.`,
+                  `Actividad 5 (Síntesis y Juicio Crítico): Redacta una conclusión de 5 líneas evaluando el impacto de ${safeTema} en el entorno escolar y cotidiano.`
+                ],
+                reto_creativo: `Diseña un mapa de ideas innovador o afiche explicativo que resuma los aprendizajes clave logrados sobre ${safeTema}.`
+              };
+            } else if (!Array.isArray(sequenceData.taller_imprimible.ejercicios) || sequenceData.taller_imprimible.ejercicios.length < 3) {
+              const baseEj = Array.isArray(sequenceData.taller_imprimible.ejercicios) ? sequenceData.taller_imprimible.ejercicios : [];
+              sequenceData.taller_imprimible.ejercicios = [
+                ...baseEj,
+                `Actividad 1 (Análisis de Caso): Analiza la situación sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones.`,
+                `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los conceptos clave de ${safeTema} con un ejemplo real.`,
+                `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales sobre ${safeTema}.`,
+                `Actividad 4 (Resolución de Problemas): Analiza y resuelve el caso hipotético del tema.`,
+                `Actividad 5 (Síntesis Crítica): Redacta un resumen de 5 líneas con tus conclusiones sobre ${safeTema}.`
+              ].slice(0, 5);
+            }
+
             if (!sequenceData.adecuaciones_piar || typeof sequenceData.adecuaciones_piar !== 'string' || sequenceData.adecuaciones_piar.trim().length < 15) {
               sequenceData.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
+            }
+            if (!sequenceData.dba_utilizado || typeof sequenceData.dba_utilizado !== 'string' || sequenceData.dba_utilizado.trim().length < 5) {
+              sequenceData.dba_utilizado = input.dba && input.dba.trim().length > 5 
+                ? input.dba 
+                : `DBA Oficial del MEN (Colombia) - Grado ${input.grado} (${input.area}): Identifica, comprende y aplica los referentes oficiales del MEN en relación con ${safeTema}.`;
             }
             sequenceData.titulo_secuencia = sequenceData.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
             sequenceData.descripcion_secuencia = sequenceData.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;

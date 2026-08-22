@@ -365,7 +365,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
     ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
     1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (Inicio, Desarrollo, Cierre) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
-    2. **AUTO-CORRECCIÓN Y ALINEACIÓN CURRICULAR:** Asegura correspondencia 100% estricta entre el DBA oficial del MEN, el estándar y el tema en "tema_principal".
+    2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el Ministerio de Educación Nacional (MEN) de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
     3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
        - **Fase de Inicio (Exploración):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
        - **Fase de Desarrollo (Estructuración y Práctica):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
@@ -376,7 +376,12 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
     7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
     8. **RÚBRICA ANALÍTICA DECRETO 1290:** Rúbrica con descriptores completos, exhaustivos y diferenciados para los 4 niveles colombianos: **Bajo, Básico, Alto y Superior**.
-    9. **TALLER IMPRIMIBLE AUTÓNOMO Y RETO CREATIVO:** Guía de trabajo aplicativa con 3 ejercicios prácticos contextualizados y un "Reto Creativo" final motivador.
+    9. **TALLER DEL ESTUDIANTE EXTENSO Y COMPLETO (GUÍA IMPRIMIBLE):** La 'taller_imprimible' debe ser un Taller completo, rico en contenido, dinámico y EXTENSO para los estudiantes ("Vista Estudiante"). Debe incluir:
+       - 'introduccion': Introducción motivadora de 2 párrafos explicativos sobre el tema.
+       - 'instrucciones': Instrucciones claras de trabajo autónomo.
+       - 'bitacora_test_inicial': 2 preguntas de indagación de saberes previos.
+       - 'ejercicios': Un arreglo de MÍNIMO 5 EJERCICIOS PRÁCTICOS EXTENSOS (situaciones problema con subpreguntas a, b, c, análisis y aplicación directa).
+       - 'reto_creativo': Un reto aplicativo de alto impacto pedagógico.
     10. **FORMATO JSON PURO:** Devuelve ÚNICAMENTE el objeto JSON estructurado sin ningún texto introductorio ni final.
 
     ### PARÁMETROS DEL CURRÍCULO
@@ -493,23 +498,51 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
-          if (!parsed.taller_imprimible) {
+          // Normalizador defensivo para el Taller del Estudiante (Garantiza guía completa y extensa)
+          if (!parsed.taller_imprimible || typeof parsed.taller_imprimible !== 'object') {
             parsed.taller_imprimible = {
-              introduccion: "Taller pedagógico de aplicación",
-              instrucciones: "Resuelve las actividades con dedicación.",
-              bitacora_test_inicial: "Saberes previos del tema",
-              ejercicios: ["Ejercicio de práctica 1"],
-              reto_creativo: "Reto creativo de aplicación"
+              introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades de análisis y producción.`,
+              instrucciones: "Lee con atención cada lectura o situación presentada, resuelve las preguntas con argumentos claros y realiza el reto creativo al finalizar.",
+              bitacora_test_inicial: `1. ¿Qué conocimientos previos tienes sobre ${safeTema} y dónde lo has observado en tu vida cotidiana?\n2. ¿Por qué consideras importante comprender este tema?`,
+              ejercicios: [
+                `Actividad 1 (Análisis de Caso): Lee el escenario sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones fundamentadas.`,
+                `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los componentes esenciales de ${safeTema} y elabora un esquema explicativo.`,
+                `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales aplicando los estándares trabajados en clase sobre ${safeTema}.`,
+                `Actividad 4 (Resolución de Problemas): Analiza el siguiente caso de estudio relacionado con ${safeTema} y explica el procedimiento de solución.`,
+                `Actividad 5 (Síntesis y Juicio Crítico): Redacta una conclusión de 5 líneas evaluando el impacto de ${safeTema} en el entorno escolar y cotidiano.`
+              ],
+              reto_creativo: `Diseña un mapa de ideas innovador o afiche explicativo que resuma los aprendizajes clave logrados sobre ${safeTema}.`
             };
-          } else if (!Array.isArray(parsed.taller_imprimible.ejercicios)) {
-            parsed.taller_imprimible.ejercicios = [parsed.taller_imprimible.ejercicios || "Ejercicio de práctica 1"];
+          } else {
+            if (!parsed.taller_imprimible.introduccion || parsed.taller_imprimible.introduccion.length < 15) {
+              parsed.taller_imprimible.introduccion = `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades.`;
+            }
+            if (!parsed.taller_imprimible.instrucciones) {
+              parsed.taller_imprimible.instrucciones = "Lee con atención cada lectura o situación, resuelve las preguntas con argumentos claros y completa cada actividad.";
+            }
+            if (!Array.isArray(parsed.taller_imprimible.ejercicios) || parsed.taller_imprimible.ejercicios.length < 3) {
+              const baseEj = Array.isArray(parsed.taller_imprimible.ejercicios) ? parsed.taller_imprimible.ejercicios : [];
+              parsed.taller_imprimible.ejercicios = [
+                ...baseEj,
+                `Actividad 1 (Análisis de Caso): Analiza la situación sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones.`,
+                `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los conceptos clave de ${safeTema} con un ejemplo real.`,
+                `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales sobre ${safeTema}.`,
+                `Actividad 4 (Resolución de Problemas): Analiza y resuelve el caso hipotético del tema.`,
+                `Actividad 5 (Síntesis Crítica): Redacta un resumen de 5 líneas con tus conclusiones sobre ${safeTema}.`
+              ].slice(0, 5);
+            }
           }
 
           if (!parsed.adecuaciones_piar || typeof parsed.adecuaciones_piar !== 'string' || parsed.adecuaciones_piar.trim().length < 15) {
             parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
           }
 
-          // Garantía Inviolable de Campos de Texto
+          // Garantía Inviolable de DBA Oficial del MEN Colombia y Campos de Texto
+          if (!parsed.dba_utilizado || typeof parsed.dba_utilizado !== 'string' || parsed.dba_utilizado.trim().length < 5) {
+            parsed.dba_utilizado = input.dba && input.dba.trim().length > 5 
+              ? input.dba 
+              : `DBA Oficial del MEN (Colombia) - Grado ${input.grado} (${input.area}): Identifica, comprende y aplica los referentes oficiales del MEN en relación con ${safeTema}.`;
+          }
           parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
           parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
           parsed.objetivo_aprendizaje = parsed.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
