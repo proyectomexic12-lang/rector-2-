@@ -366,10 +366,11 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
     1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (Inicio, Desarrollo, Cierre) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
     2. **AUTO-CORRECCIÓN Y ALINEACIÓN CURRICULAR:** Asegura correspondencia 100% estricta entre el DBA oficial del MEN, el estándar y el tema en "tema_principal".
-    3. **METODOLOGÍA ABP Y DUA INTEGRAL:** 
+    3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
        - **Fase de Inicio (Exploración):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
        - **Fase de Desarrollo (Estructuración y Práctica):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
        - **Fase de Cierre (Transferencia y Metacognición):** Evaluación formativa, síntesis, socialización y preguntas de autorreflexión.
+       - **Adecuaciones DUA / PIAR:** Es OBLIGATORIO detallar en 'adecuaciones_piar' apoyos visuales/auditivos, flexibilización de tiempos, guía paso a paso y adaptaciones específicas del Plan Individual de Ajustes Razonables (PIAR).
     4. **MOMENTOS ADI (Corporiedad y Bienestar):** Pausa activa cerebral de 3 a 5 minutos detallada en cada sesión (ej. ejercicios de respiración, gimnasia cerebral, coordinación motriz).
     5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
     6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
@@ -503,6 +504,21 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           } else if (!Array.isArray(parsed.taller_imprimible.ejercicios)) {
             parsed.taller_imprimible.ejercicios = [parsed.taller_imprimible.ejercicios || "Ejercicio de práctica 1"];
           }
+
+          if (!parsed.adecuaciones_piar || typeof parsed.adecuaciones_piar !== 'string' || parsed.adecuaciones_piar.trim().length < 15) {
+            parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
+          }
+
+          // Garantía Inviolable de Campos de Texto
+          parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
+          parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
+          parsed.objetivo_aprendizaje = parsed.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
+          parsed.metodologia = parsed.metodologia || "Aprendizaje Basado en Problemas (ABP) y Diseño Universal para el Aprendizaje (DUA)";
+          parsed.productos_asociados = parsed.productos_asociados || `Bitácora de evidencias y taller completado sobre ${safeTema}`;
+          parsed.instrumentos_evaluacion = parsed.instrumentos_evaluacion || "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo";
+          parsed.bibliografia = parsed.bibliografia || "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)";
+          parsed.observaciones = parsed.observaciones || "Planeación alineada con los requerimientos pedagógicos institucionales.";
+          parsed.corporiedad_adi = parsed.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";
         }
 
         // Auto-corrección y saneamiento de la Rúbrica (Garantiza los 4 niveles colombianos Decreto 1290)

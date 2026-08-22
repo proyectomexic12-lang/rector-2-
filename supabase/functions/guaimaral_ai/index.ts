@@ -153,6 +153,20 @@ Deno.serve(async (req: Request) => {
           }
 
           sequenceData = JSON.parse(text);
+          if (sequenceData) {
+            if (!sequenceData.adecuaciones_piar || typeof sequenceData.adecuaciones_piar !== 'string' || sequenceData.adecuaciones_piar.trim().length < 15) {
+              sequenceData.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
+            }
+            sequenceData.titulo_secuencia = sequenceData.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
+            sequenceData.descripcion_secuencia = sequenceData.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
+            sequenceData.objetivo_aprendizaje = sequenceData.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
+            sequenceData.metodologia = sequenceData.metodologia || "Aprendizaje Basado en Problemas (ABP) y Diseño Universal para el Aprendizaje (DUA)";
+            sequenceData.productos_asociados = sequenceData.productos_asociados || `Bitácora de evidencias y taller completado sobre ${safeTema}`;
+            sequenceData.instrumentos_evaluacion = sequenceData.instrumentos_evaluacion || "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo";
+            sequenceData.bibliografia = sequenceData.bibliografia || "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)";
+            sequenceData.observaciones = sequenceData.observaciones || "Planeación alineada con los requerimientos pedagógicos institucionales.";
+            sequenceData.corporiedad_adi = sequenceData.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";
+          }
           usedModel = modelName;
           
           break; // Break model loop on success

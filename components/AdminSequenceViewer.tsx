@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
-import { Database, FileText, Download, Calendar, User, Search, Trash2, Activity, Clock, BarChart3, TrendingUp, Lock } from 'lucide-react';
+import { Database, FileText, Download, Calendar, User, Search, Lock, BookOpen, FileDown } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { User as UserType } from '../services/authService';
+import { generateDocx } from '../services/docxService';
+import { SequenceInput } from '../types';
 
 interface AdminSequenceViewerProps {
     userEmail?: string;
     user?: UserType | null;
     creditsLeft?: number | null;
+    onSelectSequence?: (seq: any) => void;
 }
 
-export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEmail, user, creditsLeft }) => {
+export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEmail, user, creditsLeft, onSelectSequence }) => {
     const [sequences, setSequences] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [stats, setStats] = useState<any>(null);
+    const [exportingId, setExportingId] = useState<string | null>(null);
 
     // Unpaid/expired teacher detection: non-admin, non-unlimited user with 0 credits left
     const isUnlimited = user ? authService.isUserUnlimited(user) : true;
@@ -73,6 +77,30 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
         downloadAnchorNode.remove();
     };
 
+    const handleDownloadDocx = async (seq: any) => {
+        try {
+            setExportingId(seq.id);
+            let content = seq.content;
+            if (typeof content === 'string') {
+                content = JSON.parse(content);
+            }
+            const seqInput: SequenceInput = {
+                grado: seq.grado || content.grado || '',
+                area: seq.area || content.area || '',
+                tema: seq.tema || content.tema_principal || '',
+                dba: content.dba_utilizado || content.dba || '',
+                sesiones: content.actividades?.length || 4,
+                ejeCrese: content.eje_crese_utilizado || ''
+            };
+            await generateDocx(content, seqInput);
+        } catch (e) {
+            console.error("Error al exportar DOCX:", e);
+            alert("No se pudo generar el archivo Word (.docx) de esta planeación.");
+        } finally {
+            setExportingId(null);
+        }
+    };
+
     return (
         <div className="w-full bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl mb-12 animate-fade-in-up relative overflow-hidden group">
             {/* Decorative background element */}
@@ -88,7 +116,7 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                             {userEmail ? 'Repositorio Personal' : 'Repositorio Global'}
                         </h3>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
-                            {userEmail ? 'Mi Historial de Planeaciones' : 'Control Admin - Historial Institucional'}
+                            {userEmail ? 'Mi Historial de Planeaciones (Guardadas en Base de Datos)' : 'Control Admin - Historial Institucional'}
                         </p>
                     </div>
                 </div>
@@ -163,7 +191,7 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredSequences.map((seq) => (
-                                <tr key={seq.id} className="group hover:bg-slate-50/50 transition-colors">
+                                <tr key={seq.id} className="group hover:bg-slate-50/80 transition-colors">
                                     <td className="py-4">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
@@ -173,8 +201,18 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                                         </div>
                                     </td>
                                     <td className="py-4">
-                                        <div>
-                                            <p className="text-sm font-black text-slate-800">{seq.tema}</p>
+                                        <div 
+                                            onClick={() => onSelectSequence && onSelectSequence(seq)} 
+                                            className={onSelectSequence ? "cursor-pointer group/title" : ""}
+                                        >
+                                            <p className="text-sm font-black text-slate-800 group-hover/title:text-blue-600 transition-colors flex items-center gap-1.5">
+                                                {seq.tema}
+                                                {onSelectSequence && (
+                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold opacity-0 group-hover/title:opacity-100 transition-opacity">
+                                                        Abrir ↗
+                                                    </span>
+                                                )}
+                                            </p>
                                             <p className="text-[10px] font-bold text-slate-400">{seq.grado} • {seq.area}</p>
                                         </div>
                                     </td>
@@ -185,13 +223,36 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                                         </div>
                                     </td>
                                     <td className="py-4 text-right">
-                                        <button
-                                            onClick={() => downloadJson(seq)}
-                                            className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm group-hover:scale-110"
-                                            title="Descargar JSON"
-                                        >
-                                            <Download size={16} />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            {onSelectSequence && (
+                                                <button
+                                                    onClick={() => onSelectSequence(seq)}
+                                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-blue-500/20 flex items-center gap-1.5"
+                                                    title="Abrir Planeación en el Visor para ver o descargar PDF / Word"
+                                                >
+                                                    <BookOpen size={14} />
+                                                    <span>Abrir / PDF</span>
+                                                </button>
+                                            )}
+
+                                            <button
+                                                onClick={() => handleDownloadDocx(seq)}
+                                                disabled={exportingId === seq.id}
+                                                className="px-2.5 py-2 bg-slate-100 hover:bg-blue-50 border border-slate-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
+                                                title="Descargar directamente en Microsoft Word (.docx)"
+                                            >
+                                                <FileText size={14} />
+                                                <span className="hidden sm:inline">Word</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => downloadJson(seq)}
+                                                className="p-2 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"
+                                                title="Descargar copia de respaldo en JSON"
+                                            >
+                                                <Download size={14} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -210,3 +271,4 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
         </div>
     );
 };
+

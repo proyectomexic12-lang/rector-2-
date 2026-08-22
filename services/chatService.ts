@@ -287,8 +287,5 @@ export const chatService = {
     }
 };
 
-// Limpieza automática de mensajes de prueba antiguos
-setTimeout(() => {
-    chatService.deleteConversation('paula.padilla@guaimaral.edu.co');
-    chatService.deleteConversation('martin.celin@guaimaral.edu.co');
-}, 1000);
+// Final del servicio de chat
+

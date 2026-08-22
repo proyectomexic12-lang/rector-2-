@@ -321,6 +321,14 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               className="min-h-[2.5rem] whitespace-pre-line"
             />
           </div>
+          <div className="mt-2 border border-gray-400 institutional-section print:mt-1 bg-blue-50/20">
+            <HeaderBox className="border-0 border-b bg-[#EDF7ED] text-emerald-950 font-bold">ADECUACIONES CURRICULARES (DUA / PIAR - INCLUSIÓN EDUCATIVA)</HeaderBox>
+            <EditableContent
+              value={editableData.adecuaciones_piar || "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR)."}
+              onSave={(val) => handleUpdateField('adecuaciones_piar', val)}
+              className="min-h-[3rem] whitespace-pre-line p-2 text-[11px]"
+            />
+          </div>
           <div className="mt-1 border border-gray-400 institutional-section print:mt-0.5">
             <HeaderBox className="border-0 border-b bg-[#f9fafb]">REGISTRO DE SEGUIMIENTO (PARA LLENAR POR EL DOCENTE)</HeaderBox>
             <div className="p-2 min-h-[4rem] text-[10px] text-gray-400 italic">
