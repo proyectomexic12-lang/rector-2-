@@ -230,6 +230,46 @@ Deno.serve(async (req: Request) => {
             sequenceData.instrumentos_evaluacion = sequenceData.instrumentos_evaluacion || "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo";
             sequenceData.bibliografia = sequenceData.bibliografia || "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)";
             sequenceData.observaciones = sequenceData.observaciones || "Planeación alineada con los requerimientos pedagógicos institucionales.";
+            sequenceData.recursos = Array.isArray(sequenceData.recursos) && sequenceData.recursos.length > 0
+              ? sequenceData.recursos.map((rec: any) => {
+                  const nombre = (rec?.nombre || `Recurso Pedagógico de ${safeTema}`).toString();
+                  let descripcion = (rec?.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`).toString();
+                  
+                  const isVideo = nombre.toLowerCase().includes("video") || descripcion.toLowerCase().includes("video") || nombre.toLowerCase().includes("youtube");
+                  const hasUrl = /(https?:\/\/[^\s]+)/.test(`${nombre} ${descripcion}`);
+                  
+                  if (isVideo && !hasUrl) {
+                    const cleanQuery = nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim() || safeTema;
+                    const autoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`;
+                    descripcion += ` (Ver en YouTube: ${autoUrl})`;
+                  }
+
+                  return { nombre, descripcion };
+                })
+              : [
+                  { 
+                    nombre: `Video Explicativo: '${safeTema}'`, 
+                    descripcion: `Material audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}` 
+                  },
+                  { 
+                    nombre: `Guía Didáctica Fotocopiable: ${safeTema}`, 
+                    descripcion: "Taller imprimible para el trabajo autónomo del estudiante." 
+                  }
+                ];
+
+            const hasAnyVideoResource = sequenceData.recursos.some((r: any) => {
+              const n = (r?.nombre || "").toString().toLowerCase();
+              const d = (r?.descripcion || "").toString().toLowerCase();
+              return n.includes("video") || d.includes("video") || n.includes("youtube");
+            });
+
+            if (!hasAnyVideoResource) {
+              sequenceData.recursos.unshift({
+                nombre: `Video Explicativo: '${safeTema}'`,
+                descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}`
+              });
+            }
+
             sequenceData.corporiedad_adi = sequenceData.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";
           }
           usedModel = modelName;
