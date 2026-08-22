@@ -375,13 +375,13 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
     6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
     7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
-    8. **RÚBRICA ANALÍTICA DECRETO 1290:** Rúbrica con descriptores completos, exhaustivos y diferenciados para los 4 niveles colombianos: **Bajo, Básico, Alto y Superior**.
-    9. **TALLER DEL ESTUDIANTE EXTENSO Y COMPLETO (GUÍA IMPRIMIBLE):** La 'taller_imprimible' debe ser un Taller completo, rico en contenido, dinámico y EXTENSO para los estudiantes ("Vista Estudiante"). Debe incluir:
-       - 'introduccion': Introducción motivadora de 2 párrafos explicativos sobre el tema.
-       - 'instrucciones': Instrucciones claras de trabajo autónomo.
-       - 'bitacora_test_inicial': 2 preguntas de indagación de saberes previos.
-       - 'ejercicios': Un arreglo de MÍNIMO 5 EJERCICIOS PRÁCTICOS EXTENSOS (situaciones problema con subpreguntas a, b, c, análisis y aplicación directa).
-       - 'reto_creativo': Un reto aplicativo de alto impacto pedagógico.
+    9. **TALLER DE EXCELENCIA PARA EL ESTUDIANTE (VISTA ESTUDIANTE / GUÍA IMPRIMIBLE DE ALTO IMPACTO):**
+       La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante, extremadamente rica en preguntas potentes, ejercicios contextualizados y retos cognitivos ajustados al grado ("Vista Estudiante"). Debe incluir:
+       - 'introduccion': Texto introductorio motivador y cercano de 2 párrafos que conecte el tema con la vida real del estudiante.
+       - 'instrucciones': Pasos metodológicos claros para el desarrollo individual o colaborativo.
+       - 'bitacora_test_inicial': 2 a 3 preguntas profundas de indagación y pensamiento metacognitivo inicial.
+       - 'ejercicios': Un arreglo de 5 A 6 ACTIVIDADES Y PROBLEMAS COMPLEJOS con subpreguntas detalladas (a, b, c), lecturas cortas de análisis, esquemas de razonamiento, problemas de aplicación real y preguntas de juicio crítico (HOTS).
+       - 'reto_creativo': Un desafío innovador de creación de producto (infografía, propuesta de solución, esquema o modelo).
     10. **FORMATO JSON PURO:** Devuelve ÚNICAMENTE el objeto JSON estructurado sin ningún texto introductorio ni final.
 
     ### PARÁMETROS DEL CURRÍCULO
