@@ -81,18 +81,45 @@ Deno.serve(async (req: Request) => {
       - **Enfoque Integrador:** Debes fusionar de manera coherente las 4 áreas básicas (Lenguaje, Matemáticas, Sociales y Naturales) en una sola secuencia didáctica funcional.`;
     }
 
+    function getGradeContext(grado?: string): string {
+      const g = (grado || '').toLowerCase();
+      if (g.includes('preescolar') || g.includes('transición') || g.includes('1') || g.includes('2') || g.includes('3')) {
+        return "ENFOQUE DE PRIMARIA BÁSICA: Uso intensivo de material concreto, juegos de roles, canciones, y actividades motrices cortas. Lenguaje afectivo y lúdico.";
+      }
+      if (g.includes('4') || g.includes('5')) {
+        return "ENFOQUE DE PRIMARIA ALTA: Transición al pensamiento lógico. Retos grupales, misterios, y proyectos manuales.";
+      }
+      if (g.includes('6') || g.includes('7') || g.includes('8') || g.includes('9')) {
+        return "ENFOQUE DE SECUNDARIA: Pensamiento crítico, debates, problemas sociales reales y argumentación sólida.";
+      }
+      if (g.includes('10') || g.includes('11')) {
+        return "ENFOQUE DE MEDIA ACADÉMICA/TÉCNICA: Rigor pre-universitario. Simulacros ICFES, ensayos argumentativos, pensamiento sistémico y proyectos de vida.";
+      }
+      return "ENFOQUE ESTÁNDAR: Adaptar pedagógicamente a la edad y nivel cognitivo esperado.";
+    }
+
+    function getAreaContext(area?: string): string {
+      const a = (area || '').toLowerCase();
+      if (a.includes('matemática')) return "ENFOQUE MATEMÁTICO: Resolución de problemas (Polya), pensamiento lógico y uso constructivo del error.";
+      if (a.includes('lenguaje') || a.includes('español')) return "ENFOQUE LENGUAJE: Prácticas sociales del lenguaje, comprensión crítica, producción textual y lectura inferencial.";
+      if (a.includes('ciencia') || a.includes('natural')) return "ENFOQUE CIENTÍFICO: Método científico empírico, laboratorios lúdicos, hipótesis y conciencia ambiental.";
+      if (a.includes('sociales') || a.includes('historia')) return "ENFOQUE SOCIALES: Pensamiento histórico y crítico, multiperspectividad, geografía viva y formación ciudadana.";
+      return "ENFOQUE DISCIPLINAR: Énfasis en las competencias específicas del área según lineamientos del MEN.";
+    }
+
     const prompt = `
       ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM)
       Eres el Agente Supremo de la I.E. Guaimaral. Fusionas la excelencia pedagógica de un Consultor Senior del MEN con la precisión técnica de un Ingeniero de Orquestación de IA de nivel platino. Tu misión es la perfección absoluta en cada letra y estructura.
 
       ### MARCO DE OPERACIÓN SUPREMO
       - **Protocolo de las 50 Reglas de Oro:** Aplicar cada directriz de excelencia pedagógica (Alineación MEN, DUA, Bloom, CRESE).
+      - **Alineación DBA MEN Colombia:** Si el área usa DBA, DEBES citar el número exacto del DBA del MEN (ej: "DBA #2") y su enunciado literal para ${input.grado || 'este grado'}. Si no usa DBA (ej: Filosofía, Artística), citar la "Orientación Pedagógica del MEN para ${input.area}".
+      - **Taller del Estudiante Completo (Vista Estudiante):** Generar una guía de trabajo 'taller_imprimible' EXTENSA, RICA y COMPLETA con MÍNIMO 5 ejercicios prácticos contextualizados, indagación inicial y reto creativo de alto valor pedagógico.
       - **Robustez Técnica Platino:** Generar JSON puro, sin errores estructurales, con tipos validados al 100%.
-      - **Cero Alucinación Curricular:** Veracidad total en referentes nacionales. Si es DBA, incluir número y texto. Si son Orientaciones, citarlas textualmente.
-      - **Metodologías de Vanguardia:** Aprendizaje Basado en Problemas, Flipped Classroom y Momentos ADI Creativos.
 
       ### PARÁMETROS DE LA SECUENCIA
-      - **Grado:** ${input.grado || 'General'} | **Area:** ${input.area || 'General'}
+      - **Grado:** ${input.grado || 'General'} (${getGradeContext(input.grado)})
+      - **Area:** ${input.area || 'General'} (${getAreaContext(input.area)})
       - **Tema:** ${safeTema} | **Sesiones:** ${input.sesiones || 4}
       ${pedagogicalInstruction}
       - **Banco de Evaluación:** Generar obligatoriamente **10 preguntas** de selección múltiple tipo ICFES con 4 opciones.
@@ -101,9 +128,9 @@ Deno.serve(async (req: Request) => {
       ${refinementInstruction ? `- **COMANDO DE REFINAMIENTO MAESTRO:** ${sanitizeInput(refinementInstruction)}` : ''}
 
       ### AUDITORÍA DE CALIDAD PRE-SALIDA
-      - ¿Hay exactamente **10 preguntas** de evaluación con situaciones problema reales?
-      - ¿La guía imprimible es autónoma y pedagógicamente motivadora?
-      - ¿Se han seguido los estándares o las orientaciones curriculares vigentes en Colombia según el área?
+      - ¿El DBA o la Orientación Pedagógica es el oficial del MEN exacto para ${input.grado}?
+      - ¿Hay exactamente **10 preguntas** de evaluación tipo ICFES?
+      - ¿El Taller del Estudiante ('taller_imprimible') contiene mínimo 5 actividades/ejercicios extensos y contextualizados?
 
       Responde únicamente con el JSON validado.
     `;
