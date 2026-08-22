@@ -601,10 +601,11 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               ];
 
           // Garantizar que SIEMPRE exista al menos 1 Video explicativo obligatorio en la lista unificada de recursos
-          const hasAnyVideoResource = parsed.recursos.some((r: any) => 
-            (r.nombre && r.nombre.toLowerCase().includes("video")) || 
-            (r.descripcion && r.descripcion.toLowerCase().includes("video"))
-          );
+          const hasAnyVideoResource = parsed.recursos.some((r: any) => {
+            const n = (r?.nombre || "").toString().toLowerCase();
+            const d = (r?.descripcion || "").toString().toLowerCase();
+            return n.includes("video") || d.includes("video") || n.includes("youtube");
+          });
 
           if (!hasAnyVideoResource) {
             parsed.recursos.unshift({

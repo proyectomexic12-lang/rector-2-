@@ -257,19 +257,22 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
           </div>
           <div className="border-l border-r border-b border-gray-400 institutional-section">
             {(editableData.recursos || []).map((rec, i) => {
+              const nombreText = (rec?.nombre || "").toString();
+              const descText = (rec?.descripcion || "").toString();
+
               // Extraer URL si existe en nombre o descripción
-              const textToSearch = `${rec.nombre} ${rec.descripcion}`;
+              const textToSearch = `${nombreText} ${descText}`;
               const urlMatch = textToSearch.match(/(https?:\/\/[^\s]+)/);
               const foundUrl = urlMatch ? urlMatch[0] : null;
 
-              const isVideo = rec.nombre.toLowerCase().includes("video") || rec.descripcion.toLowerCase().includes("video") || rec.nombre.toLowerCase().includes("youtube");
-              const rawTitle = rec.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
-              const searchQuery = rawTitle ? `${rawTitle} ${editableData.tema_principal}` : `explicacion ${editableData.tema_principal}`;
+              const isVideo = nombreText.toLowerCase().includes("video") || descText.toLowerCase().includes("video") || nombreText.toLowerCase().includes("youtube");
+              const rawTitle = nombreText.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
+              const searchQuery = rawTitle ? `${rawTitle} ${editableData.tema_principal || ''}` : `explicacion ${editableData.tema_principal || ''}`;
               
               const targetUrl = foundUrl || (
                 isVideo 
                   ? `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
-                  : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || rec.nombre} ${editableData.tema_principal}`)}`
+                  : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || nombreText} ${editableData.tema_principal || ''}`)}`
               );
 
               return (
