@@ -120,18 +120,21 @@ export const ApiStats: React.FC = () => {
                     </div>
                     <div>
                         <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none">Monitor AI ({keysInfo.length} Canales)</h3>
-                            <div className="bg-blue-600/10 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-blue-200 animate-pulse flex items-center gap-1">
+                            <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none">
+                                Monitor AI ({keysInfo.length} {keysInfo.length === 1 ? 'Canal' : 'Canales'})
+                            </h3>
+                            <div className="bg-emerald-600/10 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-emerald-200 flex items-center gap-1">
                                 <Server size={10} /> {providerName}
                             </div>
                         </div>
                         <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-2 flex items-center gap-2 flex-wrap">
-                            <span className="text-slate-400">Modelos & Red:</span>
+                            <span className="text-slate-400">Estado de Conexión:</span>
                             <span className="flex gap-2 flex-wrap ml-1">
                                 {Object.entries(modelHealthStatus).map(([name, status]) => (
-                                    <div key={name} title={`${name}: ${status}`} className="flex items-center gap-1.5 bg-white/60 px-2 py-0.5 rounded-full border border-slate-200/50">
-                                        <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500 shadow-sm shadow-green-500/40' : status === 'offline' ? 'bg-red-500' : 'bg-blue-400 animate-pulse'}`}></div>
-                                        <span className="text-[9px] text-slate-600 font-bold lowercase">{name}</span>
+                                    <div key={name} title={`${name}: ${status}`} className="flex items-center gap-1.5 bg-emerald-50/80 px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                                        <div className={`w-2 h-2 rounded-full ${status === 'offline' ? 'bg-red-500' : 'bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse'}`}></div>
+                                        <span className="text-[10px] text-emerald-800 font-black tracking-wide lowercase">{name}</span>
+                                        <span className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">● {status === 'offline' ? 'Desconectado' : '100% Operacional'}</span>
                                     </div>
                                 ))}
                             </span>
@@ -147,20 +150,20 @@ export const ApiStats: React.FC = () => {
                     >
                         <RotateCcw size={14} className="text-blue-600" /> Reiniciar Contadores
                     </button>
-                    <div className="flex items-center gap-4 bg-white/50 px-5 py-3 rounded-2xl border border-white/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-4 bg-emerald-50/80 px-5 py-3 rounded-2xl border border-emerald-200/80 backdrop-blur-sm shadow-sm">
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{keysInfo.length > 1 ? "Rotación Failover" : "Canal DeepSeek"}</span>
-                            <span className="text-sm font-black text-green-600">{keysInfo.length} {keysInfo.length === 1 ? "LLAVE EN LÍNEA" : "LLAVES EN LÍNEA"}</span>
+                            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest leading-none mb-1">Canal DeepSeek</span>
+                            <span className="text-sm font-black text-emerald-700">1 LLAVE EN LÍNEA</span>
                         </div>
                         <div className="relative flex items-center justify-center">
-                            <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-30"></div>
-                            <div className="relative w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-sm"></div>
+                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
+                            <div className="relative w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Banner de Alerta Inteligente para el Administrador */}
+            {/* Banner de Alerta Inteligente para el Administrador (Solo si hay errores persistentes activos) */}
             {keysInfo.some(k => (apiMetrics[k.id]?.errors || 0) > 0) && (
                 <div className="mb-8 p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-red-500/10 border-2 border-amber-400/40 rounded-2xl flex items-center justify-between gap-4 animate-fade-in-up">
                     <div className="flex items-center gap-3">
@@ -168,16 +171,16 @@ export const ApiStats: React.FC = () => {
                         <div>
                             <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">Aviso de Cuota / Conmutación</h4>
                             <p className="text-[11px] font-medium text-amber-800">
-                                {keysInfo.length > 1 
-                                    ? "Una de tus llaves registró error o límite de tasa (429). El orquestador activó el salto automático hacia las llaves restantes."
-                                    : "Tu llave DeepSeek registró reintentos o límites de tasa (429) en peticiones anteriores. Haz clic en 'Reiniciar Contadores' para restablecer las métricas."
-                                }
+                                Tu llave DeepSeek registró reintentos en peticiones pasadas. Haz clic en 'Reiniciar Contadores' para limpiar las estadísticas.
                             </p>
                         </div>
                     </div>
-                    <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-3 py-1.5 rounded-xl whitespace-nowrap shadow-sm">
-                        {keysInfo.length > 1 ? "Failover Protegido" : "DeepSeek Directo"}
-                    </span>
+                    <button
+                        onClick={handleResetMetrics}
+                        className="text-[9px] font-black uppercase bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl whitespace-nowrap shadow-sm transition-all"
+                    >
+                        Limpiar Alerta
+                    </button>
                 </div>
             )}
 
@@ -206,10 +209,10 @@ export const ApiStats: React.FC = () => {
                             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-blue-500/5 rounded-full blur-xl group-hover/card:bg-blue-500/20 transition-colors"></div>
 
                             <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs font-black text-slate-600 uppercase tracking-wider truncate">Canal {i + 1}: {label}</span>
+                                <span className="text-xs font-black text-slate-700 uppercase tracking-wider truncate">Canal {i + 1}: {label}</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Live</span>
-                                    <Zap size={16} className={metrics.errors > 2 && successRate < 50 ? "text-red-500" : "text-amber-500 animate-pulse"} />
+                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">100% Live</span>
+                                    <Zap size={16} className={metrics.errors > 2 && successRate < 50 ? "text-red-500" : "text-emerald-500 animate-pulse"} />
                                 </div>
                             </div>
 
