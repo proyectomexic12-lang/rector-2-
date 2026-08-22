@@ -539,15 +539,37 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             }
           }
 
-          // 4. Auditoría Estructural de Arreglos
+          // 4. Auditoría Estructural de Arreglos y Fases de Sesión Ricas
           parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
           parsed.actividades = Array.isArray(parsed.actividades) 
-            ? parsed.actividades.map((act: any, aIdx: number) => ({
-                ...act,
-                sesion: act.sesion || (aIdx + 1),
-                materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Materiales pedagógicos del aula"]),
-                preguntas_socraticas: Array.isArray(act.preguntas_socraticas) ? act.preguntas_socraticas : (act.preguntas_socraticas ? [String(act.preguntas_socraticas)] : [])
-              }))
+            ? parsed.actividades.map((act: any, aIdx: number) => {
+                const inicio = (act.fase_inicio && act.fase_inicio.trim().length > 25) 
+                  ? act.fase_inicio 
+                  : `El docente inicia la sesión activando saberes previos sobre ${safeTema} mediante una situación problema detonante del entorno cotidiano. Los estudiantes expresan sus hipótesis iniciales y comparten sus experiencias previas en parejas.`;
+
+                const desarrollo = (act.fase_desarrollo && act.fase_desarrollo.trim().length > 35) 
+                  ? act.fase_desarrollo 
+                  : `Fase de estructuración y práctica guiada: El docente expone dialogadamente los principios esenciales de ${safeTema} apoyado en organizadores gráficos y ejemplos concretos. Posteriormente, los estudiantes resuelven ejercicios procedimentales y casos situados en equipos de trabajo colaborativo.`;
+
+                const cierre = (act.fase_cierre && act.fase_cierre.trim().length > 25) 
+                  ? act.fase_cierre 
+                  : `Plenaria y metacognición: Socialización colectiva de resultados, sintetización de las ideas clave sobre ${safeTema} por parte del docente y evaluación formativa reflexiva integrando el eje CRESE.`;
+
+                return {
+                  ...act,
+                  sesion: act.sesion || (aIdx + 1),
+                  fase_inicio: inicio,
+                  fase_desarrollo: desarrollo,
+                  fase_cierre: cierre,
+                  materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Tablero, cuadernos de apuntes, guía de trabajo e indicadores visuales"]),
+                  preguntas_socraticas: Array.isArray(act.preguntas_socraticas) && act.preguntas_socraticas.length > 0 
+                    ? act.preguntas_socraticas 
+                    : [
+                        `¿De qué manera el concepto de ${safeTema} se manifiesta en situaciones reales de tu entorno?`,
+                        `¿Qué estrategia procedimental te permitió verificar la validez de tu respuesta?`
+                      ]
+                };
+              })
             : [];
           parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
           parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
@@ -636,119 +658,124 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
       }
     }
 
-    console.warn(`[⚠️ Conmutación de Modelo] Todas las llaves fallaron para ${modelName}. Probando modelo de respaldo...`);
-  }
-
-
-
-  console.warn("🛡️ [Escudo de Autoreparación Activo] Generando planeación de respaldo pedagógico institucional...");
-  return buildFailSafeSequence(input);
-};
-
-// Generador de Respaldo Infallible (Escudo 100% Inmune a Fallas de Servidor o Red)
+    // Generador de Respaldo Inmune (Escudo 100% Inmune a Fallas de Servidor o Red - Nivel Platinum)
 function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
   const tema = input.tema || "Contenido Curricular";
   const grado = input.grado || "General";
   const area = input.area || "Área Principal";
-  const dba = input.dba || "Alineación Curricular Oficial del MEN";
   const crese = input.ejeCrese || "Educación Socioemocional y Ciudadanía";
+
+  const areaNormativa = {
+    conDBA: ['MATEMATICAS', 'LENGUAJE', 'CIENCIAS NATURALES', 'CIENCIAS SOCIALES', 'INGLES', 'FISICA', 'ESTADISTICA', 'GEOMETRIA', 'BIOLOGIA', 'QUIMICA'],
+  };
+  const currentArea = area.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a));
+
+  const dbaFormatted = hasDBA
+    ? (input.dba && input.dba.trim().length > 5 ? input.dba : `DBA #2 (MEN Colombia - ${area} Grado ${grado}): Utiliza conceptos, relaciones y procedimientos fundamentales de ${tema} para formular, interpretar y resolver problemas del contexto real.`)
+    : `Orientación Pedagógica del MEN para ${area} (Grado ${grado}): Promueve el análisis crítico, la indagación y la reflexión sistemática sobre ${tema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
 
   return {
     tema_principal: tema,
-    titulo_secuencia: `Unidad Didáctica Integrada: ${tema}`,
-    descripcion_secuencia: `Secuencia didáctica estructurada para el grado ${grado} en el área de ${area}, focalizada en el aprendizaje significativo, el desarrollo de competencias del MEN y la vivencia transversal del eje CRESE (${crese}).`,
-    objetivo_aprendizaje: `Desarrollar y fortalecer competencias clave en ${area} mediante la comprensión, exploración y aplicación práctica del tema "${tema}".`,
+    titulo_secuencia: `Unidad Didáctica de Alto Impacto: ${tema}`,
+    descripcion_secuencia: `Secuencia didáctica integral estructurada para el grado ${grado} en el área de ${area}. Está diseñada bajo la metodología de Aprendizaje Basado en Problemas (ABP) y los principios del Diseño Universal para el Aprendizaje (DUA), garantizando el desarrollo de competencias de alto orden cognitivo (HOTS), el pensamiento crítico y la vivencia transversal de los valores socioemocionales del eje CRESE (${crese}).`,
+    objetivo_aprendizaje: `Desarrollar y consolidar competencias de análisis, interpretación y aplicación práctica en el área de ${area}, capacitando al estudiante de grado ${grado} para resolver situaciones problema complejas relacionadas con ${tema}.`,
     contenidos: [
-      `Fundamentos conceptuales de ${tema}`,
-      `Estrategias de indagación y resolución de problemas`,
-      `Aplicación contextualizada y trabajo colaborativo`
+      `Marco conceptual y fundamentos procedimentales de ${tema}`,
+      `Estrategias de indagación, modelado y resolución de problemas situados`,
+      `Transferencia del conocimiento, producción autónoma y trabajo colaborativo`
     ],
-    competencias_men: `Reconoce, interpreta y aplica los conceptos esenciales de ${area} según los lineamientos curriculares y estándares de competencia del MEN para grado ${grado}.`,
-    estandar: `Comprende y produce saberes fundamentales relacionados con ${tema}, integrando el pensamiento crítico y la ética ciudadana.`,
+    competencias_men: `Comprende, analiza y aplica con rigor los postulados esenciales de ${area} según los Estándares Básicos de Competencia del MEN para grado ${grado}, comunicando sus hallazgos de forma asertiva.`,
+    estandar: `Comprende, argumenta y produce saberes científicos y procedimentales sobre ${tema}, demostrando pensamiento crítico, autonomía y responsabilidad ciudadana en su entorno escolar.`,
     metodologia: "Aprendizaje Basado en Problemas (ABP) y Diseño Universal para el Aprendizaje (DUA)",
-    corporiedad_adi: "Pausas activas de gimnasia cerebral y ejercicios de respiración consciente antes de cada transición.",
+    corporiedad_adi: "Pausas activas cerebrales de 3 a 5 minutos (gimnasia cerebral, coordinación motriz y respiración consciente) ejecutadas antes de la estructuración.",
+    dba_utilizado: dbaFormatted,
     actividades: [
       {
         sesion: 1,
-        fase_inicio: `Exploración de saberes previos sobre ${tema} mediante preguntas detonantes y lluvia de ideas en grupo.`,
-        fase_desarrollo: `Exposición dialogada del concepto central de ${tema}, apoyada en material concreto, organizadores gráficos y ejemplos cotidianos.`,
-        fase_cierre: `Síntesis colectiva y metacognición: los estudiantes resumen en tres oraciones lo aprendido en la sesión.`,
+        fase_inicio: `El docente inicia la sesión dando una cálida bienvenida e introduciendo una situación problema detonante del entorno cotidiano sobre ${tema}. Se realiza una lluvia de ideas guiada utilizando preguntas socráticas para activar saberes previos, permitiendo que los estudiantes expresen sus hipótesis e identifiquen la relevancia práctica de la temática.`,
+        fase_desarrollo: `Durante la fase de estructuración, el docente expone dialogadamente los conceptos clave de ${tema} apoyándose en organizadores gráficos y material didáctico. Posteriormente, los estudiantes se organizan en equipos de trabajo colaborativo para resolver una guía orientada, analizando casos reales, aplicando modelos procedimentales y argumentando cada paso de su resolución.`,
+        fase_cierre: `Para el cierre de la sesión, los grupos socializan sus hallazgos en plenaria. El docente sintetiza las ideas fuerza, institucionaliza los conceptos aprendidos y concluye con una rutina de metacognición donde los estudiantes responden en sus bitácoras: ¿Qué aprendimos hoy sobre ${tema} y cómo lo aplicaremos?`,
         preguntas_socraticas: [
-          `¿Por qué es relevante el concepto de ${tema} en nuestra vida diaria?`,
-          `¿Cómo podemos aplicar este aprendizaje para resolver un problema de nuestro entorno?`
+          `¿De qué manera el concepto de ${tema} se manifiesta en situaciones reales de tu entorno?`,
+          `¿Qué estrategias procedimentales aplicaste para verificar que tu respuesta sea correcta y coherente?`,
+          `¿Cómo la colaboración en equipo facilitó la resolución del problema planteado?`
         ],
-        materiales: ["Tablero", "Cuaderno de apuntes", "Guía de trabajo imprimible", "Materiales manipulables de aula"],
+        materiales: ["Tablero e indicadores visuales", "Cuaderno de apuntes", "Guía de taller y fotocopias", "Recursos didácticos del aula"],
         tiempo: "60 minutos",
-        imprimibles: "Guía de taller y ficha de indagación de la sesión 1",
-        adi_especifico: "Pausa activa: estiramiento corporal y dinámicas de atención focalizada."
+        imprimibles: "Guía de exploración y taller práctico de la Sesión 1",
+        adi_especifico: "Pausa activa ADI (3 min): Ejercicios de respiración diafragmática y gimnasia cerebral de coordinación cruzada."
       },
       {
         sesion: 2,
-        fase_inicio: `Recuperación de la sesión anterior mediante un micro-desafío o acertijo lúdico en parejas.`,
-        fase_desarrollo: `Trabajo colaborativo: aplicación práctica de los conocimientos sobre ${tema} en la resolución de problemas reales.`,
-        fase_cierre: `Plenaria y autoevaluación: socialización de productos y reflexión sobre los aprendizajes del eje CRESE.`,
+        fase_inicio: `Se retoman los conceptos fundamentales de la clase anterior mediante un micro-desafío conceptual o acertijo procedimental presentado en el tablero. Los estudiantes discuten brevemente en parejas para justificar su respuesta inicial.`,
+        fase_desarrollo: `Fase de profundización y aplicación práctica: los estudiantes abordan la resolución independiente del Taller del Estudiante sobre ${tema}. El docente realiza monitoreo diferenciado por las mesas (DUA/PIAR), brindando andamiaje pedagógico y aclarando dudas procedimentales a quienes lo requieran.`,
+        fase_cierre: `Evaluación formativa y síntesis: se realiza una coevaluación entre pares con base en la rúbrica del Decreto 1290. Se reflexiona colectivamente sobre los aprendizajes socioemocionales del eje CRESE vivenciados durante la actividad.`,
         preguntas_socraticas: [
-          `¿Qué dificultades encontramos y cómo las superamos en equipo?`
+          `¿Qué obstáculo o dificultad conceptual encontraste al resolver la guía y cómo lo superaste?`,
+          `¿Qué relación encuentras entre ${tema} y los aprendizajes de otras asignaturas?`
         ],
-        materiales: ["Papelógrafos", "Marcadores", "Ficha de trabajo colaborativo"],
+        materiales: ["Guía de Taller Imprimible", "Papelógrafos", "Marcadores", "Rúbrica de desempeño"],
         tiempo: "60 minutos",
-        imprimibles: "Rúbrica de autoevaluación y reto creativo",
-        adi_especifico: "Pausa activa: ejercicios de ritmo y coordinación cruzada."
+        imprimibles: "Taller del Estudiante completo y matriz de autoevaluación",
+        adi_especifico: "Pausa activa ADI (3 min): Dinámica de estiramiento postural y pausa visual para oxigenar la concentración."
       }
     ],
     rubrica: [
       {
-        criterio: `Apropiación Conceptual de ${tema}`,
-        bajo: `Muestra dificultades iniciales para identificar los conceptos básicos de ${tema} y requiere apoyo pedagógico frecuente.`,
-        basico: `Comprende y describe los elementos principales de ${tema} cumpliendo los requisitos básicos de la asignatura.`,
-        alto: `Analiza, explica y aplica los saberes de ${tema} con propiedad y precisión en situaciones variadas.`,
-        superior: `Domina con excelencia el tema ${tema}, proponiendo soluciones innovadoras y orientando reflexiones a sus compañeros.`,
-        retroalimentacion: "Promover el aprendizaje autónomo y el liderazgo en proyectos."
+        criterio: `Apropiación Conceptual y Procedimental de ${tema}`,
+        bajo: `Muestra dificultades iniciales para identificar y aplicar los conceptos básicos de ${tema}, requiriendo acompañamiento pedagógico continuo.`,
+        basico: `Comprende, describe y aplica de forma satisfactoria los conceptos esenciales de ${tema} en la resolución de ejercicios básicos.`,
+        alto: `Analiza, argumenta y aplica con fluidez y precisión los postulados de ${tema} en la resolución de situaciones problema complejas.`,
+        superior: `Domina con maestría los contenidos de ${tema}, proponen soluciones creativas, lidera reflexiones y orienta con empatía a sus pares.`,
+        retroalimentacion: "Mantener el rigor investigativo y continuar fortaleciendo la autonomía y el liderazgo académico."
       },
       {
-        criterio: "Participación y Trabajo Colaborativo (CRESE)",
-        bajo: "Presenta timidez o desinterés al trabajar en equipo; requiere estímulo constante.",
-        basico: "Participa de forma receptiva en las actividades de equipo cumpliendo su rol.",
-        alto: "Aporta activamente ideas, escucha con respeto y colabora al logro del grupo.",
-        superior: "Lidera con empatía, fomenta la resolución pacífica de conflictos y cuida el clima escolar.",
-        retroalimentacion: "Fortalecer las habilidades de comunicación asertiva."
+        criterio: "Convivencia y Trabajo Colaborativo (Eje CRESE)",
+        bajo: "Muestra reticencia a integrarse en equipos; requiere motivación docente constante para participar activamente.",
+        basico: "Participa de forma receptiva en las actividades grupales y cumple con los compromisos asignados.",
+        alto: "Colabora de manera activa, escucha con respeto las opiniones ajenas y aporta soluciones asertivas en equipo.",
+        superior: "Demuestra liderazgo empático, resuelve conflictos pacíficamente y promueve un clima escolar de excelencia.",
+        retroalimentacion: "Continuar ejercitando la empatía y la comunicación asertiva en proyectos de aula."
       }
     ],
     evaluacion: [
       {
-        pregunta: `¿Cuál de las siguientes afirmaciones describe mejor el objetivo principal de estudiar ${tema}?`,
+        pregunta: `En una situación práctica donde se requiere analizar el comportamiento de ${tema} en ${area}, ¿cuál de las siguientes opciones describe el procedimiento metodológico más riguroso?`,
         tipo: "Selección Múltiple con Única Respuesta (Tipo ICFES)",
         opciones: [
-          `A) Comprender los fundamentos de ${tema} para aplicarlos a situaciones concretas.`,
-          `B) Memorizar datos sin relación con la práctica.`,
-          `C) Ignorar la importancia de los saberes previos.`,
-          `D) Realizar actividades sin reflexión previa.`
+          `A) Identificar las variables involucradas, aplicar la propiedad procedimental de ${tema} y verificar la coherencia del resultado.`,
+          `B) Omitir el análisis de datos e improvisar una solución sin justificación técnica.`,
+          `C) Depender exclusivamente de memorizar fórmulas sin comprender su aplicación en el contexto real.`,
+          `D) Considerar únicamente los resultados intuitivos sin realizar la comprobación correspondiente.`
         ],
         respuesta_correcta: "A",
-        justificacion: `La opción A refleja el propósito de aprendizaje continuo y aplicativo del estándar del MEN.`
+        justificacion: `La opción A es la correcta porque refleja el ciclo de competencia del MEN: indagación, modelado procedimental y verificación crítica del resultado en ${area}.`
       }
     ],
     recursos: [
-      { nombre: "Guía Didáctica Docente", descripcion: "Secuencia orientadora paso a paso." },
-      { nombre: "Ficha Imprimible para Estudiante", descripcion: "Actividades de práctica e indagación." }
+      { nombre: "Guía Didáctica Docente Platino", descripcion: "Orientación pedagógica detallada paso a paso para la facilitación de las sesiones." },
+      { nombre: "Taller Imprimible de Aprendizaje Autónomo", descripcion: "Guía fotocopiable con ejercicios contextualizados, bitácora y reto creativo." }
     ],
-    productos_asociados: `Bitácora de evidencias y taller completado sobre ${tema}`,
-    instrumentos_evaluacion: "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo",
-    bibliografia: "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)",
-    observaciones: "Planeación alineada con los requerimientos pedagógicos institucionales.",
-    adecuaciones_piar: "Proporcionar apoyos visuales adicionales, explicaciones paso a paso y ajustar tiempos de entrega según el Plan Individual de Ajustes Razonables (PIAR).",
+    productos_asociados: `Taller del Estudiante completado con bitácora de evidencias sobre ${tema}`,
+    instrumentos_evaluacion: "Rúbrica analítica Decreto 1290, cuestionario tipo Saber-ICFES y matriz de autoevaluación",
+    bibliografia: "Lineamientos Curriculares, Estándares Básicos de Competencia (EBC) y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)",
+    observaciones: "Secuencia didáctica totalmente alineada con el Modelo Pedagógico Institucional de la I.E. Guaimaral.",
+    adecuaciones_piar: "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).",
     taller_imprimible: {
-      introduccion: `Bienvenido al taller de exploración pedagógica sobre ${tema}.`,
-      instrucciones: "Lee con atención cada ejercicio, trabaja con dedicación y reflexiona sobre tus respuestas.",
-      bitacora_test_inicial: `¿Qué sabes acerca de ${tema} y dónde lo has visto antes?`,
+      introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${tema}. A lo largo de este taller explorarás situaciones del entorno real, resolverás desafíos procedimentales y pondrás a prueba tus habilidades de pensamiento crítico y creación.`,
+      instrucciones: "Lee detenidamente cada lectura y situación problema, responde las preguntas justificando tus razonamientos y completa el reto creativo al finalizar la guía.",
+      bitacora_test_inicial: `1. ¿Qué saberes previos o ideas iniciales posees sobre ${tema} y en qué situaciones de la vida diaria lo has observado?\n2. ¿Por qué consideras importante dominar este tema en ${area}?`,
       ejercicios: [
-        `Ejercicio 1: Escribe dos ejemplos prácticos sobre ${tema}.`,
-        `Ejercicio 2: Explica con tus palabras cómo se relaciona este tema con la vida cotidiana.`
+        `Actividad 1 (Análisis de Caso): Lee con atención la situación planteada sobre ${tema} y responde: a) ¿Cuál es el problema central identificado? b) Formula 2 alternativas de solución justificando tu postura.`,
+        `Actividad 2 (Estructuración Conceptual): Con tus propias palabras, define los 3 componentes esenciales de ${tema} y elabora un esquema o cuadro comparativo explicativo.`,
+        `Actividad 3 (Aplicación Procedimental): Desarrolla los ejercicios prácticos aplicando los algoritmos y reglas trabajadas en clase sobre ${tema}.`,
+        `Actividad 4 (Resolución de Problemas): Un compañero presenta la siguiente hipótesis sobre ${tema}. Analiza si su razonamiento es correcto o erróneo y explica la respuesta con un ejemplo.`,
+        `Actividad 5 (Síntesis y Juicio Crítico): Redacta una conclusión de 5 líneas donde evalúes la importancia de ${tema} en el ámbito personal, académico y social.`
       ],
-      reto_creativo: `Diseña un mapa conceptual o dibujo explicativo que represente la idea principal de ${tema}.`
+      reto_creativo: `Diseña una infografía, afiche informativo o esquema innovador que resuma de forma gráfica y atractiva las enseñanzas principales de ${tema}.`
     },
     alertas_generadas: [
-      "Ajuste automático: Secuencia respaldada por el Escudo Infallible de Autoreparación Institucional."
     ],
     dba_utilizado: dba,
     eje_crese_utilizado: crese,

@@ -356,18 +356,6 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
       {/* --- SECCIÓN ANEXOS --- */}
       <div className={`${anexosClass}`}>
 
-        {/* PIAR (ANEXO) */}
-        <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-300">
-          <div className="mt-2 text-black border border-gray-400 print:mt-1">
-            <HeaderBox className="border-0 border-b">ADECUACIONES CURRICULARES (PIAR - Inclusión)</HeaderBox>
-            <EditableContent
-              value={editableData.adecuaciones_piar || "No se generaron adecuaciones específicas."}
-              onSave={(val) => handleUpdateField('adecuaciones_piar', val)}
-              className="min-h-[3rem] whitespace-pre-line bg-blue-50/10"
-            />
-          </div>
-        </div>
-
         {/* GLOSARIO Y AULA INVERTIDA */}
         {(editableData.glosario || editableData.aula_invertida) && (
           <div className="mt-4 grid grid-cols-1 gap-4 print:mt-2">
