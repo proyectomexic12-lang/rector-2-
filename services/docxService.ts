@@ -238,7 +238,12 @@ export const generateDocx = async (data: DidacticSequence, input: SequenceInput)
             const isVideo = r.nombre.toLowerCase().includes("video") || r.descripcion.toLowerCase().includes("video") || r.nombre.toLowerCase().includes("youtube");
             const rawTitle = r.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
             const searchQuery = rawTitle ? `${rawTitle} ${data.tema_principal || input.tema}` : `explicacion ${data.tema_principal || input.tema}`;
-            const targetUrl = foundUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+            
+            const targetUrl = foundUrl || (
+              isVideo 
+                ? `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
+                : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || r.nombre} ${data.tema_principal || input.tema}`)}`
+            );
 
             return new Paragraph({
               children: [
@@ -247,7 +252,7 @@ export const generateDocx = async (data: DidacticSequence, input: SequenceInput)
                 new ExternalHyperlink({
                   children: [
                     new TextRun({
-                      text: isVideo ? "[▶ Ver Video en YouTube]" : "[🌐 Abrir Enlace Web]",
+                      text: isVideo ? "[▶ Ver Video en YouTube]" : "[🌐 Abrir Recurso en Web]",
                       color: "0066CC",
                       underline: {},
                     }),

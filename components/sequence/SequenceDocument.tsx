@@ -265,7 +265,12 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               const isVideo = rec.nombre.toLowerCase().includes("video") || rec.descripcion.toLowerCase().includes("video") || rec.nombre.toLowerCase().includes("youtube");
               const rawTitle = rec.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
               const searchQuery = rawTitle ? `${rawTitle} ${editableData.tema_principal}` : `explicacion ${editableData.tema_principal}`;
-              const targetUrl = foundUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+              
+              const targetUrl = foundUrl || (
+                isVideo 
+                  ? `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
+                  : `https://www.google.com/search?q=${encodeURIComponent(`${rawTitle || rec.nombre} ${editableData.tema_principal}`)}`
+              );
 
               return (
                 <div key={i} className="grid grid-cols-2 border-b border-gray-300 last:border-0 text-[10px]">
@@ -278,20 +283,35 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                         handleUpdateField('recursos', newRecs);
                       }}
                     />
-                    {isVideo && (
-                      <a
-                        href={targetUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm print:hidden w-fit"
-                        title="Abrir búsqueda de video real en YouTube"
-                      >
-                        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                        <span>▶ Ver en YouTube ↗</span>
-                      </a>
-                    )}
+                    <a
+                      href={targetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-1 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold text-white transition-all shadow-sm print:hidden w-fit ${
+                        isVideo 
+                          ? 'bg-red-600 hover:bg-red-700' 
+                          : 'bg-emerald-600 hover:bg-emerald-700'
+                      }`}
+                      title={isVideo ? "Abrir búsqueda de video real en YouTube" : "Abrir recurso o material en Google"}
+                    >
+                      {isVideo ? (
+                        <>
+                          <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                          </svg>
+                          <span>▶ Ver en YouTube ↗</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3 h-3 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                          </svg>
+                          <span>🌐 Abrir Recurso en Web ↗</span>
+                        </>
+                      )}
+                    </a>
                   </div>
                   <div className="p-1 flex flex-col justify-center items-start">
                     <EditableContent
