@@ -4,7 +4,7 @@
  * from the generated didactic sequences. Uses the 'docx' and 'file-saver' libraries.
  */
 
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, ExternalHyperlink } from "docx";
 import { saveAs } from "file-saver";
 import { DidacticSequence, SequenceInput } from "../types";
 
@@ -229,13 +229,35 @@ export const generateDocx = async (data: DidacticSequence, input: SequenceInput)
           ] : []),
 
           new Paragraph({ text: "" }),
-          new Paragraph({ text: "RECURSOS Y MATERIALES", heading: HeadingLevel.HEADING_3 }),
-          ...(data.recursos || []).map(r => new Paragraph({
-            children: [
-              new TextRun({ text: `• ${r.nombre}: `, bold: true }),
-              new TextRun(r.descripcion)
-            ]
-          }))
+          new Paragraph({ text: "RECURSOS Y MATERIALES MULTIMEDIA", heading: HeadingLevel.HEADING_3 }),
+          ...(data.recursos || []).map(r => {
+            const textToSearch = `${r.nombre} ${r.descripcion}`;
+            const urlMatch = textToSearch.match(/(https?:\/\/[^\s]+)/);
+            const foundUrl = urlMatch ? urlMatch[0] : null;
+
+            const isVideo = r.nombre.toLowerCase().includes("video") || r.descripcion.toLowerCase().includes("video") || r.nombre.toLowerCase().includes("youtube");
+            const rawTitle = r.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
+            const searchQuery = rawTitle ? `${rawTitle} ${data.tema_principal || input.tema}` : `explicacion ${data.tema_principal || input.tema}`;
+            const targetUrl = foundUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+
+            return new Paragraph({
+              children: [
+                new TextRun({ text: `• ${r.nombre}: `, bold: true }),
+                new TextRun(r.descripcion + " "),
+                new ExternalHyperlink({
+                  children: [
+                    new TextRun({
+                      text: isVideo ? "[▶ Ver Video en YouTube]" : "[🌐 Abrir Enlace Web]",
+                      color: "0066CC",
+                      underline: {},
+                    }),
+                  ],
+                  link: targetUrl,
+                }),
+              ],
+              spacing: { before: 80, after: 80 }
+            });
+          })
         ],
       },
     ],
