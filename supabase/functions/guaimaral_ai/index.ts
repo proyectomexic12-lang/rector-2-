@@ -230,7 +230,7 @@ Deno.serve(async (req: Request) => {
             sequenceData.instrumentos_evaluacion = sequenceData.instrumentos_evaluacion || "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo";
             sequenceData.bibliografia = sequenceData.bibliografia || "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)";
             sequenceData.observaciones = sequenceData.observaciones || "Planeación alineada con los requerimientos pedagógicos institucionales.";
-            sequenceData.recursos = Array.isArray(sequenceData.recursos) && sequenceData.recursos.length > 0
+            sequenceData.recursos = Array.isArray(sequenceData.recursos) && sequenceData.recursos.length >= 2
               ? sequenceData.recursos.map((rec: any) => {
                   const nombre = (rec?.nombre || `Recurso Pedagógico de ${safeTema}`).toString();
                   let descripcion = (rec?.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`).toString();
@@ -248,25 +248,40 @@ Deno.serve(async (req: Request) => {
                 })
               : [
                   { 
-                    nombre: `Video Explicativo: '${safeTema}'`, 
-                    descripcion: `Material audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}` 
+                    nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`, 
+                    descripcion: `Tutorial audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}` 
                   },
                   { 
-                    nombre: `Guía Didáctica Fotocopiable: ${safeTema}`, 
-                    descripcion: "Taller imprimible para el trabajo autónomo del estudiante." 
+                    nombre: `Video de Aplicación Práctica: 'Ejercicios Resueltos de ${safeTema}'`, 
+                    descripcion: `Demostración paso a paso de resolución de problemas situados. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}` 
+                  },
+                  { 
+                    nombre: `Presentación Interactiva / Canva: '${safeTema}'`, 
+                    descripcion: "Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase." 
                   }
                 ];
 
-            const hasAnyVideoResource = sequenceData.recursos.some((r: any) => {
+            const videoResources = sequenceData.recursos.filter((r: any) => {
               const n = (r?.nombre || "").toString().toLowerCase();
               const d = (r?.descripcion || "").toString().toLowerCase();
               return n.includes("video") || d.includes("video") || n.includes("youtube");
             });
 
-            if (!hasAnyVideoResource) {
-              sequenceData.recursos.unshift({
-                nombre: `Video Explicativo: '${safeTema}'`,
-                descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}`
+            if (videoResources.length === 0) {
+              sequenceData.recursos.unshift(
+                {
+                  nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`,
+                  descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}`
+                },
+                {
+                  nombre: `Video Tutorial: 'Ejercicios de ${safeTema}'`,
+                  descripcion: `Tutorial paso a paso para la resolución de problemas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}`
+                }
+              );
+            } else if (videoResources.length === 1) {
+              sequenceData.recursos.splice(1, 0, {
+                nombre: `Video Tutorial Complementario: '${safeTema} en la Vida Real'`,
+                descripcion: `Explicación contextualizada de aplicación en situaciones cotidianas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} vida real`)}`
               });
             }
 

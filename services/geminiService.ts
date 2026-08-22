@@ -573,10 +573,10 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             : [];
           parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
           parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
-          parsed.recursos = Array.isArray(parsed.recursos) && parsed.recursos.length > 0
+          parsed.recursos = Array.isArray(parsed.recursos) && parsed.recursos.length >= 2
             ? parsed.recursos.map((rec: any) => {
-                const nombre = rec.nombre || `Recurso Pedagógico de ${safeTema}`;
-                let descripcion = rec.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`;
+                const nombre = (rec?.nombre || `Recurso Pedagógico de ${safeTema}`).toString();
+                let descripcion = (rec?.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`).toString();
                 
                 const isVideo = nombre.toLowerCase().includes("video") || descripcion.toLowerCase().includes("video") || nombre.toLowerCase().includes("youtube");
                 const hasUrl = /(https?:\/\/[^\s]+)/.test(`${nombre} ${descripcion}`);
@@ -591,26 +591,41 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               })
             : [
                 { 
-                  nombre: `Video Explicativo: '${safeTema}'`, 
-                  descripcion: `Material audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}` 
+                  nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`, 
+                  descripcion: `Tutorial audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}` 
                 },
                 { 
-                  nombre: `Guía Didáctica Fotocopiable: ${safeTema}`, 
-                  descripcion: "Taller imprimible para el trabajo autónomo del estudiante." 
+                  nombre: `Video de Aplicación Práctica: 'Ejercicios Resueltos de ${safeTema}'`, 
+                  descripcion: `Demostración paso a paso de resolución de problemas situados. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}` 
+                },
+                { 
+                  nombre: `Presentación Interactiva / Canva: '${safeTema}'`, 
+                  descripcion: "Diapositivas y esquemas visuales para la exposición dialogada en el aula de clase." 
                 }
               ];
 
-          // Garantizar que SIEMPRE exista al menos 1 Video explicativo obligatorio en la lista unificada de recursos
-          const hasAnyVideoResource = parsed.recursos.some((r: any) => {
+          // Garantizar que SIEMPRE existan al menos 2 Videos explicativos en la lista unificada
+          const videoResources = parsed.recursos.filter((r: any) => {
             const n = (r?.nombre || "").toString().toLowerCase();
             const d = (r?.descripcion || "").toString().toLowerCase();
             return n.includes("video") || d.includes("video") || n.includes("youtube");
           });
 
-          if (!hasAnyVideoResource) {
-            parsed.recursos.unshift({
-              nombre: `Video Explicativo: '${safeTema}'`,
-              descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}`
+          if (videoResources.length === 0) {
+            parsed.recursos.unshift(
+              {
+                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave'`,
+                descripcion: `Material audiovisual de estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} explicacion`)}`
+              },
+              {
+                nombre: `Video Tutorial: 'Ejercicios de ${safeTema}'`,
+                descripcion: `Tutorial paso a paso para la resolución de problemas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} ejercicios resueltos`)}`
+              }
+            );
+          } else if (videoResources.length === 1) {
+            parsed.recursos.splice(1, 0, {
+              nombre: `Video Tutorial Complementario: '${safeTema} en la Vida Real'`,
+              descripcion: `Explicación contextualizada de aplicación en situaciones cotidianas. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(`${safeTema} vida real`)}`
             });
           }
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
