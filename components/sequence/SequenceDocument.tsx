@@ -263,8 +263,9 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               const foundUrl = urlMatch ? urlMatch[0] : null;
 
               const isVideo = rec.nombre.toLowerCase().includes("video") || rec.descripcion.toLowerCase().includes("video") || rec.nombre.toLowerCase().includes("youtube");
-              const cleanQuery = rec.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim() || editableData.tema_principal;
-              const targetUrl = foundUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`;
+              const rawTitle = rec.nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
+              const searchQuery = rawTitle ? `${rawTitle} ${editableData.tema_principal}` : `explicacion ${editableData.tema_principal}`;
+              const targetUrl = foundUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
 
               return (
                 <div key={i} className="grid grid-cols-2 border-b border-gray-300 last:border-0 text-[10px]">
