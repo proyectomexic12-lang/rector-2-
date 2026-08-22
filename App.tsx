@@ -8,10 +8,9 @@ import { SecurityDashboard } from './components/SecurityDashboard';
 import { SubscriptionBlockModal } from './components/SubscriptionBlockModal';
 import { AdminChatPanel } from './components/AdminChatPanel';
 import { ChatWidget } from './components/ChatWidget';
-import { FlyerModal } from './components/FlyerModal';
 import { SequenceInput } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, Megaphone } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
@@ -41,7 +40,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat'>('create');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showProfile, setShowProfile] = useState(false);
-  const [showFlyerModal, setShowFlyerModal] = useState(false);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 
   const loadingMessages = [
@@ -352,17 +350,6 @@ function App() {
                   </button>
                 </>
               )}
-              
-              <div className="w-px h-4 bg-slate-300 mx-1"></div>
-
-              <button
-                onClick={() => setShowFlyerModal(true)}
-                className="flex items-center gap-2 p-2.5 px-4 rounded-xl transition-all bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 font-bold text-xs uppercase tracking-wider"
-                title="Flyer Promocional & Agendamiento"
-              >
-                <Megaphone size={16} />
-                <span className="hidden sm:inline">Flyer Promocional</span>
-              </button>
               
               <a
                 href="https://manuel-red.vercel.app"
@@ -700,9 +687,6 @@ function App() {
 
         {/* Widget Flotante de Chat para Docentes */}
         {currentUser && <ChatWidget user={currentUser} />}
-
-        {/* Modal de Flyer Promocional e Interactivo */}
-        <FlyerModal isOpen={showFlyerModal} onClose={() => setShowFlyerModal(false)} />
 
         {/* Modal Bloqueo por Mora y Suscripción Vencida */}
         {isSubscriptionExpired && currentUser && subscriptionStatus && (
