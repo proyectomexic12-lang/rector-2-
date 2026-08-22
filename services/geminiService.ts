@@ -537,11 +537,18 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
           }
 
-          // Garantía Inviolable de DBA Oficial del MEN Colombia y Campos de Texto
+          // Garantía Inviolable de DBA Oficial (para materias básicas) u Orientaciones Pedagógicas del MEN (para Filosofía, Artística, etc.)
           if (!parsed.dba_utilizado || typeof parsed.dba_utilizado !== 'string' || parsed.dba_utilizado.trim().length < 5) {
-            parsed.dba_utilizado = input.dba && input.dba.trim().length > 5 
-              ? input.dba 
-              : `DBA Oficial del MEN (Colombia) - Grado ${input.grado} (${input.area}): Identifica, comprende y aplica los referentes oficiales del MEN en relación con ${safeTema}.`;
+            if (hasDBA) {
+              parsed.dba_utilizado = (input.dba && input.dba.trim().length > 5)
+                ? input.dba
+                : `DBA #1 (MEN Colombia - ${input.area} Grado ${input.grado}): Identifica, comprende y analiza los referentes oficiales del MEN en relación con ${safeTema}.`;
+            } else {
+              parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): Promueve el análisis crítico, la indagación y la reflexión filosófica en torno a ${safeTema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
+            }
+          } else if (!hasDBA && (parsed.dba_utilizado.toLowerCase().includes("dba oficial") || parsed.dba_utilizado.toLowerCase().startsWith("dba"))) {
+            // Si el área no utiliza DBA (ej. Filosofía), corregir automáticamente para no citar un DBA ficticio
+            parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): ${parsed.dba_utilizado.replace(/^DBA\s*(Oficial\s*del\s*MEN\s*\([^)]*\))?\s*[:-]?\s*/i, "")}`;
           }
           parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
           parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;

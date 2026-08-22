@@ -185,9 +185,15 @@ Deno.serve(async (req: Request) => {
               sequenceData.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
             }
             if (!sequenceData.dba_utilizado || typeof sequenceData.dba_utilizado !== 'string' || sequenceData.dba_utilizado.trim().length < 5) {
-              sequenceData.dba_utilizado = input.dba && input.dba.trim().length > 5 
-                ? input.dba 
-                : `DBA Oficial del MEN (Colombia) - Grado ${input.grado} (${input.area}): Identifica, comprende y aplica los referentes oficiales del MEN en relación con ${safeTema}.`;
+              if (hasDBA) {
+                sequenceData.dba_utilizado = (input.dba && input.dba.trim().length > 5)
+                  ? input.dba
+                  : `DBA #1 (MEN Colombia - ${input.area} Grado ${input.grado}): Identifica, comprende y analiza los referentes oficiales del MEN en relación con ${safeTema}.`;
+              } else {
+                sequenceData.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): Promueve el análisis crítico, la indagación y la reflexión filosófica en torno a ${safeTema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
+              }
+            } else if (!hasDBA && (sequenceData.dba_utilizado.toLowerCase().includes("dba oficial") || sequenceData.dba_utilizado.toLowerCase().startsWith("dba"))) {
+              sequenceData.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): ${sequenceData.dba_utilizado.replace(/^DBA\s*(Oficial\s*del\s*MEN\s*\([^)]*\))?\s*[:-]?\s*/i, "")}`;
             }
             sequenceData.titulo_secuencia = sequenceData.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
             sequenceData.descripcion_secuencia = sequenceData.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
