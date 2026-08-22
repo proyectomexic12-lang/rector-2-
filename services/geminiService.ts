@@ -573,7 +573,32 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             : [];
           parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
           parsed.evaluacion = Array.isArray(parsed.evaluacion) ? parsed.evaluacion : [];
-          parsed.recursos = Array.isArray(parsed.recursos) ? parsed.recursos : [];
+          parsed.recursos = Array.isArray(parsed.recursos) && parsed.recursos.length > 0
+            ? parsed.recursos.map((rec: any) => {
+                const nombre = rec.nombre || `Recurso Pedagógico de ${safeTema}`;
+                let descripcion = rec.descripcion || `Material explicativo de apoyo pedagógico para ${safeTema}.`;
+                
+                const isVideo = nombre.toLowerCase().includes("video") || descripcion.toLowerCase().includes("video") || nombre.toLowerCase().includes("youtube");
+                const hasUrl = /(https?:\/\/[^\s]+)/.test(`${nombre} ${descripcion}`);
+                
+                if (isVideo && !hasUrl) {
+                  const cleanQuery = nombre.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim() || safeTema;
+                  const autoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`;
+                  descripcion += ` (Ver en YouTube: ${autoUrl})`;
+                }
+
+                return { nombre, descripcion };
+              })
+            : [
+                { 
+                  nombre: `Video Explicativo: '${safeTema}'`, 
+                  descripcion: `Material audiovisual para la estructuración conceptual. Ver en YouTube: https://www.youtube.com/results?search_query=${encodeURIComponent(safeTema)}` 
+                },
+                { 
+                  nombre: `Guía Didáctica Fotocopiable: ${safeTema}`, 
+                  descripcion: "Taller imprimible para el trabajo autónomo del estudiante." 
+                }
+              ];
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
           // 5. Auditoría Institucional de Textos
