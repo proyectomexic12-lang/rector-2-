@@ -102,8 +102,7 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
     try {
       const finalReason = cancelReason === 'Otro' ? (customReason || 'Solicitud voluntaria del titular') : cancelReason;
       await authService.cancelSubscription(userEmail, finalReason);
-      setActionSuccessMessage("La suscripción ha sido dada de baja. La cuenta queda en estado inactivo. Para reactivarla en el futuro, aplicará la tarifa de reapertura técnica de $12.000 COP.");
-      setShowCancelDialog(false);
+      onClose(); // Cerrar modal inmediatamente tras cancelar
       if (onSubscriptionChanged) onSubscriptionChanged();
     } catch (e) {
       alert("Error al procesar la cancelación.");
@@ -115,8 +114,8 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
   return (
     <div className="fixed inset-0 z-[999999] overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-16 pb-12 font-sans antialiased text-slate-100 selection:bg-indigo-500 selection:text-white">
       
-      {/* Backdrop */}
-      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
+      {/* Backdrop (Sin evento onClick para forzar lectura) */}
+      <div className="fixed inset-0" aria-hidden="true" />
 
       {/* Main Executive Container */}
       <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-up z-10 my-auto">
@@ -143,14 +142,6 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
               </h2>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-700"
-            title="Cerrar ventana"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Notification Toast */}
