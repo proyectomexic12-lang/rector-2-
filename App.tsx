@@ -12,7 +12,7 @@ import { PolicyAnnouncementModal } from './components/PolicyAnnouncementModal';
 import { SettingsModal } from './components/SettingsModal';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
