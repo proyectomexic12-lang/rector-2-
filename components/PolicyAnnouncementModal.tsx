@@ -408,19 +408,9 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
           </button>
         )}
 
-        {/* Modal Footer with Dual Actions */}
-        <div className="px-6 py-4 bg-slate-950/90 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 sticky bottom-0 z-20">
-          <button
-            type="button"
-            onClick={() => {
-              setShowCancelDialog(true);
-              scrollToBottom();
-            }}
-            className="w-full sm:w-auto px-4 py-2 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-500/30 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
-          >
-            <UserX size={13} />
-            <span>Cancelar mi Suscripción</span>
-          </button>
+        {/* Modal Footer (Un solo botón para forzar aceptación sin opción de cancelar por ahora) */}
+        <div className="px-6 py-4 bg-slate-950/90 border-t border-slate-800 flex justify-center sticky bottom-0 z-20">
+          {/* Botón de Cancelar oculto temporalmente por solicitud del admin */}
 
           <button
             type="button"

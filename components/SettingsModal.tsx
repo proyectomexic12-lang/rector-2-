@@ -291,13 +291,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
 
                   {!showCancelDialog && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCancelDialog(true)}
-                      className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-xs font-medium rounded-lg transition-colors"
-                    >
-                      Cancelar mi Suscripción
-                    </button>
+                    <React.Fragment>
+                      {/* Botón de Cancelar oculto temporalmente por solicitud del admin */}
+                    </React.Fragment>
                   )}
                 </div>
 
