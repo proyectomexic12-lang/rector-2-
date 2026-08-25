@@ -92,9 +92,10 @@ function App() {
           }
         });
 
-        // Mostrar comunicado oficial de políticas de una al ingresar
+        // Mostrar comunicado oficial de políticas de una al ingresar (Solo 1 vez en la vida útil)
         const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
-        if (!sessionDismissed) {
+        const localDismissed = localStorage.getItem('guaimaral_policy_ack_2026');
+        if (!sessionDismissed && !localDismissed) {
           setShowPolicyModal(true);
         }
       }
