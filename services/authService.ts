@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { SubscriptionStatus } from '../types';
+import { SubscriptionStatus, PlanQuotaInfo } from '../types';
 
 /**
  * AuthService (Híbrido: Local + Supabase)
@@ -29,14 +29,15 @@ const obfuscate = (text: string): string => {
 export const deobfuscate = (encoded: string): string => {
     if (!encoded) return '';
     try {
-        const text = atob(encoded);
-        const deobfuscated = text.split('').map((char, i) =>
-            String.fromCharCode(char.charCodeAt(0) ^ SALT.charCodeAt(i % SALT.length))
-        ).join('');
+        const decoded = atob(encoded);
+        let result = '';
+        for (let i = 0; i < decoded.length; i++) {
+            result += String.fromCharCode(decoded.charCodeAt(i) ^ SALT.charCodeAt(i % SALT.length));
+        }
         try {
-            return decodeURIComponent(escape(deobfuscated));
-        } catch {
-            return deobfuscated;
+            return decodeURIComponent(escape(result));
+        } catch (e) {
+            return result;
         }
     } catch (e) {
         return '';
@@ -63,7 +64,11 @@ export interface User {
         year: number;
         total: number;
         saved: number;
+        cycleUsage?: number;
+        maxQuota?: number;
+        remainingQuota?: number;
     };
+    quotaInfo?: PlanQuotaInfo;
 }
 
 // Usuarios locales de respaldo (Solo si falla la nube)
@@ -74,31 +79,31 @@ export const AUTHORIZED_USERS: User[] = [
     { name: 'Docente Demo (Ilimitado)', email: 'demo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
 
     // Guaimaral Bachillerato (Orden Alfabético)
-    { name: 'Alex San Juan', email: 'alex.sanjuan@guaimaral.edu.co', role: 'docente' },
+    { name: 'Alex San Juan', email: 'alex.sanjuan@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 15000, subscription_months: 1 },
     { name: 'Deisy Arroyo', email: 'deisy.arroyo@guaimaral.edu.co', role: 'docente' },
-    { name: 'Jairo Blanco', email: 'jairo.blanco@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-13', monthly_price: 15000, subscription_months: 1 },
-    { name: 'Liliana Valle', email: 'liliana.valle@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12', monthly_price: 15000, subscription_months: 1 },
-    { name: 'Paula Padilla', email: 'paula.padilla@guaimaral.edu.co', role: 'docente' },
-    { name: 'Rocio Ramírez', email: 'rocio.ramirez@guaimaral.edu.co', role: 'docente' },
+    { name: 'Jairo Blanco', email: 'jairo.blanco@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-13T00:00:00+00:00', monthly_price: 15000, subscription_months: 1 },
+    { name: 'Liliana Valle', email: 'liliana.valle@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 15000, subscription_months: 1 },
+    { name: 'Paula Padilla', email: 'paula.padilla@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 15000, subscription_months: 1 },
+    { name: 'Rocio Ramírez', email: 'rocio.ramirez@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 15000, subscription_months: 1 },
 
     // Guaimaral Primaria (Orden Alfabético)
-    { name: 'Aleida Lara', email: 'aleida.lara@guaimaral.edu.co', role: 'docente' },
+    { name: 'Aleida Lara', email: 'aleida.lara@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-23T16:39:27+00:00', monthly_price: 15000, subscription_months: 1 },
     { name: 'Alfredo Torres', email: 'alfredo.torres@guaimaral.edu.co', role: 'docente' },
     { name: 'Asterio Torres', email: 'asterio.torres@guaimaral.edu.co', role: 'docente', areas: ["Ciencias Naturales y Educación Ambiental", "Educación Artística (Agropecuaria)", "Ética y Valores"], grados: ["1", "2", "3", "4", "5"] },
-    { name: 'Carlos Sandoval', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-19', monthly_price: 15000, subscription_months: 1 },
-    { name: 'Deisy Mercado', email: 'deisy.mercado@guaimaral.edu.co', role: 'docente', areas: ["Dimensión Cognitiva", "Dimensión Comunicativa", "Dimensión Corporal", "Dimensión Socioafectiva", "Dimensión Espiritual"], grados: ["Transición"] },
+    { name: 'Carlos Sandoval', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-19T00:00:00+00:00', monthly_price: 35000, subscription_months: 3 },
+    { name: 'Deisy Mercado', email: 'deisy.mercado@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-11T00:00:00+00:00', monthly_price: 15000, subscription_months: 1, areas: ["Dimensión Cognitiva", "Dimensión Comunicativa", "Dimensión Corporal", "Dimensión Socioafectiva", "Dimensión Espiritual"], grados: ["Transición"] },
     { name: 'Eduardo', email: 'eduardo@guaimaral.edu.co', role: 'docente', areas: ["Tecnología e Informática", "Educación Física"] },
     { name: 'Evaristo Vertel', email: 'evaristo.vertel@guaimaral.edu.co', role: 'docente', areas: ["Ciencias Naturales y Educación Ambiental", "Biología", "Química"] },
     { name: 'Ibeth Charris', email: 'ibeth.charris@guaimaral.edu.co', role: 'docente', areas: ["Dimensión Cognitiva", "Dimensión Comunicativa", "Dimensión Corporal", "Dimensión Socioafectiva", "Dimensión Espiritual"], grados: ["Transición"] },
     { name: 'Jairo Benavides', email: 'jairo.benavides@guaimaral.edu.co', role: 'docente', areas: ["Física", "Estadística", "Matemáticas", "Educación Artística"] },
     { name: 'Jorge de la Hoz', email: 'jorge.delahoz@guaimaral.edu.co', role: 'docente', areas: ["Religión", "Inglés"] },
     { name: 'Jorge Ferrer', email: 'jorge.ferrer@guaimaral.edu.co', role: 'docente', areas: ["Matemáticas", "Geometría", "Religión", "Estadística", "Física"] },
-    { name: 'Leovigilda Navarro', email: 'leovigilda.navarro@guaimaral.edu.co', role: 'docente', areas: ["Integral (Matemáticas, Lenguaje, Sociales, Naturales)"], grados: ["Multigrado"] },
+    { name: 'Leovigilda Navarro', email: 'leovigilda.navarro@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 15000, subscription_months: 1, areas: ["Integral (Matemáticas, Lenguaje, Sociales, Naturales)"], grados: ["Multigrado"] },
     { name: 'Linda Varela', email: 'linda.varela@guaimaral.edu.co', role: 'docente', areas: ["Lengua Castellana"] },
-    { name: 'Martín Celin', email: 'martin.celin@guaimaral.edu.co', role: 'docente' },
-    { name: 'Nancy Vargas', email: 'nancy.vargas@guaimaral.edu.co', role: 'docente' },
+    { name: 'Martín Celin', email: 'martin.celin@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 35000, subscription_months: 3 },
+    { name: 'Nancy Vargas', email: 'nancy.vargas@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-12T00:00:00+00:00', monthly_price: 35000, subscription_months: 3 },
     { name: 'Pedro Arroyo', email: 'pedro.arroyo@guaimaral.edu.co', role: 'docente' },
-    { name: 'Roberto Daza', email: 'roberto.daza@guaimaral.edu.co', role: 'docente', areas: ["Ciencias Sociales", "Ética y Valores", "Filosofía", "Cátedra de la Paz"] },
+    { name: 'Roberto Daza', email: 'roberto.daza@guaimaral.edu.co', role: 'docente', is_unlimited: true, unlimited_start_date: '2026-08-11T00:00:00+00:00', monthly_price: 35000, subscription_months: 3, areas: ["Ciencias Sociales", "Ética y Valores", "Filosofía", "Cátedra de la Paz"] },
     { name: 'Xilena Santiago', email: 'xilena.santiago@guaimaral.edu.co', role: 'docente' }
 ];
 
@@ -210,6 +215,173 @@ export const authService = {
         return subStatus.isValid;
     },
 
+    getUserQuotaInfo: async (user: User | null | undefined): Promise<PlanQuotaInfo> => {
+        if (!user || !user.email) {
+            return {
+                hasPlan: false,
+                isUnlimitedAdmin: false,
+                planName: 'Sin Sesión',
+                maxQuota: 0,
+                usedQuota: 0,
+                remainingQuota: 0,
+                canGenerate: false,
+                reason: 'sin_creditos',
+                cycleStartDate: null,
+                nextBillingDateStr: ''
+            };
+        }
+
+        const lowEmail = user.email.toLowerCase().trim();
+
+        // 0. Si hay conexión a Supabase, sincronizar datos frescos de la cuenta
+        let currentUserData = user;
+        if (supabase && lowEmail) {
+            try {
+                const { data: freshDbUser } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+                if (freshDbUser) {
+                    currentUserData = {
+                        ...user,
+                        is_unlimited: freshDbUser.is_unlimited,
+                        unlimited_start_date: freshDbUser.unlimited_start_date,
+                        subscription_months: freshDbUser.subscription_months,
+                        monthly_price: freshDbUser.monthly_price,
+                        custom_credits: freshDbUser.custom_credits
+                    };
+                    const cur = authService.getCurrentUser();
+                    if (cur && cur.email.toLowerCase() === lowEmail) {
+                        localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(currentUserData)));
+                    }
+                }
+            } catch (e) { }
+        }
+
+        // 1. Admin o Cuenta Demo
+        if (currentUserData.role === 'admin' || lowEmail.includes('demo') || lowEmail === 'jesus@guaimaral.edu.co') {
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: true,
+                planName: 'Acceso Admin Ilimitado',
+                maxQuota: 9999,
+                usedQuota: 0,
+                remainingQuota: 9999,
+                canGenerate: true,
+                reason: 'ok',
+                cycleStartDate: currentUserData.unlimited_start_date || null,
+                nextBillingDateStr: 'Acceso Ilimitado'
+            };
+        }
+
+        const subStatus = authService.getSubscriptionStatus(currentUserData);
+
+        // 2. Suscripción Vencida (En mora)
+        if (subStatus.status === 'vencido') {
+            const planCap = (subStatus.monthsPaid >= 3 || subStatus.monthlyPrice >= 35000) ? 40 : 15;
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: false,
+                planName: `Plan ${subStatus.monthsPaid >= 3 ? 'Trimestral (40 Plan.)' : 'Mensual (15 Plan.)'} (Vencido)`,
+                maxQuota: planCap,
+                usedQuota: 0,
+                remainingQuota: 0,
+                canGenerate: false,
+                reason: 'vencido',
+                cycleStartDate: subStatus.startDate,
+                nextBillingDateStr: subStatus.nextBillingDateStr,
+                totalDebt: subStatus.totalDebt,
+                monthsOverdue: subStatus.monthsOverdue
+            };
+        }
+
+        // 3. Suscripción Vigente con Cuota
+        if (subStatus.status === 'vigente') {
+            let maxQuota = 15;
+            let planName = 'Plan Mensual (15 Planeaciones / Mes)';
+
+            if (subStatus.monthsPaid >= 6 || subStatus.monthlyPrice >= 75000) {
+                maxQuota = 90;
+                planName = 'Plan Semestral (90 Planeaciones)';
+            } else if (subStatus.monthsPaid >= 3 || subStatus.monthlyPrice >= 35000) {
+                maxQuota = 40;
+                planName = 'Plan Trimestral (40 Planeaciones / 3 Meses)';
+            } else {
+                maxQuota = 15;
+                planName = 'Plan Mensual (15 Planeaciones / Mes)';
+            }
+
+            // Si el administrador asignó un cupo personalizado explícito (diferente al default básico 6)
+            if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+                maxQuota = user.custom_credits;
+                planName = `Plan Asignado (${maxQuota} Planeaciones)`;
+            }
+
+            // Contar uso en el ciclo de cuota actual (a partir del lanzamiento de política 25-Ago o inicio de plan)
+            let usedQuota = 0;
+            const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
+            const subStartDate = subStatus.startDate ? new Date(subStatus.startDate) : (user.unlimited_start_date ? new Date(user.unlimited_start_date) : null);
+            const countFromDate = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
+
+            if (supabase) {
+                try {
+                    const { count } = await supabase
+                        .from('generated_sequences')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_email', lowEmail)
+                        .gte('timestamp', countFromDate.toISOString());
+                    usedQuota = count || 0;
+                } catch (e) {
+                    console.error("Error al consultar secuencias del ciclo en Supabase:", e);
+                    const localSavedKey = `guaimaral_saved_sequences_${lowEmail}`;
+                    const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                    usedQuota = localSeqs.length;
+                }
+            } else {
+                const localSavedKey = `guaimaral_saved_sequences_${lowEmail}`;
+                const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                usedQuota = localSeqs.length;
+            }
+
+            const remainingQuota = Math.max(0, maxQuota - usedQuota);
+            const canGenerate = remainingQuota > 0;
+
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: false,
+                planName,
+                maxQuota,
+                usedQuota,
+                remainingQuota,
+                canGenerate,
+                reason: canGenerate ? 'ok' : 'quota_exceeded',
+                cycleStartDate: subStatus.startDate,
+                nextBillingDateStr: subStatus.nextBillingDateStr
+            };
+        }
+
+        // 4. Usuario Gratuito (Sin Plan)
+        const maxCredits = user.custom_credits !== undefined && user.custom_credits !== null ? user.custom_credits : 6;
+        const stats = await authService.getUsageStats(lowEmail);
+        const usedCredits = stats.week;
+        const remainingCredits = Math.max(0, maxCredits - usedCredits);
+        const canGenerate = remainingCredits > 0;
+
+        return {
+            hasPlan: false,
+            isUnlimitedAdmin: false,
+            planName: 'Plan Gratuito / Básico',
+            maxQuota: maxCredits,
+            usedQuota: usedCredits,
+            remainingQuota: remainingCredits,
+            canGenerate,
+            reason: canGenerate ? 'ok' : 'sin_creditos',
+            cycleStartDate: null,
+            nextBillingDateStr: 'Renovación Semanal (Lunes)'
+        };
+    },
+
     registerPayment: async (email: string, monthsToAdd: number = 1, pricePerMonth: number = 15000) => {
         const lowEmail = email.toLowerCase().trim();
         const nowIso = new Date().toISOString();
@@ -251,6 +423,90 @@ export const authService = {
                 throw e;
             }
         }
+    },
+
+    cancelSubscription: async (email: string, reason: string = 'Cancelación voluntaria por el docente') => {
+        const lowEmail = email.toLowerCase().trim();
+
+        // 1. Update localStorage
+        const current = authService.getCurrentUser();
+        if (current && current.email.toLowerCase() === lowEmail) {
+            const updated: User = {
+                ...current,
+                is_unlimited: false
+                // No tocamos unlimited_start_date ni custom_credits para preservar el historial
+            };
+            localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updated)));
+        }
+
+        // 2. Update Cloud (Supabase)
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('app_users')
+                    .update({
+                        is_unlimited: false
+                        // IMPORTANTE: NO ponemos unlimited_start_date: null para preservar su fecha real de pago histórico
+                    })
+                    .eq('email', lowEmail);
+
+                if (error) console.error("Error cancelando suscripción en Supabase:", error);
+
+                // Registrar en logs de uso
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `🛑 CANCELACIÓN DE SUSCRIPCIÓN. Motivo: ${reason}`
+                }]);
+
+                // Notificar en el chat del administrador
+                try {
+                    await supabase.from('chat_messages').insert([{
+                        user_email: lowEmail,
+                        sender: lowEmail,
+                        recipient: 'admin@guaimaral.edu.co',
+                        message: `⚠️ Hola Administrador, he solicitado la cancelación de mi suscripción. Motivo: ${reason}. Entiendo que si deseo reactivarla en el futuro, aplicará la tarifa de reactivación de $12.000 COP + mensualidad.`,
+                        created_at: new Date().toISOString()
+                    }]);
+                } catch (chatErr) { }
+
+            } catch (e) {
+                console.error("Error en cancelación de suscripción:", e);
+            }
+        }
+
+        return { success: true };
+    },
+
+    requestSubscription: async (email: string, planType: 'mensual' | 'trimestral' | 'reactivacion', messageNote?: string) => {
+        const lowEmail = email.toLowerCase().trim();
+        const planText = planType === 'trimestral'
+            ? 'Plan Trimestral ($35.000 COP / 40 planeaciones)'
+            : planType === 'reactivacion'
+            ? 'Reactivación de Plan con Reconexión ($27.000 COP)'
+            : 'Plan Mensual ($15.000 COP / 15 planeaciones)';
+
+        if (supabase) {
+            try {
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `📩 SOLICITUD DE SUSCRIPCIÓN: ${planText}. Nota: ${messageNote || 'Sin notas'}`
+                }]);
+
+                try {
+                    await supabase.from('chat_messages').insert([{
+                        user_email: lowEmail,
+                        sender: lowEmail,
+                        recipient: 'admin@guaimaral.edu.co',
+                        message: `👋 Hola Administrador, deseo solicitar la activación de mi ${planText}.${messageNote ? ` Nota: ${messageNote}` : ''} Quedo atento a la confirmación de pago.`,
+                        created_at: new Date().toISOString()
+                    }]);
+                } catch (chatErr) { }
+            } catch (e) {
+                console.error("Error al enviar solicitud:", e);
+            }
+        }
+
+        return { success: true, planText };
     },
 
 
@@ -933,29 +1189,70 @@ export const authService = {
                     userList = Array.from(emailMap.values());
                 }
 
-                // 2. OPTIMIZACIÓN CRÍTICA: Obtener conteos globales en una sola pasada
-                // En lugar de 200 peticiones (N+1), hacemos solo 1 para todos los conteos
+                // 2. OPTIMIZACIÓN CRÍTICA: Obtener secuencias con timestamp en una sola pasada
                 const { data: seqStats } = await supabase
                     .from('generated_sequences')
-                    .select('user_email');
+                    .select('user_email, timestamp');
 
-                const countsMap: Record<string, number> = {};
-                seqStats?.forEach(s => {
-                    if (s.user_email) {
-                        const email = s.user_email.toLowerCase();
-                        countsMap[email] = (countsMap[email] || 0) + 1;
-                    }
-                });
+                const totalCountsMap: Record<string, number> = {};
+                const cycleCountsMap: Record<string, number> = {};
 
                 // 3. Cruzar datos de forma ultra-rápida en memoria
                 return userList.map(user => {
-                    const low = (user && user.email) ? user.email.toLowerCase() : '';
+                    const low = (user && user.email) ? user.email.toLowerCase().trim() : '';
+                    const startDateStr = user.unlimited_start_date;
+                    const startDate = startDateStr ? new Date(startDateStr.includes('T') ? startDateStr : startDateStr + 'T00:00:00') : null;
+
+                    let total = 0;
+                    let cycle = 0;
+                    const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
+                    const subStartDate = user.unlimited_start_date ? new Date(user.unlimited_start_date) : null;
+                    const effectiveCountStart = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
+
+                    seqStats?.forEach(s => {
+                        if (s.user_email && s.user_email.toLowerCase().trim() === low) {
+                            total++;
+                            if (new Date(s.timestamp) >= effectiveCountStart) {
+                                cycle++;
+                            }
+                        }
+                    });
+
+                    // Calcular cuota máxima del plan
+                    let maxQuota = 6;
+                    if (user.role === 'admin' || low.includes('demo') || low === 'jesus@guaimaral.edu.co') {
+                        maxQuota = 9999;
+                    } else if (user.is_unlimited) {
+                        if ((user.subscription_months || 1) >= 6 || (user.monthly_price || 15000) >= 75000) {
+                            maxQuota = 90;
+                        } else if ((user.subscription_months || 1) >= 3 || (user.monthly_price || 15000) >= 35000) {
+                            maxQuota = 40;
+                        } else {
+                            maxQuota = 15;
+                        }
+
+                        if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+                            maxQuota = user.custom_credits;
+                        }
+                    } else if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0) {
+                        maxQuota = user.custom_credits;
+                    }
+
+                    const used = user.is_unlimited ? cycle : cycle;
+                    const remaining = maxQuota === 9999 ? 9999 : Math.max(0, maxQuota - used);
+
                     return {
                         ...user,
                         stats: {
-                            today: 0, week: 0, month: 0, year: 0,
-                            total: low ? (countsMap[low] || 0) : 0,
-                            saved: low ? (countsMap[low] || 0) : 0
+                            today: 0,
+                            week: 0,
+                            month: 0,
+                            year: 0,
+                            total,
+                            saved: total,
+                            cycleUsage: used,
+                            maxQuota,
+                            remainingQuota: remaining
                         }
                     };
                 });

@@ -84,6 +84,19 @@ export interface TallerImprimible {
   reto_creativo: string;
 }
 
+export interface PlanQuotaInfo {
+  hasPlan: boolean;
+  isUnlimitedAdmin: boolean;
+  planName: string;
+  maxQuota: number;
+  usedQuota: number;
+  remainingQuota: number;
+  canGenerate: boolean;
+  reason?: 'ok' | 'vencido' | 'quota_exceeded' | 'sin_creditos';
+  cycleStartDate: string | null;
+  nextBillingDateStr: string;
+}
+
 export interface SubscriptionStatus {
   status: 'admin' | 'vigente' | 'vencido' | 'sin_plan';
   isUnlimited: boolean;

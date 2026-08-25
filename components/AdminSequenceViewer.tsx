@@ -30,8 +30,18 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
 
         if (userEmail) {
             seqData = seqData.filter(s => (s.user_email || '').toLowerCase() === userEmail.toLowerCase());
-            // Cargar estadísticas también
+            
+            // Ocultar todas las planeaciones anteriores al inicio de la cuota de la política
+            const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
+            const subStartDate = user && user.unlimited_start_date ? new Date(user.unlimited_start_date) : null;
+            const effectiveCountStart = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
+            seqData = seqData.filter(s => s.timestamp && new Date(s.timestamp) >= effectiveCountStart);
+
+            // Cargar estadísticas
             const s = await authService.getUsageStats(userEmail);
+            if (s) {
+                s.total = seqData.length;
+            }
             setStats(s);
         }
 

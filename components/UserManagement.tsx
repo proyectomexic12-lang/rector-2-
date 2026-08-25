@@ -339,20 +339,25 @@ export const UserManagement: React.FC = () => {
                                                 </div>
                                             ) : subStatus.status === 'vigente' ? (
                                                 <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-sm">
-                                                        <span>🟢</span> Vigente ({formatCOP(subStatus.monthlyPrice)}/mes)
+                                                    <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm ${
+                                                        (user.stats?.remainingQuota ?? 1) > 0 
+                                                            ? 'text-emerald-800 bg-emerald-50 border-emerald-200' 
+                                                            : 'text-red-700 bg-red-50 border-red-200 animate-pulse'
+                                                    }`}>
+                                                        <span>{(user.stats?.remainingQuota ?? 1) > 0 ? '🟢' : '🚨'}</span> 
+                                                        {user.stats?.cycleUsage || 0} / {user.stats?.maxQuota || (subStatus.monthsPaid >= 3 ? 40 : 15)} planeaciones
                                                     </span>
                                                     <span className="text-[9px] font-bold text-slate-500">
-                                                        📅 Próximo pago: {subStatus.nextBillingDateStr}
+                                                        {user.stats?.remainingQuota || 0} disponibles • {subStatus.nextBillingDateStr}
                                                     </span>
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col items-center gap-0.5">
                                                     <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm ${(user.stats?.week || 0) >= (user.custom_credits ?? 6) ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                                                        <CreditCard size={10} /> {user.stats?.week || 0} / {user.custom_credits ?? 6} gastados
+                                                        <CreditCard size={10} /> {user.stats?.week || 0} / {user.custom_credits ?? 6} créditos
                                                     </span>
                                                     <span className="text-[9px] font-bold text-slate-400">
-                                                        {Math.max(0, (user.custom_credits ?? 6) - (user.stats?.week || 0))} restantes
+                                                        {Math.max(0, (user.custom_credits ?? 6) - (user.stats?.week || 0))} restantes (Sin Plan)
                                                     </span>
                                                 </div>
                                             )}
@@ -716,12 +721,12 @@ export const UserManagement: React.FC = () => {
 
                                                 {/* Planes Automáticos de Suscripción */}
                                                 <div>
-                                                    <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-2">🎁 Selecciona un Plan Automático (Tarifa Especial):</label>
+                                                    <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-2">🎁 Selecciona un Plan Oficial (Asignación de Planeaciones):</label>
                                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                                         {[
-                                                            { months: 1, price: 15000, label: '1 Mes', badge: 'Mensual' },
-                                                            { months: 3, price: 35000, label: '3 Meses', badge: 'Oferta 35k' },
-                                                            { months: 6, price: 75000, label: '6 Meses', badge: 'Oferta 75k' },
+                                                            { months: 1, price: 15000, label: '1 Mes', quota: '15 Planeaciones', badge: 'Mensual' },
+                                                            { months: 3, price: 35000, label: '3 Meses', quota: '40 Planeaciones', badge: 'Oferta 35k' },
+                                                            { months: 6, price: 75000, label: '6 Meses', quota: '90 Planeaciones', badge: 'Semestral' },
                                                         ].map(plan => {
                                                             const isSelected = tempSubscriptionMonths === plan.months && tempMonthlyPrice === plan.price;
                                                             return (
@@ -745,9 +750,12 @@ export const UserManagement: React.FC = () => {
                                                                     </div>
                                                                     <div>
                                                                         <h5 className="font-black text-sm">{plan.label}</h5>
-                                                                        <p className={`text-xs font-bold ${isSelected ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                                                                        <p className={`text-xs font-black ${isSelected ? 'text-white' : 'text-emerald-700'}`}>
                                                                             ${(plan.price / 1000).toLocaleString('es-CO')}k COP
                                                                         </p>
+                                                                        <span className={`text-[10px] font-bold block mt-0.5 ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
+                                                                            ⚡ {plan.quota}
+                                                                        </span>
                                                                     </div>
                                                                 </button>
                                                             );

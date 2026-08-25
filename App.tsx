@@ -8,9 +8,11 @@ import { SecurityDashboard } from './components/SecurityDashboard';
 import { SubscriptionBlockModal } from './components/SubscriptionBlockModal';
 import { AdminChatPanel } from './components/AdminChatPanel';
 import { ChatWidget } from './components/ChatWidget';
-import { SequenceInput } from './types';
+import { PolicyAnnouncementModal } from './components/PolicyAnnouncementModal';
+import { SettingsModal } from './components/SettingsModal';
+import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
@@ -40,6 +42,9 @@ function App() {
   const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat'>('create');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showProfile, setShowProfile] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [userQuota, setUserQuota] = useState<PlanQuotaInfo | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 
   const loadingMessages = [
@@ -76,16 +81,21 @@ function App() {
         setInput(initialInput);
       }
 
-      // FETCH CREDITS
+      // FETCH QUOTA & CREDITS
       if (currentUser) {
-        const isUnlim = authService.isUserUnlimited(currentUser);
-        if (isUnlim) {
-          setCreditsLeft(9999);
-        } else {
-          authService.getUsageStats(currentUser.email).then(stats => {
-            const userMax = currentUser.custom_credits !== undefined && currentUser.custom_credits !== null ? currentUser.custom_credits : 6;
-            setCreditsLeft(Math.max(0, userMax - stats.week));
-          });
+        authService.getUserQuotaInfo(currentUser).then(quota => {
+          setUserQuota(quota);
+          if (quota.isUnlimitedAdmin) {
+            setCreditsLeft(9999);
+          } else {
+            setCreditsLeft(quota.remainingQuota);
+          }
+        });
+
+        // Mostrar comunicado oficial de políticas de una al ingresar
+        const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
+        if (!sessionDismissed) {
+          setShowPolicyModal(true);
         }
       }
     }
@@ -95,6 +105,9 @@ function App() {
   useEffect(() => {
     if (activeTab === 'create' && isAuthenticated) {
       refreshUser();
+      if (currentUser) {
+        authService.getUserQuotaInfo(currentUser).then(setUserQuota);
+      }
     }
     if (currentUser?.role === 'admin') {
       authService.getAllUsersWithStats().then(setAllUsers);
@@ -169,19 +182,24 @@ function App() {
       }
     }
 
-    // CRÉDITOS SEMANALES: Bloqueo si el usuario supera su límite (Exento si es ilimitado o admin)
-    const isUnlimitedUser = currentUser && authService.isUserUnlimited(currentUser);
-    const maxCredits = currentUser?.custom_credits !== undefined && currentUser?.custom_credits !== null ? currentUser.custom_credits : 6;
-    if (currentUser && !isUnlimitedUser) {
+    // VALIDACIÓN DE CUOTA Y PLAN (15 Planeaciones / Mes, 40 / Trimestre, o Créditos Básicos)
+    if (currentUser) {
       try {
-        const stats = await authService.getUsageStats(currentUser.email);
-        if (stats.week >= maxCredits) {
-          toast(`Has agotado tus ${maxCredits} créditos semanales. Tu saldo se recargará el próximo lunes.`, 'error');
+        const currentQuota = await authService.getUserQuotaInfo(currentUser);
+        setUserQuota(currentQuota);
+        if (!currentQuota.canGenerate) {
+          if (currentQuota.reason === 'vencido') {
+            toast("Tu suscripción mensual ha vencido. Ponte al día con tu saldo acumulado para continuar.", 'error');
+          } else if (currentQuota.reason === 'quota_exceeded') {
+            toast(`🚨 Has alcanzado el límite de tu plan (${currentQuota.usedQuota} de ${currentQuota.maxQuota} planeaciones usadas). Contacta a administración para recargas adicionales.`, 'error');
+          } else {
+            toast(`Has agotado tus ${currentQuota.maxQuota} créditos disponibles.`, 'error');
+          }
           setIsLoading(false);
           return;
         }
       } catch (e) {
-        console.error("Error validando créditos", e);
+        console.error("Error validando cuota", e);
       }
     }
 
@@ -197,9 +215,12 @@ function App() {
           grade: input.grado
         });
         
-        // Descontar 1 crédito localmente para refrescar la UI al instante
-        setCreditsLeft(prev => prev !== null ? Math.max(0, prev - 1) : null);
-        refreshUser(); // Refrescar los stats locales después de generar
+        // Actualizar cuota inmediatamente para refrescar la UI al instante
+        authService.getUserQuotaInfo(currentUser).then(q => {
+          setUserQuota(q);
+          setCreditsLeft(q.remainingQuota);
+        });
+        refreshUser();
       }
       
       toast("¡Planeación generada con éxito!", 'success');
@@ -264,153 +285,176 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-outfit pb-20 relative selection:bg-blue-100 selection:text-blue-900">
-      {/* Sidebar removed per Rector's request */}
-
-      {/* Header */}
-      <header className="relative z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 no-print transition-all duration-300 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer group" onClick={handleFullReset}>
-            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500 w-12 h-12 flex items-center justify-center shrink-0">
-              <img src="/logo.png" alt="Clases Ideal Logo" className="institutional-logo w-10 h-10 object-contain rounded-lg" style={{ maxWidth: '40px', maxHeight: '40px' }} />
+      {/* Header Executive Minimalist */}
+      <header className="relative z-40 bg-slate-900 border-b border-slate-800 text-slate-100 sticky top-0 no-print transition-all duration-300 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleFullReset}>
+            <div className="bg-slate-800 p-1 rounded-lg border border-slate-700 w-10 h-10 flex items-center justify-center shrink-0 group-hover:border-indigo-500 transition-colors">
+              <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded" style={{ maxWidth: '32px', maxHeight: '32px' }} />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none group-hover:text-blue-700 transition-colors">
+              <h1 className="text-base font-bold text-white tracking-tight leading-none">
                 Clases Ideal
               </h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[2px] mt-1">
-                AI <span className="text-blue-600">SaaS Platform</span>
+              <p className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
+                Plataforma Docente IA
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Nav Tools */}
-            <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
+            <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
               {currentUser?.role === 'admin' ? (
                 <>
                   <button
                     onClick={() => { setActiveTab('create'); setSequence(null); }}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'create' && !sequence ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Nueva Planeación"
                   >
-                    <Sparkles size={20} />
+                    <Sparkles size={14} />
+                    <span className="hidden md:inline">Planeador</span>
                   </button>
-                  <div className="w-px h-4 bg-slate-300 mx-1"></div>
                   <button
                     onClick={() => setActiveTab('monitor')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'monitor' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'monitor' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Monitor en Tiempo Real"
                   >
-                    <LayoutDashboard size={20} />
+                    <LayoutDashboard size={14} />
+                    <span className="hidden lg:inline">Monitor</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('users')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'users' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Gestión de Usuarios"
                   >
-                    <UserIcon size={20} />
+                    <UserIcon size={14} />
+                    <span className="hidden lg:inline">Usuarios</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('history')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'history' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Repositorio Global"
                   >
-                    <Database size={20} />
+                    <Database size={14} />
+                    <span className="hidden lg:inline">Historial</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('chat')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'chat' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
-                    title="Chat y Consultas de Docentes"
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                    title="Chat Administrativo"
                   >
-                    <MessageSquare size={20} />
+                    <MessageSquare size={14} />
                   </button>
                   <button
                     onClick={() => setActiveTab('security')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'security' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Seguridad Administrativa"
                   >
-                    <ShieldAlert size={20} />
+                    <ShieldAlert size={14} />
                   </button>
                 </>
               ) : (
                 <>
                   <button
                     onClick={() => { setActiveTab('create'); setSequence(null); }}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'create' && !sequence ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Nueva Planeación"
                   >
-                    <Sparkles size={20} />
+                    <Sparkles size={14} />
+                    <span>Crear Planeación</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('history')}
-                    className={`p-2.5 rounded-xl transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                     title="Mi Historial de Planeaciones"
                   >
-                    <Database size={20} />
+                    <Database size={14} />
+                    <span className="hidden sm:inline">Mis Planeaciones</span>
                   </button>
                 </>
               )}
               
+              {/* Botón Políticas y Planes */}
+              <button
+                onClick={() => setShowPolicyModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60 font-medium text-xs transition-colors"
+                title="Términos y Planes de Suscripción"
+              >
+                <BookOpen size={13} className="text-indigo-400" />
+                <span className="hidden md:inline">Planes y Cuotas</span>
+              </button>
+
               <a
                 href="https://manuel-red.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 p-2.5 px-4 rounded-xl transition-all bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 font-bold text-xs uppercase tracking-wider"
-                title="Ir a montar planeaciones"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors shadow-sm"
+                title="Montar planeaciones institucionales"
               >
-                <Upload size={16} />
+                <Upload size={13} />
                 <span className="hidden sm:inline">Montar Planeaciones</span>
               </a>
             </div>
 
-            <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block"></div>
+            <div className="h-5 w-px bg-slate-800 mx-1 hidden sm:block"></div>
 
-            {/* User Profile & Credits */}
-            <div className="flex items-center gap-1.5 sm:gap-3 pl-1 sm:pl-2 shrink-0">
-              
-              {/* Subscription Badge */}
+            {/* User Quota Status Badge */}
+            <div className="flex items-center gap-2 shrink-0">
               {currentUser && (
-                authService.isUserUnlimited(currentUser) ? (
-                  <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-emerald-200 shadow-sm" title="Tu cuenta cuenta con Plan Ilimitado">
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Plan:</span>
-                    <span className="text-[9px] sm:text-xs font-black bg-emerald-600 text-white px-2 sm:px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1 uppercase tracking-wider">
-                      <Sparkles size={11} /> {
-                        currentUser.role === 'admin' ? 'ADMIN' :
-                        currentUser.subscription_months === 6 ? 'SEMESTRAL' :
-                        currentUser.subscription_months === 3 ? 'TRIMESTRAL' :
-                        currentUser.subscription_months === 1 ? 'MENSUAL' : 'ILIMITADO'
-                      }
-                    </span>
+                userQuota?.isUnlimitedAdmin ? (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-emerald-400 text-xs font-semibold" title="Acceso Administrativo Ilimitado">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span className="text-[11px] tracking-wide">ADMIN</span>
                   </div>
+                ) : userQuota?.hasPlan ? (
+                  <button 
+                    onClick={() => setShowPolicyModal(true)}
+                    className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-800/90 border border-slate-700 hover:border-slate-600 text-slate-200 transition-colors cursor-pointer text-left" 
+                    title={`Plan Activo: ${userQuota.usedQuota} de ${userQuota.maxQuota} usadas. Clic para ver detalles.`}
+                  >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${userQuota.remainingQuota > 3 ? 'bg-emerald-400' : userQuota.remainingQuota > 0 ? 'bg-amber-400' : 'bg-red-400'}`}></span>
+                    <div className="flex flex-col leading-none">
+                      <span className="text-[11px] font-bold text-white">
+                        {userQuota.usedQuota} / {userQuota.maxQuota}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-medium">
+                        {userQuota.maxQuota === 40 ? 'Plan 3M' : 'Plan Mes'}
+                      </span>
+                    </div>
+                  </button>
                 ) : (
-                  <div className="flex items-center gap-1 bg-red-50 text-red-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-red-200 shadow-sm animate-pulse" title="No cuentas con una suscripción activa">
-                    <AlertTriangle size={12} className="text-red-500 shrink-0" />
-                    <span className="text-[9px] font-black bg-red-600 text-white px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm uppercase tracking-widest">
-                      SIN PAGO
-                    </span>
-                  </div>
+                  <button 
+                    onClick={() => setShowPolicyModal(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-950/40 border border-red-500/30 text-red-300 hover:bg-red-950/60 transition-colors text-xs font-semibold" 
+                    title="Sin Plan Activo. Clic para contratar."
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                    <span className="text-[10px] uppercase">Sin Plan</span>
+                  </button>
                 )
               )}
 
-              <div className="hidden lg:flex flex-col items-end">
-                <span className="text-xs font-black text-slate-800 leading-none">{currentUser?.name}</span>
-                <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">{currentUser?.role}</span>
+              <div className="hidden xl:flex flex-col items-end leading-none">
+                <span className="text-xs font-semibold text-slate-200">{currentUser?.name}</span>
+                <span className="text-[9px] text-slate-500 uppercase mt-0.5">{currentUser?.role}</span>
               </div>
 
+              {/* Settings (Engranaje) Button */}
               <button
-                onClick={() => setShowProfile(!showProfile)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all shadow-sm shrink-0 ${showProfile ? 'bg-indigo-600 text-white shadow-indigo-500/30' : 'bg-white text-slate-500 hover:text-indigo-600 border border-slate-200'}`}
-                title="Mi Cuenta"
+                onClick={() => setShowSettingsModal(true)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0 ${showSettingsModal ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700'}`}
+                title="Configuración, Suscripción y Cuenta (⚙️)"
               >
-                <UserIcon size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <Settings size={16} />
               </button>
 
               <button
                 onClick={handleAppLogout}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-red-50 text-red-600 border border-red-100 sm:bg-white sm:text-slate-400 sm:border-slate-200 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm flex items-center justify-center shrink-0"
+                className="w-9 h-9 rounded-xl bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 border border-slate-700 transition-colors shadow-sm flex items-center justify-center shrink-0"
                 title="Cerrar Sesión"
               >
-                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <LogOut size={16} />
               </button>
             </div>
           </div>
@@ -486,77 +530,79 @@ function App() {
             {activeTab === 'create' && (
               <>
                 {currentUser && !authService.isUserUnlimited(currentUser) && (
-                  <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-br from-rose-500 via-red-500 to-red-700 rounded-[2.5rem] p-8 sm:p-10 text-white shadow-2xl shadow-red-500/40 text-center animate-fade-in-up border-4 border-white/20 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black/10 rounded-full blur-2xl"></div>
-                    
-                    <AlertTriangle size={56} className="mx-auto mb-5 drop-shadow-lg opacity-90 animate-bounce" />
-                    <h3 className="text-3xl sm:text-4xl font-black tracking-tight mb-4 drop-shadow-md">
-                      ⚠️ ¡Atención Profesores!
-                    </h3>
-                    <p className="text-lg sm:text-xl font-medium leading-relaxed opacity-95 mb-6 text-red-50">
-                      Hace 6 meses pagaron 20 mil pesos por la plataforma demo.<br/>
-                      <strong className="font-black text-white bg-black/20 px-4 py-1.5 rounded-xl mt-3 inline-block shadow-inner backdrop-blur-sm">
-                        Es momento de renovar su suscripción para generar planeaciones sin límites.
-                      </strong>
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-left">
-                      <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
-                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Mensual</div>
-                        <div className="text-3xl font-black text-white mb-2">$15.000<span className="text-sm font-bold text-red-200">/mes</span></div>
-                        <ul className="text-xs text-red-100 space-y-1 font-medium">
-                          <li>✅ Acceso Ilimitado</li>
-                          <li>✅ Descargas en PDF</li>
-                        </ul>
+                  <div className="max-w-4xl mx-auto mb-10 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 text-slate-200 shadow-xl relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-semibold tracking-wider text-amber-300 uppercase">
+                          Suscripción Requerida
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                          Activación de Acceso y Planeador Didáctico
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          Selecciona tu plan institucional para habilitar la generación de planeaciones con IA.
+                        </p>
                       </div>
-                      <div className="bg-white text-red-700 border-2 border-red-300 p-4 rounded-2xl shadow-xl transform md:-translate-y-2 relative">
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-md">Más Popular</div>
-                        <div className="text-red-900 text-xs font-black uppercase tracking-widest mb-1">Plan Trimestral</div>
-                        <div className="text-3xl font-black mb-2">$35.000<span className="text-sm font-bold text-red-700">/3 meses</span></div>
-                        <ul className="text-xs space-y-1 font-bold">
-                          <li>⭐ Promoción especial</li>
-                          <li>⭐ Ahorras $10.000</li>
-                        </ul>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPolicyModal(true)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition-colors shadow-sm shrink-0 flex items-center gap-2"
+                      >
+                        <BookOpen size={14} />
+                        <span>Ver Políticas y Planes</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+                      <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-semibold text-slate-300">Plan Mensual</span>
+                          <span className="font-bold text-white text-base">$15.000 COP</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          15 Planeaciones Didácticas completas por ciclo de 30 días.
+                        </p>
                       </div>
-                      <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
-                        <div className="text-red-200 text-xs font-black uppercase tracking-widest mb-1">Plan Semestral</div>
-                        <div className="text-3xl font-black text-white mb-2">$75.000<span className="text-sm font-bold text-red-200">/6 meses</span></div>
-                        <ul className="text-xs text-red-100 space-y-1 font-medium">
-                          <li>🚀 Ahorras $15.000</li>
-                          <li>🚀 Soporte Prioritario</li>
-                        </ul>
+
+                      <div className="p-4 rounded-xl bg-slate-950/60 border border-indigo-500/40 space-y-2 relative">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-semibold text-indigo-300 flex items-center gap-1.5">
+                            <Award size={13} /> Plan Trimestral
+                          </span>
+                          <span className="font-bold text-emerald-400 text-base">$35.000 COP</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          40 Planeaciones Didácticas (Ahorro directo de $10.000 COP).
+                        </p>
                       </div>
                     </div>
 
-                    <div className="bg-black/30 border border-white/20 p-5 rounded-2xl inline-block backdrop-blur-md max-w-2xl mx-auto">
-                      <p className="text-sm sm:text-base font-black text-white mb-2">
-                        💳 Para activar tu cuenta, transfiere por <span className="text-purple-300">Nequi</span> o <span className="text-blue-300">BRE-B</span> al:
-                      </p>
-                      <div className="text-4xl font-black text-white tracking-widest bg-black/40 py-3 rounded-xl mb-3 shadow-inner flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-blue-200 uppercase tracking-[0.3em] font-bold mb-1 opacity-80">Llave / Celular</span>
-                        320 595 7019
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-indigo-400 shrink-0">
+                          <CreditCard size={16} />
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px]">Canal de Transferencia Directa (Nequi / BRE-B):</span>
+                          <strong className="text-white font-mono text-sm tracking-wider">320 595 7019</strong>
+                        </div>
                       </div>
-                      <p className="text-xs sm:text-sm text-emerald-200 font-black uppercase tracking-wider bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/30">
-                        ⚡ Activación Automática: Al realizar el pago, tu suscripción y el acceso a planeaciones sin límites se activan automáticamente al instante.
-                      </p>
+
+                      <div className="text-[11px] text-slate-400 text-right">
+                        <span>Activación y validación inmediata tras reporte</span>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* AVISO A DOCENTES SUBSCRIBIERTOS (POLÍTICA DISPOSITIVOS) */}
                 {currentUser && authService.isUserUnlimited(currentUser) && (
-                  <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-sm">
-                    <div className="bg-emerald-600 text-white p-2.5 rounded-xl shrink-0 shadow-md">
-                      <ShieldCheck size={22} />
-                    </div>
-                    <div className="text-center sm:text-left flex-1">
-                      <h4 className="text-xs font-black uppercase tracking-widest text-emerald-800 mb-1">
-                        ℹ️ Uso de Cuenta & Licencia Personal Docente
-                      </h4>
-                      <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-700">
-                        <strong>Queridos profesores:</strong> Por su suscripción tienen derecho a utilizar su cuenta personal en <strong>1 Celular y 1 Computador Personal</strong> para realizar sus planeaciones. Recordamos que el acceso es personal e intransferible; cualquier manejo indebido o préstamo de credenciales será analizado por la administración institucional.
-                      </p>
-                    </div>
+                  <div className="max-w-4xl mx-auto mb-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 sm:p-4 flex items-center gap-3.5 text-xs text-slate-300">
+                    <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
+                    <p className="leading-relaxed">
+                      <strong className="text-white">Licencia Personal Activa:</strong> Autorizada para uso en <strong>1 dispositivo móvil y 1 computador personal</strong>. El acceso es personal e intransferible.
+                    </p>
                   </div>
                 )}
 
@@ -697,6 +743,42 @@ function App() {
             onRefresh={() => refreshUser()}
           />
         )}
+
+        {/* Modal Comunicado Oficial y Políticas de Sostenibilidad 2026 */}
+        <PolicyAnnouncementModal
+          isOpen={showPolicyModal}
+          onClose={() => {
+            setShowPolicyModal(false);
+            sessionStorage.setItem('guaimaral_policy_modal_dismissed', 'true');
+            localStorage.setItem('guaimaral_policy_ack_2026', 'true');
+          }}
+          userName={currentUser?.name}
+          userEmail={currentUser?.email}
+          onSubscriptionChanged={async () => {
+            await refreshUser();
+            if (currentUser) {
+              const q = await authService.getUserQuotaInfo(currentUser);
+              setUserQuota(q);
+            }
+          }}
+        />
+
+        {/* Modal de Configuración, Suscripción y Cuenta (Engranaje) */}
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          user={currentUser}
+          quotaInfo={userQuota}
+          onOpenPolicies={() => setShowPolicyModal(true)}
+          onSubscriptionChanged={async () => {
+            await refreshUser();
+            if (currentUser) {
+              const q = await authService.getUserQuotaInfo(currentUser);
+              setUserQuota(q);
+            }
+          }}
+          onLogout={handleAppLogout}
+        />
       </main>
     </div>
   );
