@@ -324,13 +324,7 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
             {!showCancelDialog ? (
               <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
                 <span className="text-slate-500 text-[11px]">Gestión de cuenta personal</span>
-                <button
-                  type="button"
-                  onClick={() => setShowCancelDialog(true)}
-                  className="text-xs text-slate-400 hover:text-red-400 transition-colors font-medium underline underline-offset-4"
-                >
-                  Solicitar baja voluntaria de suscripción
-                </button>
+                {/* Botón de Cancelar oculto temporalmente por solicitud del admin */}
               </div>
             ) : (
               <div className="mt-3 p-3.5 bg-slate-900 border border-red-500/30 rounded-xl space-y-3 animate-fade-in">
