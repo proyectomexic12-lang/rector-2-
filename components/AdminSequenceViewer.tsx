@@ -31,12 +31,6 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
         if (userEmail) {
             seqData = seqData.filter(s => (s.user_email || '').toLowerCase() === userEmail.toLowerCase());
             
-            // Ocultar todas las planeaciones anteriores al inicio de la cuota de la política
-            const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
-            const subStartDate = user && user.unlimited_start_date ? new Date(user.unlimited_start_date) : null;
-            const effectiveCountStart = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
-            seqData = seqData.filter(s => s.timestamp && new Date(s.timestamp) >= effectiveCountStart);
-
             // Cargar estadísticas
             const s = await authService.getUsageStats(userEmail);
             if (s) {
@@ -162,26 +156,21 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                 </div>
             )}
 
+            {isUnpaidTeacher && (
+                <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 rounded-2xl p-4 sm:p-5 mb-6 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-amber-500/20 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Lock size={20} />
+                    </div>
+                    <div className="text-xs">
+                        <p className="font-bold text-amber-950">Modo Solo Lectura - Repositorio Activo</p>
+                        <p className="text-amber-800">Puedes consultar y descargar todas tus planeaciones anteriores. Para generar nuevas planeaciones con IA, renueva tu suscripción.</p>
+                    </div>
+                </div>
+            )}
+
             {isLoading ? (
                 <div className="flex justify-center py-20">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                </div>
-            ) : isUnpaidTeacher ? (
-                <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-[2rem] p-8 sm:p-12 text-center shadow-2xl relative overflow-hidden my-6 border border-indigo-900">
-                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-red-500/10 rounded-full blur-3xl"></div>
-                    <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-red-500/30">
-                        <Lock size={32} />
-                    </div>
-                    <h4 className="text-2xl font-black tracking-tight mb-3">
-                        🔒 Historial de Planeaciones Protegido
-                    </h4>
-                    <p className="text-slate-300 text-sm max-w-xl mx-auto leading-relaxed mb-6 font-medium">
-                        Tus planeaciones guardadas anteriormente se encuentran protegidas en el repositorio de la I.E. Guaimaral. Para volver a acceder, visualizarlas o descargarlas, debes renovar tu suscripción o solicitar la activación al Administrador.
-                    </p>
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl max-w-md mx-auto border border-white/10 text-xs text-slate-200">
-                        <p className="font-bold text-white mb-1">💳 Restablecimiento Automático</p>
-                        <p>Tan pronto como el Administrador active tu cuenta o recargue tus créditos, todas tus planeaciones anteriores se restablecerán automáticamente.</p>
-                    </div>
                 </div>
             ) : filteredSequences.length === 0 ? (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-slate-400">

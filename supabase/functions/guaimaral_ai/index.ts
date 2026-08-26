@@ -1,7 +1,6 @@
 // @ts-nocheck
 declare const Deno: any;
 
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -19,9 +18,9 @@ Deno.serve(async (req: Request) => {
     const { input, refinementInstruction } = body;
 
     if (!input) {
-      return new Response(JSON.stringify({ error: "No input provided in request body" }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: "No input provided in request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -41,11 +40,11 @@ Deno.serve(async (req: Request) => {
     const apiKeys = Array.from(new Set(rawKeys));
 
     if (apiKeys.length === 0) {
-      return new Response(JSON.stringify({ 
-        error: "No API keys configured on the server. Please add GEMINI_API_KEY_1 or VITE_API_KEY_1 to Supabase Secrets." 
-      }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({
+        error: "No API keys configured on the server. Please add GEMINI_API_KEY_1 or VITE_API_KEY_1 to Supabase Secrets."
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -254,6 +253,8 @@ Deno.serve(async (req: Request) => {
           return "ENFOQUE DE MEDIA ACADÉMICA / TÉCNICA (10° y 11°): Alto rigor conceptual pre-universitario, competencias Saber 11 / ICFES, análisis crítico de textos complejos, ensayos argumentativos, formulación de hipótesis y proyectos de vida.";
         case 'multigrado':
           return "ENFOQUE MULTIGRADO PRIMARIA (Escuela Nueva / Altomira): Estrategia de aula unificada con actividades multinivel diferenciadas por ciclo (Transición a 5°), guías de autoaprendizaje y aprendizaje colaborativo entre pares.";
+        default:
+          return "ENFOQUE GENERAL: Adaptación al nivel cognitivo según lineamientos pedagógicos.";
       }
     }
 
@@ -303,7 +304,7 @@ Deno.serve(async (req: Request) => {
       for (const modelName of modelsToTry) {
         try {
           console.log(`Trying model ${modelName} with key substring ...${key.slice(-6)}`);
-          
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 35000);
 
@@ -325,8 +326,8 @@ Deno.serve(async (req: Request) => {
           clearTimeout(timeoutId);
 
           if (!res.ok) {
-             const errData = await res.json().catch(() => ({}));
-             throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
           }
 
           const data = await res.json();
@@ -423,7 +424,7 @@ Deno.serve(async (req: Request) => {
             sequenceData.corporiedad_adi = sequenceData.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";
           }
           usedModel = modelName;
-          
+
           break; // Break model loop on success
         } catch (err: any) {
           console.error(`Attempt failed [${modelName}]:`, err?.message || err);
@@ -437,13 +438,13 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Fallo en Orquestación: Ninguna combinación de llave y modelo funcionó. Error final: ${lastError?.message || 'Error desconocido'}`);
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       sequence: sequenceData,
       meta: { model: usedModel }
-    }), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error: any) {
