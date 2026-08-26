@@ -766,14 +766,14 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               <span>📌</span> I. Marco General & Objetivos
             </h4>
             <EditableContent
-              value={editableData.taller_imprimible.introduccion}
+              value={editableData.taller_imprimible?.introduccion || ''}
               onSave={(val) => handleUpdateField('taller_imprimible.introduccion', val)}
               className="text-xs text-slate-700 leading-relaxed mb-2"
             />
             <div className="text-[10px] font-bold text-slate-600 bg-white p-2 rounded border border-slate-200">
               <span className="font-black text-slate-800">Instrucciones: </span>
               <EditableContent
-                value={editableData.taller_imprimible.instrucciones}
+                value={editableData.taller_imprimible?.instrucciones || ''}
                 onSave={(val) => handleUpdateField('taller_imprimible.instrucciones', val)}
                 className="inline border-0 p-0 text-slate-700 font-medium"
               />
@@ -781,7 +781,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
           </div>
 
           {/* II. BITÁCORA / TEST INICIAL (LÍNEA BASE) */}
-          {editableData.taller_imprimible.bitacora_test_inicial && (
+          {editableData.taller_imprimible?.bitacora_test_inicial && (
             <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-300">
               <h4 className="font-black text-xs uppercase tracking-wider text-amber-950 mb-1 flex items-center gap-1.5">
                 <PenTool size={14} className="text-amber-700" /> II. Bitácora de Saberes Previos (Test Inicial)
