@@ -108,9 +108,10 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
     const handleDownloadDirectPDF = (seq: any) => {
         if (onSelectSequence) {
             onSelectSequence(seq);
+            window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
             setTimeout(() => {
                 window.print();
-            }, 400);
+            }, 500);
         }
     };
 
