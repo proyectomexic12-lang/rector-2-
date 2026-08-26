@@ -125,11 +125,11 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
 
         <button
           onClick={handleDownloadPDF}
-          className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
-          title="Descargar PDF"
+          className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
+          title="Descargar planeación directamente como PDF"
         >
-          <FileDown size={14} />
-          <span>PDF</span>
+          <FileDown size={15} />
+          <span>Descargar PDF</span>
         </button>
 
         {/* Menú Desplegable Imprimir */}

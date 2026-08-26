@@ -105,6 +105,15 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
         }
     };
 
+    const handleDownloadDirectPDF = (seq: any) => {
+        if (onSelectSequence) {
+            onSelectSequence(seq);
+            setTimeout(() => {
+                window.print();
+            }, 400);
+        }
+    };
+
     return (
         <div className="w-full bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl mb-12 animate-fade-in-up relative overflow-hidden group">
             {/* Decorative background element */}
@@ -223,26 +232,35 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                                     </td>
                                     <td className="py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            {onSelectSequence && (
-                                                <button
-                                                    onClick={() => onSelectSequence(seq)}
-                                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-blue-500/20 flex items-center gap-1.5"
-                                                    title="Abrir Planeación en el Visor para ver o descargar PDF / Word"
-                                                >
-                                                    <BookOpen size={14} />
-                                                    <span>Abrir / PDF</span>
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => handleDownloadDirectPDF(seq)}
+                                                className="px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-rose-500/25 flex items-center gap-1.5 hover:scale-105 active:scale-95"
+                                                title="Descargar esta planeación como PDF enseguida"
+                                            >
+                                                <FileDown size={14} />
+                                                <span>Descargar PDF</span>
+                                            </button>
 
                                             <button
                                                 onClick={() => handleDownloadDocx(seq)}
                                                 disabled={exportingId === seq.id}
-                                                className="px-2.5 py-2 bg-slate-100 hover:bg-blue-50 border border-slate-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
+                                                className="px-2.5 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
                                                 title="Descargar directamente en Microsoft Word (.docx)"
                                             >
                                                 <FileText size={14} />
                                                 <span className="hidden sm:inline">Word</span>
                                             </button>
+
+                                            {onSelectSequence && (
+                                                <button
+                                                    onClick={() => onSelectSequence(seq)}
+                                                    className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                                                    title="Ver planeación completa en pantalla"
+                                                >
+                                                    <BookOpen size={14} />
+                                                    <span className="hidden sm:inline">Ver</span>
+                                                </button>
+                                            )}
 
                                             <button
                                                 onClick={() => downloadJson(seq)}
