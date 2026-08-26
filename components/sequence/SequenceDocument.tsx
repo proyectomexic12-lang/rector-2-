@@ -633,16 +633,16 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               
               <button 
                 onClick={handleGenerateIcfes}
-                disabled={isGeneratingIcfes || editableData.evaluacion.length >= 10}
+                disabled={isGeneratingIcfes || (editableData.evaluacion?.length || 0) >= 10}
                 className={`no-print flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded shadow-sm transition-all
-                  ${(isGeneratingIcfes || editableData.evaluacion.length >= 10) 
+                  ${(isGeneratingIcfes || (editableData.evaluacion?.length || 0) >= 10) 
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                     : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'
                   }`}
               >
                 {isGeneratingIcfes ? (
                   <><Loader2 size={12} className="animate-spin" /> Diseñando...</>
-                ) : editableData.evaluacion.length >= 10 ? (
+                ) : (editableData.evaluacion?.length || 0) >= 10 ? (
                   <><Sparkles size={12} /> Examen Completo</>
                 ) : (
                   <><Sparkles size={12} /> Generar Examen ICFES (10 Preguntas)</>
@@ -666,7 +666,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                         value={ev.pregunta}
                         className="font-bold text-gray-900 border-0 p-0 inline text-[11px]"
                         onSave={(val) => {
-                          const newEv = [...editableData.evaluacion];
+                          const newEv = [...(editableData.evaluacion || [])];
                           newEv[i].pregunta = val;
                           handleUpdateField('evaluacion', newEv);
                         }}
@@ -808,7 +808,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                   <EditableContent
                     value={ej}
                     onSave={(val) => {
-                      const newEjs = [...editableData.taller_imprimible.ejercicios];
+                      const newEjs = [...(editableData.taller_imprimible?.ejercicios || [])];
                       newEjs[i] = val;
                       handleUpdateField('taller_imprimible.ejercicios', newEjs);
                     }}
@@ -827,7 +827,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
               <span>🚀</span> IV. Reto Creativo de Aplicación & Pensamiento Crítico
             </h4>
             <EditableContent
-              value={editableData.taller_imprimible.reto_creativo}
+              value={editableData.taller_imprimible?.reto_creativo || ''}
               onSave={(val) => handleUpdateField('taller_imprimible.reto_creativo', val)}
               className="text-xs text-slate-800 italic leading-relaxed"
             />

@@ -43,13 +43,13 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
     if (!input.area) return toast('⚠️ Debes seleccionar el área del conocimiento.', 'error');
     if (!input.ejeCrese) return toast('⚠️ Selecciona un eje transversal (CRESE).', 'error');
     if (input.sesiones < 1) return toast('⚠️ La cantidad de sesiones debe ser mayor a 0.', 'error');
-    if (!input.tema || input.tema.length < 5) return toast('⚠️ El tema principal debe tener al menos 5 caracteres.', 'error');
-    if (dbaMode === 'manual' && (!input.dba || input.dba.length < 5)) return toast('⚠️ Si usas el modo manual, debes escribir un DBA válido.', 'error');
+    if (!input.tema || (input.tema?.length || 0) < 5) return toast('⚠️ El tema principal debe tener al menos 5 caracteres.', 'error');
+    if (dbaMode === 'manual' && (!input.dba || (input.dba?.length || 0) < 5)) return toast('⚠️ Si usas el modo manual, debes escribir un DBA válido.', 'error');
     
     onGenerate();
   };
 
-  const isFormComplete = input.grado && input.area && input.ejeCrese && input.tema.length >= 5;
+  const isFormComplete = Boolean(input.grado && input.area && input.ejeCrese && (input.tema?.length || 0) >= 5);
 
   return (
     <div className="w-full mb-10 no-print animate-fade-in-up">
@@ -157,12 +157,12 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                 <input
                   type="text"
                   name="tema"
-                  value={input.tema}
+                  value={input.tema || ''}
                   onChange={handleChange}
                   placeholder="Ej. El ciclo del agua, Suma de fraccionarios..."
                   className="w-full px-6 py-5 bg-white/50 border border-slate-200/60 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-md hover:border-blue-300 hover:shadow-blue-500/10 text-xl font-black text-slate-800 placeholder-slate-300"
                 />
-                {input.tema.length > 5 && (
+                {(input.tema?.length || 0) > 5 && (
                   <div className="absolute right-5 top-1/2 -translate-y-1/2 text-green-500 animate-fade-in">
                     <CheckCircle2 size={24} />
                   </div>
@@ -198,7 +198,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                 {dbaMode === 'manual' ? (
                   <textarea
                     name="dba"
-                    value={input.dba}
+                    value={input.dba || ''}
                     onChange={handleChange}
                     rows={3}
                     placeholder="Escribe o pega aquí el DBA oficial..."
@@ -252,9 +252,9 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               </div>
 
               {/* Nodo 2: Tema */}
-              <div className={`transition-all duration-700 ease-out delay-100 ${input.tema.length > 3 ? 'opacity-100 translate-x-0' : 'opacity-30 -translate-x-8'}`}>
+              <div className={`transition-all duration-700 ease-out delay-100 ${(input.tema?.length || 0) > 3 ? 'opacity-100 translate-x-0' : 'opacity-30 -translate-x-8'}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`mt-0.5 rounded-full p-1.5 transition-colors duration-500 ${input.tema.length > 3 ? 'bg-green-500/20 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-slate-800 text-slate-600'}`}>
+                  <div className={`mt-0.5 rounded-full p-1.5 transition-colors duration-500 ${(input.tema?.length || 0) > 3 ? 'bg-green-500/20 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-slate-800 text-slate-600'}`}>
                     <CheckCircle2 size={18} />
                   </div>
                   <div>
@@ -267,7 +267,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                     </p>
                   </div>
                 </div>
-                {input.tema.length > 3 && <div className="ml-3.5 mt-2 h-8 border-l-2 border-dashed border-slate-700"></div>}
+                {(input.tema?.length || 0) > 3 && <div className="ml-3.5 mt-2 h-8 border-l-2 border-dashed border-slate-700"></div>}
               </div>
 
               {/* Nodo 3: Transversalidad */}
