@@ -550,8 +550,8 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
         </div>
 
         {/* RÚBRICA Y EVALUACIÓN (ANEXO) */}
-        <div className={`mt-8 pt-4 border-t-2 border-dashed border-gray-300 print:break-before-page ${activeView === 'estudiante' ? 'hidden print:block' : ''}`}>
-          <h3 className="text-center font-bold text-gray-400 uppercase text-[10px] mb-4">- ANEXO 2: RÚBRICA Y EVALUACIÓN -</h3>
+        <div className={`mt-6 pt-3 border-t-2 border-dashed border-gray-300 break-inside-avoid print:mt-3 ${activeView === 'estudiante' ? 'hidden print:block' : ''}`}>
+          <h3 className="text-center font-bold text-gray-400 uppercase text-[10px] mb-3">- ANEXO 2: RÚBRICA Y EVALUACIÓN -</h3>
 
           <div className="mb-6 print:mb-2">
             <h4 className="font-bold text-xs mb-2 text-gray-800">Rúbrica de Desempeño</h4>

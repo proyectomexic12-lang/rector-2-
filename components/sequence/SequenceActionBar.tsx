@@ -23,6 +23,8 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [isExportingDocx, setIsExportingDocx] = useState(false);
 
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+
   const handleCopyText = () => {
     const el = document.getElementById('preview-container');
     if (el) {
@@ -31,9 +33,36 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
     }
   };
 
-  const handleDownloadPDF = () => {
-    // Invoca la exportación a PDF nativa del navegador con resolución vectorial perfecta y saltos de página limpios
-    window.print();
+  const handleDownloadPDF = async () => {
+    const el = document.getElementById('preview-container');
+    const html2pdf = (window as any).html2pdf;
+
+    if (el && typeof html2pdf === 'function') {
+      try {
+        setIsExportingPDF(true);
+        const title = editableData?.titulo_secuencia || input?.tema || 'Planeacion_Guaimaral';
+        const cleanTitle = title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').substring(0, 50);
+        const fileName = `${cleanTitle}.pdf`;
+
+        const opt = {
+          margin: [8, 8, 8, 8],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        await html2pdf().set(opt).from(el).save();
+      } catch (err) {
+        console.warn("Direct html2pdf export fallback:", err);
+        window.print();
+      } finally {
+        setIsExportingPDF(false);
+      }
+    } else {
+      window.print();
+    }
   };
 
   const handleDownloadDocx = async () => {
@@ -125,11 +154,12 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
 
         <button
           onClick={handleDownloadPDF}
-          className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
-          title="Descargar planeación directamente como PDF"
+          disabled={isExportingPDF}
+          className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
+          title="Descargar planeación directamente como archivo PDF"
         >
-          <FileDown size={15} />
-          <span>Descargar PDF</span>
+          <FileDown size={15} className={isExportingPDF ? 'animate-bounce' : ''} />
+          <span>{isExportingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
         </button>
 
         {/* Menú Desplegable Imprimir */}

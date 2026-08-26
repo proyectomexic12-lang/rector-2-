@@ -110,7 +110,22 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
             onSelectSequence(seq);
             window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
             setTimeout(() => {
-                window.print();
+                const el = document.getElementById('preview-container');
+                const html2pdf = (window as any).html2pdf;
+                if (el && typeof html2pdf === 'function') {
+                    const title = seq.content?.titulo_secuencia || seq.topic || 'Planeacion';
+                    const fileName = `Planeacion_${title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').substring(0, 50)}.pdf`;
+                    html2pdf().set({
+                        margin: [8, 8, 8, 8],
+                        filename: fileName,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                    }).from(el).save().catch(() => window.print());
+                } else {
+                    window.print();
+                }
             }, 500);
         }
     };
