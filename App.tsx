@@ -718,7 +718,7 @@ function App() {
             href="https://wa.me/573205957019?text=Hola,%20soy%20usuario%20Premium%20de%20la%20plataforma%20Guaimaral%20AI.%20Necesito%20soporte%20o%20tengo%20una%20sugerencia:"
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#1ebe57] hover:scale-110 transition-all z-50 flex items-center justify-center group animate-fade-in-up"
+            className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#1ebe57] hover:scale-110 transition-all z-50 flex items-center justify-center group animate-fade-in-up no-print"
             title="Contactar Soporte Premium"
           >
             <MessageCircle size={32} />

@@ -115,7 +115,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user }) => {
     if (!user || user.role === 'admin') return null;
 
     return (
-        <div className="fixed bottom-6 left-6 z-50">
+        <div className="fixed bottom-6 left-6 z-50 no-print">
             {/* Tooltip Flotante de Invitación al Chat (Aparece a los 6s) */}
             {showWelcomePrompt && !isOpen && (
                 <div className="absolute bottom-20 left-0 w-80 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/50 text-white rounded-3xl p-4 shadow-2xl animate-fade-in-up flex flex-col gap-3 relative z-50">
