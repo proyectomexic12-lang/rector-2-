@@ -627,7 +627,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
             {/* Banco de Preguntas (Para el estudiante sí se muestra, pero sin clave) */}
           </div>
           
-          <div className="print:mt-1 print:break-before-page">
+          <div className="mt-3 print:mt-2 break-inside-avoid">
             <div className="flex justify-between items-center mb-2">
               <h4 className="font-bold text-xs text-gray-800">Banco de Preguntas (Evaluación por Competencias)</h4>
               

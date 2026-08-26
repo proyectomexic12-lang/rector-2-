@@ -257,20 +257,65 @@ textarea {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
-/* Fix para impresión */
+/* Fix para impresión - A prueba de fallos y sin espacios en blanco */
 @media print {
-  .no-print {
-    display: none !important;
+  @page {
+    size: portrait;
+    margin: 0.6cm;
   }
 
-  body {
-    background: white;
+  html, body {
+    background: white !important;
+    background-color: white !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Desactivar animaciones, filtros y sombras que cuelgan el motor de impresión de Chromium */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print, header, nav, .fixed, .sticky, [role="dialog"] {
+    display: none !important;
   }
 
   .glass,
   .dark-glass {
-    background: transparent !important;
+    background: white !important;
     backdrop-filter: none !important;
-    border-color: #e2e8f0 !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  #preview-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .institutional-section,
+  .evaluation-card,
+  .activity-block,
+  tr,
+  td,
+  th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
