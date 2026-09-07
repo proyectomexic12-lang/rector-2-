@@ -92,10 +92,6 @@ export const AUTHORIZED_USERS: User[] = [
         email: 'alex.sanjuan@guaimaral.edu.co', 
         role: 'docente', 
         is_unlimited: true,
-        subscription_months: 3,
-        monthly_price: 35000,
-        unlimited_start_date: '2026-09-07T00:00:00.000Z',
-        custom_credits: 60,
         areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
         grados: ['4°']
     },
@@ -303,24 +299,6 @@ export const authService = {
             };
         }
 
-        // Activación inmediata y permanente para Alex San Juan (Plan Trimestral 3 Meses / 60 Planeaciones)
-        if (lowEmail.includes('alex.sanjuan')) {
-            const nextBilling = new Date();
-            nextBilling.setMonth(nextBilling.getMonth() + 3);
-            return {
-                status: 'vigente',
-                isUnlimited: true,
-                isValid: true,
-                startDate: '2026-09-07T00:00:00.000Z',
-                nextBillingDate: nextBilling,
-                nextBillingDateStr: nextBilling.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
-                monthlyPrice: 35000,
-                monthsPaid: 3,
-                daysOverdue: 0,
-                monthsOverdue: 0,
-                totalDebt: 0
-            };
-        }
 
         const authUser = AUTHORIZED_USERS.find(u => u.email && u.email.toLowerCase() === lowEmail);
         const isUnlimFlag = user.is_unlimited !== undefined ? Boolean(user.is_unlimited) : (authUser ? (authUser as any).is_unlimited === true : false);
@@ -432,27 +410,6 @@ export const authService = {
                     };
                 }
 
-                // Sincronización proactiva para Alex San Juan (Plan Trimestral Oficial 3 Meses / 60 Planeaciones)
-                if (lowEmail === 'alex.sanjuan@guaimaral.edu.co' && (!freshDbUser?.is_unlimited || (freshDbUser?.subscription_months || 1) < 3)) {
-                    currentUserData.is_unlimited = true;
-                    currentUserData.subscription_months = 3;
-                    currentUserData.monthly_price = 35000;
-                    currentUserData.custom_credits = 60;
-                    currentUserData.unlimited_start_date = currentUserData.unlimited_start_date || '2026-09-07T00:00:00.000Z';
-                    
-                    try {
-                        await supabase.from('app_users').upsert({
-                            email: lowEmail,
-                            name: 'ALEX ENRIQUE SANJUAN PACHON',
-                            role: 'docente',
-                            is_unlimited: true,
-                            unlimited_start_date: currentUserData.unlimited_start_date,
-                            subscription_months: 3,
-                            monthly_price: 35000,
-                            custom_credits: 60
-                        });
-                    } catch (syncErr) { }
-                }
 
                 const cur = authService.getCurrentUser();
                 if (cur && cur.email.toLowerCase() === lowEmail) {
@@ -1033,13 +990,6 @@ export const authService = {
                 let custCredits = data.custom_credits;
                 let unlimStart = data.unlimited_start_date;
 
-                if (current.email.toLowerCase().includes('alex.sanjuan')) {
-                    isUnlim = true;
-                    subMonths = 3;
-                    monPrice = 35000;
-                    custCredits = 60;
-                    unlimStart = unlimStart || '2026-09-07T00:00:00.000Z';
-                }
 
                 const updatedUser: User = {
                     name: data.name,
@@ -1522,14 +1472,6 @@ export const authService = {
         if (!userJson) return null;
         try {
             const parsed = JSON.parse(deobfuscate(userJson));
-            if (parsed && (parsed.email || '').toLowerCase().includes('alex.sanjuan')) {
-                parsed.is_unlimited = true;
-                parsed.subscription_months = 3;
-                parsed.monthly_price = 35000;
-                parsed.custom_credits = 60;
-                parsed.unlimited_start_date = parsed.unlimited_start_date || '2026-09-07T00:00:00.000Z';
-                localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(parsed)));
-            }
             return parsed;
         } catch (e) {
             return null;

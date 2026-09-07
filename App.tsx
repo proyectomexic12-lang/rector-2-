@@ -596,8 +596,8 @@ function App() {
                     </div>
                   </div>
                 )}
-                {/* AVISO ESPECIAL DE CORTESÍA Y RECOMENDACIÓN DE SUSCRIPCIÓN TRIMESTRAL */}
-                {currentUser && !userQuota?.hasPlan && !(currentUser.email || '').toLowerCase().includes('alex') && (
+                {/* AVISO ESPECIAL DE CORTESÍA Y RECOMENDACIÓN DE SUSCRIPCIÓN */}
+                {currentUser && !userQuota?.hasPlan && (
                   currentUser.custom_credits === 3 ||
                   (currentUser.email || '').toLowerCase().includes('evaristo') || 
                   (currentUser.name || '').toLowerCase().includes('evaristo')
