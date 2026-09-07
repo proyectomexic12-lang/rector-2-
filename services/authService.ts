@@ -78,189 +78,31 @@ export const AUTHORIZED_USERS: User[] = [
     { name: 'JESUS (PRUEBAS)', email: 'jesus@guaimaral.edu.co', role: 'docente', is_unlimited: true },
     { name: 'Docente Demo', email: 'demo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
 
-    // 22 Docentes Oficiales de Planta (Sincronizados con SIGEP)
-    { 
-        name: 'ALEIDA INES LARA CASTRO', 
-        email: 'aleida.ines@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'],
-        grados: ['2°']
-    },
-    { 
-        name: 'ALEX ENRIQUE SANJUAN PACHON', 
-        email: 'alex.sanjuan@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['4°']
-    },
-    { 
-        name: 'ASTERIO MANUEL TORRES GAMEZ', 
-        email: 'asterio.manuel@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Ciencias Naturales y Ed. Ambiental', 'Educación Ética y en Valores Humanos'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'CARLOS DE JESUS SANDOVAL PEÑALOZA', 
-        email: 'carlos.de@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['4°']
-    },
-    { 
-        name: 'DEISY DEL CARMEN MERCADO VASQUEZ', 
-        email: 'deisy.mercado@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['Jardín', 'Transición']
-    },
-    { 
-        name: 'EDUARDO RAFAEL ALONSO ROMERO', 
-        email: 'eduardo.rafael@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Educación Física, Recreación y Deportes', 'Tecnología e Informática'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'ESTEFANY PAOLA VERBEL BARRETO', 
-        email: 'estefany.paola@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['5°']
-    },
-    { 
-        name: 'EVARISTO JOSE BERTEL BELEÑO', 
-        email: 'evaristo.jose@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Ciencias Naturales y Ed. Ambiental', 'Química', 'Biología'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'IBETH ESTHER CHARRIS CELIN', 
-        email: 'ibeth.esther@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural'],
-        grados: ['Jardín', 'Transición']
-    },
-    { 
-        name: 'JAIRO ALONSO BENAVIDES BUSTILLO', 
-        email: 'jairo.alonso@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Física', 'Educación Artística y Cultural'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'JAIRO ENRIQUE BLANCO NIETO', 
-        email: 'jairo.blanco@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'],
-        grados: ['3°']
-    },
-    { 
-        name: 'JORGE DE LA HOZ MALDONADO', 
-        email: 'jorge.de@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Idioma Extranjero (Inglés)', 'Educación Religiosa'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'JORGE LUIS FERRER SOLANO', 
-        email: 'jorge.luis@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Idioma Extranjero (Inglés)', 'Física'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'LEOVIGILDA CUENTAS ARIZA', 
-        email: 'leovigilda.cuentas@altamira.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['Transición', '1°', '2°', '3°', '4°', '5°']
-    },
-    { 
-        name: 'LILIANA YAZMIN VALLE RODRIGUEZ', 
-        email: 'liliana.valle@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['5°']
-    },
-    { 
-        name: 'LINDA PATRICIA VARELA RODRIGUEZ', 
-        email: 'linda.patricia@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Humanidades y Lengua Castellana', 'Lectura Crítica'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'MARTIN ALONSO CELIN MOLINARES', 
-        email: 'martin.alonso@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['1°']
-    },
-    { 
-        name: 'NANCY ESTHER VARGAS LARA', 
-        email: 'nancy.esther@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['3°']
-    },
-    { 
-        name: 'PAULA ANDREA PADILLA RONCALLO', 
-        email: 'paula.padilla@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['2°']
-    },
-    { 
-        name: 'ROBERTO CARLOS DAZA ANGULO', 
-        email: 'roberto.carlos@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Ciencias Sociales, Historia y Geografía', 'Constitución Política y Cátedra de la Paz', 'Educación Ética y en Valores Humanos', 'Filosofía', 'Ciencias Económicas y Políticas', 'Cátedra de Estudios Afrocolombianos'],
-        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
-    },
-    { 
-        name: 'ROCIO DEL CARMEN RAMIREZ MONTIEL', 
-        email: 'rocio.ramirez@guaimaral.edu.co', 
-        role: 'docente', 
-        is_unlimited: true,
-        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
-        grados: ['1°']
-    },
-
-    // Aliases comunes para máxima compatibilidad
-    { name: 'Carlos Sandoval (Alias)', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['4°'] },
-    { name: 'Aleida Lara (Alias)', email: 'aleida.lara@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'], grados: ['2°'] },
-    { name: 'Eduardo Romero (Alias)', email: 'eduardo@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Educación Física, Recreación y Deportes', 'Tecnología e Informática'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Evaristo Vertel (Alias)', email: 'evaristo.vertel@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Naturales y Ed. Ambiental', 'Química', 'Biología'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Ibeth Charris (Alias)', email: 'ibeth.charris@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural'], grados: ['Jardín', 'Transición'] },
-    { name: 'Jairo Benavides (Alias)', email: 'jairo.benavides@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Física', 'Educación Artística y Cultural'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Jorge de la Hoz (Alias)', email: 'jorge.delahoz@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Idioma Extranjero (Inglés)', 'Educación Religiosa'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Jorge Ferrer (Alias)', email: 'jorge.ferrer@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Idioma Extranjero (Inglés)', 'Física'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Linda Varela (Alias)', email: 'linda.varela@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Humanidades y Lengua Castellana', 'Lectura Crítica'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
-    { name: 'Martín Celin (Alias)', email: 'martin.celin@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['1°'] },
-    { name: 'Nancy Vargas (Alias)', email: 'nancy.vargas@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['3°'] },
-    { name: 'Roberto Daza (Alias)', email: 'roberto.daza@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Sociales, Historia y Geografía', 'Constitución Política y Cátedra de la Paz', 'Educación Ética y en Valores Humanos', 'Filosofía', 'Ciencias Económicas y Políticas', 'Cátedra de Estudios Afrocolombianos'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] }
+    // 24 Docentes Oficiales de Planta - I.E. Guaimaral
+    { name: 'Alex San Juan', email: 'alex.sanjuan@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['4°'] },
+    { name: 'Aleida Lara', email: 'aleida.lara@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'], grados: ['2°'] },
+    { name: 'Alfredo Torres', email: 'alfredo.torres@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    { name: 'Asterio Torres', email: 'asterio.torres@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural', 'Educación Ética y en Valores Humanos'], grados: ['1°', '2°', '3°', '4°', '5°'] },
+    { name: 'Carlos Sandoval', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['4°'] },
+    { name: 'Deisy Arroyo', email: 'deisy.arroyo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    { name: 'Deisy Mercado', email: 'deisy.mercado@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['Jardín', 'Transición'] },
+    { name: 'Eduardo Alonso', email: 'eduardo@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Tecnología e Informática', 'Educación Física, Recreación y Deportes'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Evaristo Vertel', email: 'evaristo.vertel@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Naturales y Ed. Ambiental', 'Biología', 'Química'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Ibeth Charris', email: 'ibeth.charris@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural'], grados: ['Jardín', 'Transición'] },
+    { name: 'Jairo Benavides', email: 'jairo.benavides@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Física', 'Educación Artística y Cultural'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Jairo Blanco', email: 'jairo.blanco@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'], grados: ['3°'] },
+    { name: 'Jorge de la Hoz', email: 'jorge.delahoz@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Idioma Extranjero (Inglés)', 'Educación Religiosa'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Jorge Ferrer', email: 'jorge.ferrer@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Idioma Extranjero (Inglés)', 'Física'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Leovigilda Navarro', email: 'leovigilda.navarro@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['Transición', '1°', '2°', '3°', '4°', '5°'] },
+    { name: 'Liliana Valle', email: 'liliana.valle@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['5°'] },
+    { name: 'Linda Varela', email: 'linda.varela@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Humanidades y Lengua Castellana', 'Lectura Crítica'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Martín Celin', email: 'martin.celin@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['1°'] },
+    { name: 'Nancy Vargas', email: 'nancy.vargas@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['3°'] },
+    { name: 'Paula Padilla', email: 'paula.padilla@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['2°'] },
+    { name: 'Pedro Arroyo', email: 'pedro.arroyo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    { name: 'Roberto Daza', email: 'roberto.daza@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Sociales, Historia y Geografía', 'Constitución Política y Cátedra de la Paz', 'Educación Ética y en Valores Humanos', 'Filosofía', 'Ciencias Económicas y Políticas', 'Cátedra de Estudios Afrocolombianos'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Rocio Ramírez', email: 'rocio.ramirez@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['1°'] },
+    { name: 'Xilena Santiago', email: 'xilena.santiago@guaimaral.edu.co', role: 'docente', is_unlimited: true }
 ];
 
 export const authService = {
