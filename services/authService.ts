@@ -1,0 +1,1660 @@
+import { supabase } from './supabaseClient';
+import { SubscriptionStatus, PlanQuotaInfo } from '../types';
+
+/**
+ * AuthService (Híbrido: Local + Supabase)
+ * 1. Intenta conectar con Nube (Supabase) para estadísticas y contraseñas centralizadas.
+ * 2. Si falla o no hay conexión, usa LocalStorage (Modo Offline/Privado).
+ */
+
+const STORAGE_KEYS = {
+    AUTH: 'guaimaral_auth_v2',
+    USER: 'guaimaral_user_v2',
+    ROLE: 'guaimaral_role_v2',
+    SECURITY_LOGS: 'guaimaral_security_v1',
+    LOCKOUT: 'guaimaral_lockout_v1'
+};
+
+const SALT = 'guaimaral-2026-secure-v2-executive-shield';
+
+// Simple XOR obfuscation with UTF-8 support
+const obfuscate = (text: string): string => {
+    const utf8Text = unescape(encodeURIComponent(text));
+    const result = utf8Text.split('').map((char, i) =>
+        String.fromCharCode(char.charCodeAt(0) ^ SALT.charCodeAt(i % SALT.length))
+    ).join('');
+    return btoa(result);
+};
+
+export const deobfuscate = (encoded: string): string => {
+    if (!encoded) return '';
+    try {
+        const decoded = atob(encoded);
+        let result = '';
+        for (let i = 0; i < decoded.length; i++) {
+            result += String.fromCharCode(decoded.charCodeAt(i) ^ SALT.charCodeAt(i % SALT.length));
+        }
+        try {
+            return decodeURIComponent(escape(result));
+        } catch (e) {
+            return result;
+        }
+    } catch (e) {
+        return '';
+    }
+};
+
+export interface User {
+    name: string;
+    email: string;
+    role: 'admin' | 'docente';
+    areas?: string[];
+    grados?: string[];
+    password?: string;
+    custom_credits?: number | null;
+    is_unlimited?: boolean;
+    unlimited_start_date?: string | null;
+    monthly_price?: number;
+    subscription_months?: number;
+    session_id?: string; // Para control de sesión única tipo WhatsApp
+    stats?: {
+        today: number;
+        week: number;
+        month: number;
+        year: number;
+        total: number;
+        saved: number;
+        cycleUsage?: number;
+        maxQuota?: number;
+        remainingQuota?: number;
+    };
+    quotaInfo?: PlanQuotaInfo;
+}
+
+// Usuarios locales de respaldo (Solo si falla la nube)
+export const AUTHORIZED_USERS: User[] = [
+    // Directivos / Administradores
+    { name: 'Administrador Institucional', email: 'admin@guaimaral.edu.co', role: 'admin', is_unlimited: true },
+    { name: 'JESUS (PRUEBAS)', email: 'jesus@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    { name: 'Docente Demo', email: 'demo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+
+    // 22 Docentes Oficiales de Planta (Sincronizados con SIGEP)
+    { 
+        name: 'ALEIDA INES LARA CASTRO', 
+        email: 'aleida.ines@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'],
+        grados: ['2°']
+    },
+    { 
+        name: 'ALEX ENRIQUE SANJUAN PACHON', 
+        email: 'alex.sanjuan@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        subscription_months: 3,
+        monthly_price: 35000,
+        unlimited_start_date: '2026-09-07T00:00:00.000Z',
+        custom_credits: 60,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['4°']
+    },
+    { 
+        name: 'ASTERIO MANUEL TORRES GAMEZ', 
+        email: 'asterio.manuel@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Ciencias Naturales y Ed. Ambiental', 'Educación Ética y en Valores Humanos'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'CARLOS DE JESUS SANDOVAL PEÑALOZA', 
+        email: 'carlos.de@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['4°']
+    },
+    { 
+        name: 'DEISY DEL CARMEN MERCADO VASQUEZ', 
+        email: 'deisy.mercado@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['Jardín', 'Transición']
+    },
+    { 
+        name: 'EDUARDO RAFAEL ALONSO ROMERO', 
+        email: 'eduardo.rafael@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Educación Física, Recreación y Deportes', 'Tecnología e Informática'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'ESTEFANY PAOLA VERBEL BARRETO', 
+        email: 'estefany.paola@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['5°']
+    },
+    { 
+        name: 'EVARISTO JOSE BERTEL BELEÑO', 
+        email: 'evaristo.jose@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Ciencias Naturales y Ed. Ambiental', 'Química', 'Biología'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'IBETH ESTHER CHARRIS CELIN', 
+        email: 'ibeth.esther@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural'],
+        grados: ['Jardín', 'Transición']
+    },
+    { 
+        name: 'JAIRO ALONSO BENAVIDES BUSTILLO', 
+        email: 'jairo.alonso@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Física', 'Educación Artística y Cultural'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'JAIRO ENRIQUE BLANCO NIETO', 
+        email: 'jairo.blanco@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'],
+        grados: ['3°']
+    },
+    { 
+        name: 'JORGE DE LA HOZ MALDONADO', 
+        email: 'jorge.de@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Idioma Extranjero (Inglés)', 'Educación Religiosa'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'JORGE LUIS FERRER SOLANO', 
+        email: 'jorge.luis@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Idioma Extranjero (Inglés)', 'Física'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'LEOVIGILDA CUENTAS ARIZA', 
+        email: 'leovigilda.cuentas@altamira.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['Transición', '1°', '2°', '3°', '4°', '5°']
+    },
+    { 
+        name: 'LILIANA YAZMIN VALLE RODRIGUEZ', 
+        email: 'liliana.valle@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['5°']
+    },
+    { 
+        name: 'LINDA PATRICIA VARELA RODRIGUEZ', 
+        email: 'linda.patricia@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Humanidades y Lengua Castellana', 'Lectura Crítica'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'MARTIN ALONSO CELIN MOLINARES', 
+        email: 'martin.alonso@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['1°']
+    },
+    { 
+        name: 'NANCY ESTHER VARGAS LARA', 
+        email: 'nancy.esther@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['3°']
+    },
+    { 
+        name: 'PAULA ANDREA PADILLA RONCALLO', 
+        email: 'paula.padilla@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['2°']
+    },
+    { 
+        name: 'ROBERTO CARLOS DAZA ANGULO', 
+        email: 'roberto.carlos@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Ciencias Sociales, Historia y Geografía', 'Constitución Política y Cátedra de la Paz', 'Educación Ética y en Valores Humanos', 'Filosofía', 'Ciencias Económicas y Políticas', 'Cátedra de Estudios Afrocolombianos'],
+        grados: ['6°', '7°', '8°', '9°', '10°', '11°']
+    },
+    { 
+        name: 'ROCIO DEL CARMEN RAMIREZ MONTIEL', 
+        email: 'rocio.ramirez@guaimaral.edu.co', 
+        role: 'docente', 
+        is_unlimited: true,
+        areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'],
+        grados: ['1°']
+    },
+
+    // Aliases comunes para máxima compatibilidad
+    { name: 'Carlos Sandoval (Alias)', email: 'carlos.sandoval@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['4°'] },
+    { name: 'Aleida Lara (Alias)', email: 'aleida.lara@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental'], grados: ['2°'] },
+    { name: 'Eduardo Romero (Alias)', email: 'eduardo@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Educación Física, Recreación y Deportes', 'Tecnología e Informática'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Evaristo Vertel (Alias)', email: 'evaristo.vertel@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Naturales y Ed. Ambiental', 'Química', 'Biología'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Ibeth Charris (Alias)', email: 'ibeth.charris@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Educación Artística y Cultural'], grados: ['Jardín', 'Transición'] },
+    { name: 'Jairo Benavides (Alias)', email: 'jairo.benavides@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Física', 'Educación Artística y Cultural'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Jorge de la Hoz (Alias)', email: 'jorge.delahoz@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Idioma Extranjero (Inglés)', 'Educación Religiosa'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Jorge Ferrer (Alias)', email: 'jorge.ferrer@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Idioma Extranjero (Inglés)', 'Física'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Linda Varela (Alias)', email: 'linda.varela@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Humanidades y Lengua Castellana', 'Lectura Crítica'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] },
+    { name: 'Martín Celin (Alias)', email: 'martin.celin@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['1°'] },
+    { name: 'Nancy Vargas (Alias)', email: 'nancy.vargas@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Matemáticas', 'Humanidades y Lengua Castellana', 'Idioma Extranjero (Inglés)', 'Ciencias Naturales y Ed. Ambiental', 'Ciencias Sociales, Historia y Geografía'], grados: ['3°'] },
+    { name: 'Roberto Daza (Alias)', email: 'roberto.daza@guaimaral.edu.co', role: 'docente', is_unlimited: true, areas: ['Ciencias Sociales, Historia y Geografía', 'Constitución Política y Cátedra de la Paz', 'Educación Ética y en Valores Humanos', 'Filosofía', 'Ciencias Económicas y Políticas', 'Cátedra de Estudios Afrocolombianos'], grados: ['6°', '7°', '8°', '9°', '10°', '11°'] }
+];
+
+export const authService = {
+    getSubscriptionStatus: (user: User | null | undefined): SubscriptionStatus => {
+        const defaultPrice = 15000;
+        if (!user || !user.email) {
+            return {
+                status: 'sin_plan',
+                isUnlimited: false,
+                isValid: false,
+                startDate: null,
+                nextBillingDate: null,
+                nextBillingDateStr: '',
+                monthlyPrice: defaultPrice,
+                monthsPaid: 1,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        const lowEmail = (user.email || '').toLowerCase().trim();
+        if (user.role === 'admin' || lowEmail.includes('demo')) {
+            return {
+                status: 'admin',
+                isUnlimited: true,
+                isValid: true,
+                startDate: user.unlimited_start_date || new Date().toISOString(),
+                nextBillingDate: null,
+                nextBillingDateStr: 'Acceso Admin Ilimitado',
+                monthlyPrice: 0,
+                monthsPaid: 12,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        // Activación inmediata y permanente para Alex San Juan (Plan Trimestral 3 Meses / 60 Planeaciones)
+        if (lowEmail.includes('alex.sanjuan')) {
+            const nextBilling = new Date();
+            nextBilling.setMonth(nextBilling.getMonth() + 3);
+            return {
+                status: 'vigente',
+                isUnlimited: true,
+                isValid: true,
+                startDate: '2026-09-07T00:00:00.000Z',
+                nextBillingDate: nextBilling,
+                nextBillingDateStr: nextBilling.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
+                monthlyPrice: 35000,
+                monthsPaid: 3,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        const authUser = AUTHORIZED_USERS.find(u => u.email && u.email.toLowerCase() === lowEmail);
+        const isUnlimFlag = user.is_unlimited !== undefined ? Boolean(user.is_unlimited) : (authUser ? (authUser as any).is_unlimited === true : false);
+
+        if (!isUnlimFlag) {
+            return {
+                status: 'sin_plan',
+                isUnlimited: false,
+                isValid: false,
+                startDate: null,
+                nextBillingDate: null,
+                nextBillingDateStr: '',
+                monthlyPrice: user.monthly_price || defaultPrice,
+                monthsPaid: user.subscription_months || 1,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        }
+
+        const startDateStr = user.unlimited_start_date || (authUser as any)?.unlimited_start_date || new Date().toISOString();
+        const start = startDateStr.includes('T') ? new Date(startDateStr) : new Date(startDateStr + 'T12:00:00');
+        const monthsPaid = user.subscription_months || (authUser as any)?.subscription_months || 1;
+        const monthlyPrice = user.monthly_price || (authUser as any)?.monthly_price || defaultPrice;
+
+        const nextBilling = new Date(start);
+        nextBilling.setMonth(nextBilling.getMonth() + monthsPaid);
+
+        const now = new Date();
+        const nextStr = nextBilling.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        if (now <= nextBilling) {
+            return {
+                status: 'vigente',
+                isUnlimited: true,
+                isValid: true,
+                startDate: startDateStr,
+                nextBillingDate: nextBilling,
+                nextBillingDateStr: nextStr,
+                monthlyPrice,
+                monthsPaid,
+                daysOverdue: 0,
+                monthsOverdue: 0,
+                totalDebt: 0
+            };
+        } else {
+            // EXPIRED / EN MORA
+            const diffTime = now.getTime() - nextBilling.getTime();
+            const daysOverdue = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+            const monthsOverdue = Math.max(1, Math.ceil(daysOverdue / 30));
+            const totalDebt = monthsOverdue * monthlyPrice;
+
+            return {
+                status: 'vencido',
+                isUnlimited: false,
+                isValid: false, // BLOQUEADO POR VENCIMIENTO Y MORA
+                startDate: startDateStr,
+                nextBillingDate: nextBilling,
+                nextBillingDateStr: nextStr,
+                monthlyPrice,
+                monthsPaid,
+                daysOverdue,
+                monthsOverdue,
+                totalDebt
+            };
+        }
+    },
+
+    isUserUnlimited: (user: User | null | undefined): boolean => {
+        const subStatus = authService.getSubscriptionStatus(user);
+        return subStatus.isValid;
+    },
+
+    getUserQuotaInfo: async (user: User | null | undefined): Promise<PlanQuotaInfo> => {
+        if (!user || !user.email) {
+            return {
+                hasPlan: false,
+                isUnlimitedAdmin: false,
+                planName: 'Sin Sesión',
+                maxQuota: 0,
+                usedQuota: 0,
+                remainingQuota: 0,
+                canGenerate: false,
+                reason: 'sin_creditos',
+                cycleStartDate: null,
+                nextBillingDateStr: ''
+            };
+        }
+
+        const lowEmail = user.email.toLowerCase().trim();
+
+        // 0. Si hay conexión a Supabase, sincronizar datos frescos de la cuenta
+        let currentUserData = user;
+        if (supabase && lowEmail) {
+            try {
+                const { data: freshDbUser } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+                if (freshDbUser) {
+                    currentUserData = {
+                        ...user,
+                        is_unlimited: freshDbUser.is_unlimited,
+                        unlimited_start_date: freshDbUser.unlimited_start_date,
+                        subscription_months: freshDbUser.subscription_months,
+                        monthly_price: freshDbUser.monthly_price,
+                        custom_credits: freshDbUser.custom_credits
+                    };
+                }
+
+                // Sincronización proactiva para Alex San Juan (Plan Trimestral Oficial 3 Meses / 60 Planeaciones)
+                if (lowEmail === 'alex.sanjuan@guaimaral.edu.co' && (!freshDbUser?.is_unlimited || (freshDbUser?.subscription_months || 1) < 3)) {
+                    currentUserData.is_unlimited = true;
+                    currentUserData.subscription_months = 3;
+                    currentUserData.monthly_price = 35000;
+                    currentUserData.custom_credits = 60;
+                    currentUserData.unlimited_start_date = currentUserData.unlimited_start_date || '2026-09-07T00:00:00.000Z';
+                    
+                    try {
+                        await supabase.from('app_users').upsert({
+                            email: lowEmail,
+                            name: 'ALEX ENRIQUE SANJUAN PACHON',
+                            role: 'docente',
+                            is_unlimited: true,
+                            unlimited_start_date: currentUserData.unlimited_start_date,
+                            subscription_months: 3,
+                            monthly_price: 35000,
+                            custom_credits: 60
+                        });
+                    } catch (syncErr) { }
+                }
+
+                const cur = authService.getCurrentUser();
+                if (cur && cur.email.toLowerCase() === lowEmail) {
+                    localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(currentUserData)));
+                }
+            } catch (e) { }
+        }
+
+        // 1. Admin o Cuenta Demo
+        if (currentUserData.role === 'admin' || lowEmail.includes('demo') || lowEmail === 'jesus@guaimaral.edu.co') {
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: true,
+                planName: 'Acceso Admin Ilimitado',
+                maxQuota: 9999,
+                usedQuota: 0,
+                remainingQuota: 9999,
+                canGenerate: true,
+                reason: 'ok',
+                cycleStartDate: currentUserData.unlimited_start_date || null,
+                nextBillingDateStr: 'Acceso Ilimitado'
+            };
+        }
+
+        const subStatus = authService.getSubscriptionStatus(currentUserData);
+
+        // 2. Suscripción Vencida (En mora)
+        if (subStatus.status === 'vencido') {
+            const planCap = (subStatus.monthsPaid >= 6 || subStatus.monthlyPrice >= 75000) ? 120 : (subStatus.monthsPaid >= 3 || subStatus.monthlyPrice >= 35000) ? 60 : 20;
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: false,
+                planName: `Plan ${subStatus.monthsPaid >= 6 ? 'Semestral (120 Plan.)' : subStatus.monthsPaid >= 3 ? 'Trimestral (60 Plan.)' : 'Mensual (20 Plan.)'} (Vencido)`,
+                maxQuota: planCap,
+                usedQuota: 0,
+                remainingQuota: 0,
+                canGenerate: false,
+                reason: 'vencido',
+                cycleStartDate: subStatus.startDate,
+                nextBillingDateStr: subStatus.nextBillingDateStr,
+                totalDebt: subStatus.totalDebt,
+                monthsOverdue: subStatus.monthsOverdue
+            };
+        }
+
+        // 3. Suscripción Vigente con Cuota
+        if (subStatus.status === 'vigente') {
+            let maxQuota = 20;
+            let planName = 'Plan Mensual (20 Planeaciones / Mes)';
+
+            if (subStatus.monthsPaid >= 6 || subStatus.monthlyPrice >= 75000) {
+                maxQuota = 120;
+                planName = 'Plan Semestral (120 Planeaciones)';
+            } else if (subStatus.monthsPaid >= 3 || subStatus.monthlyPrice >= 35000) {
+                maxQuota = 60;
+                planName = 'Plan Trimestral (60 Planeaciones / 3 Meses)';
+            } else {
+                maxQuota = 20;
+                planName = 'Plan Mensual (20 Planeaciones / Mes)';
+            }
+
+            // Si el administrador asignó un cupo personalizado explícito (diferente al default básico 6)
+            if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+                maxQuota = user.custom_credits;
+                planName = `Plan Asignado (${maxQuota} Planeaciones)`;
+            }
+
+            // Contar uso en el ciclo de cuota actual (a partir del lanzamiento de política 25-Ago o inicio de plan)
+            let usedQuota = 0;
+            const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
+            const subStartDate = subStatus.startDate ? new Date(subStatus.startDate) : (user.unlimited_start_date ? new Date(user.unlimited_start_date) : null);
+            const countFromDate = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
+
+            if (supabase) {
+                try {
+                    const { count } = await supabase
+                        .from('generated_sequences')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_email', lowEmail)
+                        .gte('timestamp', countFromDate.toISOString());
+                    usedQuota = count || 0;
+                } catch (e) {
+                    console.error("Error al consultar secuencias del ciclo en Supabase:", e);
+                    const localSavedKey = `guaimaral_saved_sequences_${lowEmail}`;
+                    const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                    usedQuota = localSeqs.length;
+                }
+            } else {
+                const localSavedKey = `guaimaral_saved_sequences_${lowEmail}`;
+                const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                usedQuota = localSeqs.length;
+            }
+
+            const remainingQuota = Math.max(0, maxQuota - usedQuota);
+            const canGenerate = remainingQuota > 0;
+
+            return {
+                hasPlan: true,
+                isUnlimitedAdmin: false,
+                planName,
+                maxQuota,
+                usedQuota,
+                remainingQuota,
+                canGenerate,
+                reason: canGenerate ? 'ok' : 'quota_exceeded',
+                cycleStartDate: subStatus.startDate,
+                nextBillingDateStr: subStatus.nextBillingDateStr
+            };
+        }
+
+        // 4. Usuario Gratuito (Sin Plan) o con Créditos de Cortesía
+        const maxCredits = user.custom_credits !== undefined && user.custom_credits !== null ? user.custom_credits : 6;
+        let usedCredits = 0;
+
+        if (supabase) {
+            try {
+                // Para créditos asignados/cortesía, contar secuencias desde el 1 del mes actual para que no se reinicien indebidamente
+                const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+                const { count } = await supabase
+                    .from('generated_sequences')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_email', lowEmail)
+                    .gte('timestamp', monthStart);
+                usedCredits = count !== null && count !== undefined ? count : 0;
+            } catch (e) {
+                const stats = await authService.getUsageStats(lowEmail);
+                usedCredits = stats.month || stats.week || 0;
+            }
+        } else {
+            const stats = await authService.getUsageStats(lowEmail);
+            usedCredits = stats.month || stats.week || 0;
+        }
+
+        const remainingCredits = Math.max(0, maxCredits - usedCredits);
+        const canGenerate = remainingCredits > 0;
+
+        return {
+            hasPlan: false,
+            isUnlimitedAdmin: false,
+            planName: user.custom_credits === 3 ? 'Créditos de Cortesía (3 Plan.)' : 'Plan Básico / Cortesía',
+            maxQuota: maxCredits,
+            usedQuota: usedCredits,
+            remainingQuota: remainingCredits,
+            canGenerate,
+            reason: canGenerate ? 'ok' : 'sin_creditos',
+            cycleStartDate: null,
+            nextBillingDateStr: 'Renovación de Plan Requerida'
+        };
+    },
+
+    registerPayment: async (email: string, monthsToAdd: number = 1, pricePerMonth: number = 15000) => {
+        const lowEmail = email.toLowerCase().trim();
+        const nowIso = new Date().toISOString();
+
+        // Update local storage if currentUser
+        const current = authService.getCurrentUser();
+        if (current && current.email.toLowerCase() === lowEmail) {
+            const updated: User = {
+                ...current,
+                is_unlimited: true,
+                unlimited_start_date: nowIso,
+                subscription_months: monthsToAdd,
+                monthly_price: pricePerMonth
+            };
+            localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updated)));
+        }
+
+        // Update Cloud in Supabase
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('app_users')
+                    .update({
+                        is_unlimited: true,
+                        unlimited_start_date: nowIso,
+                        subscription_months: monthsToAdd,
+                        monthly_price: pricePerMonth
+                    })
+                    .eq('email', lowEmail);
+
+                if (error) throw error;
+
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `Pago de Suscripción Registrado: ${monthsToAdd} mes(es) por $${(monthsToAdd * pricePerMonth).toLocaleString('es-CO')} COP`
+                }]);
+            } catch (e) {
+                console.error("Error al registrar pago en Supabase:", e);
+                throw e;
+            }
+        }
+    },
+
+    cancelSubscription: async (email: string, reason: string = 'Cancelación voluntaria por el docente') => {
+        const lowEmail = email.toLowerCase().trim();
+
+        // 1. Update localStorage
+        const current = authService.getCurrentUser();
+        if (current && current.email.toLowerCase() === lowEmail) {
+            const updated: User = {
+                ...current,
+                is_unlimited: false
+                // No tocamos unlimited_start_date ni custom_credits para preservar el historial
+            };
+            localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updated)));
+        }
+
+        // 2. Update Cloud (Supabase)
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('app_users')
+                    .update({
+                        is_unlimited: false
+                        // IMPORTANTE: NO ponemos unlimited_start_date: null para preservar su fecha real de pago histórico
+                    })
+                    .eq('email', lowEmail);
+
+                if (error) console.error("Error cancelando suscripción en Supabase:", error);
+
+                // Registrar en logs de uso
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `🛑 CANCELACIÓN DE SUSCRIPCIÓN. Motivo: ${reason}`
+                }]);
+
+                // Notificar en el chat del administrador
+                try {
+                    await supabase.from('chat_messages').insert([{
+                        user_email: lowEmail,
+                        sender: lowEmail,
+                        recipient: 'admin@guaimaral.edu.co',
+                        message: `⚠️ Hola Administrador, he solicitado la cancelación de mi suscripción. Motivo: ${reason}. Entiendo que si deseo reactivarla en el futuro, aplicará la tarifa de reactivación de $12.000 COP + mensualidad.`,
+                        created_at: new Date().toISOString()
+                    }]);
+                } catch (chatErr) { }
+
+            } catch (e) {
+                console.error("Error en cancelación de suscripción:", e);
+            }
+        }
+
+        return { success: true };
+    },
+
+    requestSubscription: async (email: string, planType: 'mensual' | 'trimestral' | 'reactivacion', messageNote?: string) => {
+        const lowEmail = email.toLowerCase().trim();
+        const planText = planType === 'trimestral'
+            ? 'Plan Trimestral ($35.000 COP / 60 planeaciones)'
+            : planType === 'reactivacion'
+            ? 'Reactivación de Plan con Reconexión ($27.000 COP)'
+            : 'Plan Mensual ($15.000 COP / 20 planeaciones)';
+
+        if (supabase) {
+            try {
+                await supabase.from('usage_logs').insert([{
+                    user_email: lowEmail,
+                    action: `📩 SOLICITUD DE SUSCRIPCIÓN: ${planText}. Nota: ${messageNote || 'Sin notas'}`
+                }]);
+
+                try {
+                    await supabase.from('chat_messages').insert([{
+                        user_email: lowEmail,
+                        sender: lowEmail,
+                        recipient: 'admin@guaimaral.edu.co',
+                        message: `👋 Hola Administrador, deseo solicitar la activación de mi ${planText}.${messageNote ? ` Nota: ${messageNote}` : ''} Quedo atento a la confirmación de pago.`,
+                        created_at: new Date().toISOString()
+                    }]);
+                } catch (chatErr) { }
+            } catch (e) {
+                console.error("Error al enviar solicitud:", e);
+            }
+        }
+
+        return { success: true, planText };
+    },
+
+
+    // --- PASSWORD MANAGEMENT ---
+    changePassword: async (email: string, newPass: string) => {
+        // 1. Local
+        const key = `guaimaral_pwd_${email.toLowerCase()}`;
+        localStorage.setItem(key, obfuscate(newPass));
+
+        // 2. Cloud (Supabase)
+        if (supabase) {
+            try {
+                // Upsert user password in cloud
+                const { error } = await supabase
+                    .from('app_users')
+                    .update({ password: obfuscate(newPass) })
+                    .eq('email', email);
+
+                if (error) console.warn("Cloud Pwd Update Error:", error);
+            } catch (e) { console.error(e); }
+        }
+    },
+
+    verifyPassword: async (email: string, inputPass: string, role?: string): Promise<boolean> => {
+        // A. Check Local Overrides First
+        const customPassEnc = localStorage.getItem(`guaimaral_pwd_${email.toLowerCase()}`);
+        if (customPassEnc) {
+            return deobfuscate(customPassEnc) === inputPass;
+        }
+
+        // B. Check Cloud (Supabase)
+        if (supabase) {
+            const { data } = await supabase
+                .from('app_users')
+                .select('password')
+                .eq('email', email)
+                .single();
+
+            if (data && data.password) {
+                // Try deobfuscate from cloud storage
+                try {
+                    const cloudPass = deobfuscate(data.password);
+                    if (cloudPass === inputPass) return true;
+                    // If obfuscation fails (maybe plaintext in db?), check direct
+                    if (data.password === inputPass) return true;
+                } catch (e) {
+                    if (data.password === inputPass) return true;
+                }
+            }
+        }
+
+        // C. Default Hardcoded Passwords
+        if (role === 'admin') return inputPass === 'admin2026';
+        if (email.toLowerCase() === 'jesus@guaimaral.edu.co') return inputPass === '1' || inputPass === 'guaimaral2026';
+        if (email === 'docente@guaimaral.edu.co') return inputPass === '123456';
+        return inputPass === 'guaimaral2026';
+    },
+
+    // --- SECURITY & BLINDADO SYSTEM ---
+    logSecurityEvent: async (email: string, event: string, severity: 'low' | 'high' = 'low') => {
+        const logEntry = {
+            email: email.toLowerCase(),
+            event,
+            severity,
+            timestamp: new Date().toISOString(),
+            ip: 'client-side-vetted',
+            userAgent: navigator.userAgent
+        };
+
+        // 1. Local Log
+        const localLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
+        localLogs.unshift(logEntry);
+        localStorage.setItem(STORAGE_KEYS.SECURITY_LOGS, JSON.stringify(localLogs.slice(0, 50)));
+
+        // 2. Cloud Log (Supabase)
+        if (supabase) {
+            try {
+                await supabase.from('security_logs').insert([{
+                    email: email.toLowerCase(),
+                    event: event,
+                    severity: severity,
+                    ip: 'client-side-vetted',
+                    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server'
+                }]);
+            } catch (e) { console.error("Cloud Security Log Failed", e); }
+        }
+    },
+
+    checkBruteForce: (email: string): { locked: boolean, remaining: number } => {
+        const key = `${STORAGE_KEYS.LOCKOUT}_${email.toLowerCase()}`;
+        const data = JSON.parse(localStorage.getItem(key) || '{"attempts": 0, "last": 0}');
+        const now = Date.now();
+
+        // Lock for 5 minutes if 5 attempts
+        if (data.attempts >= 5 && (now - data.last) < 300000) {
+            return { locked: true, remaining: Math.ceil((300000 - (now - data.last)) / 60000) };
+        }
+
+        // Reset if more than 5 mins passed
+        if ((now - data.last) > 300000) {
+            localStorage.setItem(key, JSON.stringify({ attempts: 0, last: now }));
+            return { locked: false, remaining: 5 };
+        }
+
+        return { locked: false, remaining: 5 - data.attempts };
+    },
+
+    recordFailedAttempt: (email: string) => {
+        const key = `${STORAGE_KEYS.LOCKOUT}_${email.toLowerCase()}`;
+        const data = JSON.parse(localStorage.getItem(key) || '{"attempts": 0, "last": 0}');
+        data.attempts += 1;
+        data.last = Date.now();
+        localStorage.setItem(key, JSON.stringify(data));
+    },
+
+    unlockUserLockout: (email: string) => {
+        const key = `${STORAGE_KEYS.LOCKOUT}_${email.toLowerCase().trim()}`;
+        localStorage.removeItem(key);
+        console.log(`🔓 Cuenta de ${email} desbloqueada manualmente.`);
+    },
+
+    getSecurityLogs: async () => {
+        if (supabase) {
+            try {
+                const { data } = await supabase.from('security_logs').select('*').order('timestamp', { ascending: false }).limit(20);
+                if (data) return data;
+            } catch (e) { }
+        }
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
+    },
+
+    // --- ANTI-ACCOUNT SHARING SYSTEM (CONTROL DE DISPOSITIVOS Y SESIÓN ÚNICA) ---
+    getDeviceId: (): string => {
+        let devId = localStorage.getItem('guaimaral_device_id');
+        if (!devId) {
+            devId = 'DEV-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now();
+            localStorage.setItem('guaimaral_device_id', devId);
+        }
+        return devId;
+    },
+
+    registerSession: async (email: string): Promise<string> => {
+        const lowEmail = email.toLowerCase().trim();
+        const devId = authService.getDeviceId();
+        const sessionToken = `ST-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        
+        localStorage.setItem(`guaimaral_session_token`, sessionToken);
+        localStorage.setItem(`guaimaral_active_session_${lowEmail}`, sessionToken);
+
+        if (supabase) {
+            try {
+                await supabase.from('active_sessions').upsert({
+                    email: lowEmail,
+                    session_token: sessionToken,
+                    device_id: devId,
+                    user_agent: navigator.userAgent.substring(0, 100),
+                    updated_at: new Date().toISOString()
+                });
+            } catch (e) { }
+        }
+
+        console.log(`🛡️ Sesión activa registrada para ${lowEmail}: ${sessionToken}`);
+        return sessionToken;
+    },
+
+    validateSession: async (email: string): Promise<boolean> => {
+        if (!email) return true;
+        const lowEmail = email.toLowerCase().trim();
+        const localToken = localStorage.getItem(`guaimaral_session_token`);
+        if (!localToken) return true;
+
+        const activeLocal = localStorage.getItem(`guaimaral_active_session_${lowEmail}`);
+        if (activeLocal && activeLocal !== localToken) {
+            return false;
+        }
+
+        if (supabase) {
+            try {
+                const { data } = await supabase
+                    .from('active_sessions')
+                    .select('session_token')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+
+                if (data && data.session_token && data.session_token !== localToken) {
+                    return false;
+                }
+            } catch (e) { }
+        }
+
+        return true;
+    },
+
+    revokeSessions: async (email: string) => {
+        const lowEmail = email.toLowerCase().trim();
+        localStorage.removeItem(`guaimaral_active_session_${lowEmail}`);
+        if (supabase) {
+            try {
+                await supabase.from('active_sessions').delete().eq('email', lowEmail);
+            } catch (e) { }
+        }
+        console.log(`🔒 Sesiones inactivadas para ${lowEmail}.`);
+    },
+
+    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number, password?: string }) => {
+        const lowEmail = email.toLowerCase().trim();
+        console.log(`🛠️ Iniciando guardado para: ${lowEmail}`, settings);
+
+        // 1. Local (Legado/Respaldo)
+        if (settings.areas) localStorage.setItem(`guaimaral_areas_${lowEmail}`, JSON.stringify(settings.areas));
+        if (settings.grados) localStorage.setItem(`guaimaral_grados_${lowEmail}`, JSON.stringify(settings.grados));
+        if (settings.is_unlimited !== undefined) localStorage.setItem(`guaimaral_unlimited_${lowEmail}`, JSON.stringify(settings.is_unlimited));
+        if (settings.password && settings.password.trim().length > 0) {
+            localStorage.setItem(`guaimaral_custom_pass_${lowEmail}`, obfuscate(settings.password.trim()));
+        }
+
+        // 2. Cloud (Supabase)
+        if (supabase) {
+            try {
+                // Paso A: Verificar si el usuario ya existe en Supabase
+                const { data: existingUser, error: fetchError } = await supabase
+                    .from('app_users')
+                    .select('email, password')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+
+                if (fetchError) throw fetchError;
+
+                const updatePayload: any = {
+                    areas: settings.areas,
+                    grados: settings.grados,
+                    is_unlimited: settings.is_unlimited,
+                    custom_credits: settings.custom_credits,
+                    unlimited_start_date: settings.unlimited_start_date,
+                    monthly_price: settings.monthly_price,
+                    subscription_months: settings.subscription_months
+                };
+
+                if (settings.password && settings.password.trim().length > 0) {
+                    updatePayload.password = obfuscate(settings.password.trim());
+                }
+
+                if (existingUser) {
+                    const { error: updateError } = await supabase
+                        .from('app_users')
+                        .update(updatePayload)
+                        .eq('email', lowEmail);
+
+                    if (updateError) throw updateError;
+                    console.log("✅ Actualización en la nube exitosa (Áreas/Grados/Password)");
+                } else {
+                    const authUser = AUTHORIZED_USERS.find(u => u.email.toLowerCase() === lowEmail);
+                    if (authUser) {
+                        const { error: insertError } = await supabase
+                            .from('app_users')
+                            .insert({
+                                email: lowEmail,
+                                name: authUser.name,
+                                role: authUser.role,
+                                password: settings.password ? obfuscate(settings.password.trim()) : obfuscate('guaimaral2026'),
+                                areas: settings.areas || [],
+                                grados: settings.grados || [],
+                                is_unlimited: settings.is_unlimited ?? authUser.is_unlimited ?? false,
+                                custom_credits: settings.custom_credits ?? authUser.custom_credits ?? null,
+                                unlimited_start_date: settings.unlimited_start_date ?? authUser.unlimited_start_date ?? null,
+                                monthly_price: settings.monthly_price ?? authUser.monthly_price ?? 15000,
+                                subscription_months: settings.subscription_months ?? authUser.subscription_months ?? 1
+                            });
+
+                        if (insertError) throw insertError;
+                        console.log("✅ Usuario registrado automáticamente y áreas asignadas");
+                    } else {
+                        console.warn("⚠️ Usuario no reconocido en la lista autorizada.");
+                    }
+                }
+            } catch (e) {
+                console.error("❌ Fallo en Sincronización Cloud:", e);
+                throw e;
+            }
+        }
+    },
+
+    refreshCurrentUser: async (): Promise<User | null> => {
+        const current = authService.getCurrentUser();
+        if (!current || !supabase) return current;
+
+        // Anti-spam: Solo refrescar cada 2 segundos como máximo
+        const lastRefresh = (authService as any)._lastRefresh || 0;
+        if (Date.now() - lastRefresh < 2000) return current;
+        (authService as any)._lastRefresh = Date.now();
+
+        try {
+            const { data, error } = await supabase
+                .from('app_users')
+                .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                .eq('email', current.email.toLowerCase())
+                .maybeSingle();
+
+            if (data && !error) {
+                let isUnlim = data.is_unlimited;
+                let subMonths = data.subscription_months;
+                let monPrice = data.monthly_price;
+                let custCredits = data.custom_credits;
+                let unlimStart = data.unlimited_start_date;
+
+                if (current.email.toLowerCase().includes('alex.sanjuan')) {
+                    isUnlim = true;
+                    subMonths = 3;
+                    monPrice = 35000;
+                    custCredits = 60;
+                    unlimStart = unlimStart || '2026-09-07T00:00:00.000Z';
+                }
+
+                const updatedUser: User = {
+                    name: data.name,
+                    email: data.email,
+                    role: data.role as 'admin' | 'docente',
+                    areas: data.areas || [],
+                    grados: data.grados || [],
+                    custom_credits: custCredits,
+                    is_unlimited: isUnlim,
+                    unlimited_start_date: unlimStart,
+                    monthly_price: monPrice,
+                    subscription_months: subMonths
+                };
+                localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(updatedUser)));
+                return updatedUser;
+            }
+        } catch (e) { /* Silencioso si hay error de red */ }
+        return current;
+    },
+
+    login: async (email: string, password: string): Promise<User | null> => {
+        const lowEmail = email.toLowerCase().trim();
+
+        // Brute force check
+        const lockoutStatus = authService.checkBruteForce(lowEmail);
+        if (lockoutStatus.locked) {
+            throw new Error(`Cuenta bloqueada temporalmente por seguridad. Intenta en ${lockoutStatus.remaining} min.`);
+        }
+
+        // 1. First, check if user exists in Supabase to get the real name and subscription settings
+        let cloudUser: User | null = null;
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                    .eq('email', email.toLowerCase())
+                    .maybeSingle();
+
+                if (data && !error) {
+                    cloudUser = {
+                        name: data.name,
+                        email: data.email,
+                        role: data.role as 'admin' | 'docente',
+                        areas: data.areas || [],
+                        grados: data.grados || [],
+                        custom_credits: data.custom_credits,
+                        is_unlimited: data.is_unlimited,
+                        unlimited_start_date: data.unlimited_start_date,
+                        monthly_price: data.monthly_price,
+                        subscription_months: data.subscription_months
+                    };
+                }
+            } catch (e) {
+                console.error("Cloud login fetch error:", e);
+            }
+        }
+
+        // 2. Fallback to hardcoded list if cloud fetch fails
+        let user = cloudUser || AUTHORIZED_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+        if (user) {
+            const isValid = await authService.verifyPassword(email, password, user.role);
+            if (isValid) {
+                // Generar ID de sesión única (WhatsApp Style)
+                const sessionId = crypto.randomUUID();
+
+                // Actualizar en el usuario
+                const finalUser = { ...(cloudUser || user), session_id: sessionId };
+
+                // 1. Guardar Localmente
+                localStorage.setItem(STORAGE_KEYS.AUTH, obfuscate('true'));
+                localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(finalUser)));
+
+                // 2. Sincronizar en Nube (Supabase active_sessions)
+                await authService.registerSession(lowEmail);
+
+                // Reset failed attempts on success
+                localStorage.removeItem(`${STORAGE_KEYS.LOCKOUT}_${lowEmail}`);
+
+                await authService.logSecurityEvent(lowEmail, "Inicio de sesión exitoso (Sesión única activa)", "low");
+                console.log('✅ Sesión única guardada para:', finalUser.email, 'ID:', sessionId);
+                return finalUser;
+            } else {
+                authService.recordFailedAttempt(lowEmail);
+                await authService.logSecurityEvent(lowEmail, "Fallo de contraseña - Posible ataque de fuerza bruta", "high");
+            }
+        } else {
+            await authService.logSecurityEvent(lowEmail, "Intento de acceso con correo inexistente", "low");
+        }
+        return null;
+    },
+
+    loginAsUser: async (targetUser: User): Promise<User> => {
+        const lowEmail = targetUser.email.toLowerCase().trim();
+        const sessionId = crypto.randomUUID();
+
+        let fullUser: User = { ...targetUser };
+        if (supabase) {
+            try {
+                const { data } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+                if (data) {
+                    fullUser = {
+                        ...fullUser,
+                        name: data.name || fullUser.name,
+                        role: data.role as 'admin' | 'docente',
+                        areas: data.areas || fullUser.areas,
+                        grados: data.grados || fullUser.grados,
+                        custom_credits: data.custom_credits,
+                        is_unlimited: data.is_unlimited,
+                        unlimited_start_date: data.unlimited_start_date,
+                        monthly_price: data.monthly_price,
+                        subscription_months: data.subscription_months
+                    };
+                }
+            } catch (e) {
+                console.error("Cloud fetch error in loginAsUser:", e);
+            }
+        }
+
+        const finalUser = { ...fullUser, session_id: sessionId };
+
+        localStorage.setItem(STORAGE_KEYS.AUTH, obfuscate('true'));
+        localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(finalUser)));
+
+        await authService.registerSession(lowEmail);
+
+        await authService.logSecurityEvent(lowEmail, "Acceso directo a perfil por Administrador (Ingreso sin clave)", "low");
+        return finalUser;
+    },
+
+
+    // --- GENERATED SEQUENCES PERSISTENCE & LOGGING ---
+    saveAndLogSequence: async (user: User, sequence: any, details: { grade: string, area: string, theme: string }) => {
+        const email = user.email.toLowerCase().trim();
+        const isDiag = details.theme.toLowerCase().includes('diagnóst');
+        const actionPrefix = isDiag ? 'Diagnóstico' : 'Planeación';
+        const actionText = `${actionPrefix}: ${details.theme} (${details.area} - ${details.grade})`;
+
+        // 1. Respaldo Local (Inmediato)
+        try {
+            const statsKey = `guaimaral_stats_${email}`;
+            const seqKey = `guaimaral_saved_sequences_${email}`;
+
+            const stats = JSON.parse(localStorage.getItem(statsKey) || '[]');
+            stats.push({ timestamp: Date.now(), action: actionText });
+            localStorage.setItem(statsKey, JSON.stringify(stats));
+
+            const seqs = JSON.parse(localStorage.getItem(seqKey) || '[]');
+            seqs.push({
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                grade: details.grade,
+                area: details.area,
+                theme: details.theme,
+                content: sequence
+            });
+            localStorage.setItem(seqKey, JSON.stringify(seqs));
+        } catch (e) {
+            console.warn("⚠️ Local storage backup failed");
+        }
+
+        // 2. Nube (Prioridad para el Rector)
+        if (supabase) {
+            try {
+                // A. Registro en Log de Uso (Para Hoy/Mes/Año)
+                const { error: logErr } = await supabase.from('usage_logs').insert([{
+                    user_email: email,
+                    action: actionText
+                }]);
+                if (logErr) console.error("❌ Error Log Nube:", logErr.message);
+
+                // B. Guardado en Repositorio (Para Docs Guardados)
+                const { error: seqErr } = await supabase.from('generated_sequences').insert([{
+                    user_email: email,
+                    grado: details.grade,
+                    area: details.area,
+                    tema: details.theme,
+                    content: sequence
+                }]);
+                if (seqErr) console.error("❌ Error Repositorio Nube:", seqErr.message);
+
+                if (!logErr && !seqErr) console.log("🚀 [Sync] Éxito Total en la Nube");
+            } catch (e) {
+                console.error("❌ Fallo crítico de sincronización:", e);
+            }
+        }
+    },
+
+    getAllSequences: async () => {
+        let cloudSeqs: any[] = [];
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('generated_sequences')
+                    .select('*')
+                    .order('timestamp', { ascending: false });
+
+                if (!error && data) {
+                    cloudSeqs = data;
+                }
+            } catch (e) {
+                console.error("Error fetching cloud sequences:", e);
+            }
+        }
+
+        // Combinar con secuencias locales para modo offline y resiliencia total
+        const allLocalSeqs: any[] = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('guaimaral_saved_sequences_')) {
+                    const emailFromKey = k.replace('guaimaral_saved_sequences_', '');
+                    const parsed = JSON.parse(localStorage.getItem(k) || '[]');
+                    parsed.forEach((seq: any) => {
+                        allLocalSeqs.push({
+                            id: seq.id || String(seq.timestamp),
+                            user_email: emailFromKey,
+                            grado: seq.grade || '',
+                            area: seq.area || '',
+                            tema: seq.theme || '',
+                            content: seq.content,
+                            timestamp: new Date(seq.timestamp || Date.now()).toISOString()
+                        });
+                    });
+                }
+            }
+        } catch (e) {}
+
+        const combined = [...cloudSeqs];
+        allLocalSeqs.forEach(localSeq => {
+            const exists = combined.some(c => 
+                c.user_email?.toLowerCase() === localSeq.user_email?.toLowerCase() && 
+                c.tema === localSeq.tema &&
+                c.grado === localSeq.grado
+            );
+            if (!exists) {
+                combined.push(localSeq);
+            }
+        });
+
+        return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    },
+
+    getUsageStats: async (email: string) => {
+        const lowEmail = email.toLowerCase().trim();
+
+        if (supabase) {
+            try {
+                const now = new Date();
+
+                // Calcular el Lunes de la semana actual a las 00:00:00
+                const dayOfWeek = now.getDay(); // 0 es Domingo, 1 es Lunes
+                const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+                const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+                monday.setHours(0, 0, 0, 0);
+
+                // Inicios de periodos robustos
+                const dayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+                const weekStart = monday.toISOString();
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+                const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+
+                // 1. Acumulado Histórico (Logs de actividad)
+                const { count: logTotal } = await supabase.from('usage_logs').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail);
+
+                // 2. Hoy (Docs o Logs de hoy)
+                const { count: todayLogs } = await supabase.from('usage_logs').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', dayStart);
+                const { count: todayDocs } = await supabase.from('generated_sequences').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', dayStart);
+
+                // 3. Semana actual (Desde el Lunes)
+                const { count: weekLogs } = await supabase.from('usage_logs').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', weekStart);
+                const { count: weekDocs } = await supabase.from('generated_sequences').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', weekStart);
+
+                // 4. Mes (Logs o Docs de este mes)
+                const { count: monthLogs } = await supabase.from('usage_logs').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', monthStart);
+                const { count: monthDocs } = await supabase.from('generated_sequences').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail).gte('timestamp', monthStart);
+
+                // 5. Año (Histórico total en realidad para migración)
+                const { count: totalDocs } = await supabase.from('generated_sequences').select('id', { count: 'exact', head: true }).eq('user_email', lowEmail);
+
+                // 6. Acumulado Real (Suma de lo que hay en repositorio + posibles logs huérfanos)
+                const finalTotal = (logTotal || 0) > (totalDocs || 0) ? (logTotal || 0) : (totalDocs || 0);
+
+                return {
+                    today: Math.max(todayLogs || 0, todayDocs || 0),
+                    week: Math.max(weekLogs || 0, weekDocs || 0),
+                    month: Math.max(monthLogs || 0, monthDocs || 0),
+                    year: totalDocs || 0, // Migramos todo lo guardado al contador de año para que se vea
+                    total: finalTotal,
+                    saved: totalDocs || 0
+                };
+            } catch (e) { console.error("Cloud stats logic error", e); }
+        }
+
+        const local = authService.getLocalUsageStats(email);
+        return {
+            ...local,
+            year: local.year || local.month,
+            saved: local.saved || 0
+        };
+    },
+
+    getLocalUsageStats: (email: string) => {
+        const key = `guaimaral_stats_${email.toLowerCase()}`;
+        const logs: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+        const now = new Date();
+
+        const timestamps = logs.map(l => typeof l === 'number' ? l : l.timestamp);
+
+        const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        const dayOfWeek = now.getDay();
+        const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+        const weekStart = monday.getTime();
+        
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
+
+        const localSavedKey = `guaimaral_saved_sequences_${email.toLowerCase()}`;
+        const savedCount = JSON.parse(localStorage.getItem(localSavedKey) || '[]').length;
+
+        return {
+            today: timestamps.filter(t => t >= dayStart).length,
+            week: timestamps.filter(t => t >= weekStart).length,
+            month: timestamps.filter(t => t >= monthStart).length,
+            year: timestamps.filter(t => t >= yearStart).length,
+            total: timestamps.length,
+            saved: savedCount
+        };
+    },
+
+    getAllUsersWithStats: async () => {
+        let userList = [...AUTHORIZED_USERS];
+
+        if (supabase) {
+            try {
+                // 1. Obtener todos los usuarios de la nube de una vez
+                const { data: cloudData } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months, password');
+
+                if (cloudData && cloudData.length > 0) {
+                    const cloudUsers: User[] = cloudData.map(u => ({
+                        name: u.name,
+                        email: u.email,
+                        role: u.role as 'admin' | 'docente',
+                        areas: u.areas || [],
+                        grados: u.grados || [],
+                        custom_credits: u.custom_credits,
+                        is_unlimited: u.is_unlimited,
+                        unlimited_start_date: u.unlimited_start_date,
+                        monthly_price: u.monthly_price,
+                        subscription_months: u.subscription_months,
+                        password: u.password
+                    }));
+
+                    const emailMap = new Map();
+                    [...userList, ...cloudUsers].forEach(u => emailMap.set(u.email.toLowerCase(), u));
+                    userList = Array.from(emailMap.values());
+                }
+
+                // 2. OPTIMIZACIÓN CRÍTICA: Obtener secuencias con timestamp en una sola pasada
+                const { data: seqStats } = await supabase
+                    .from('generated_sequences')
+                    .select('user_email, timestamp');
+
+                const totalCountsMap: Record<string, number> = {};
+                const cycleCountsMap: Record<string, number> = {};
+
+                // 3. Cruzar datos de forma ultra-rápida en memoria
+                return userList.map(user => {
+                    const low = (user && user.email) ? user.email.toLowerCase().trim() : '';
+                    const startDateStr = user.unlimited_start_date;
+                    const startDate = startDateStr ? new Date(startDateStr.includes('T') ? startDateStr : startDateStr + 'T00:00:00') : null;
+
+                    let total = 0;
+                    let cycle = 0;
+                    const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
+                    const subStartDate = user.unlimited_start_date ? new Date(user.unlimited_start_date) : null;
+                    const effectiveCountStart = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
+
+                    seqStats?.forEach(s => {
+                        if (s.user_email && s.user_email.toLowerCase().trim() === low) {
+                            total++;
+                            if (new Date(s.timestamp) >= effectiveCountStart) {
+                                cycle++;
+                            }
+                        }
+                    });
+
+                    // Calcular cuota máxima del plan
+                    let maxQuota = 6;
+                    if (user.role === 'admin' || low.includes('demo') || low === 'jesus@guaimaral.edu.co') {
+                        maxQuota = 9999;
+                    } else if (user.is_unlimited) {
+                        if ((user.subscription_months || 1) >= 6 || (user.monthly_price || 15000) >= 75000) {
+                            maxQuota = 120;
+                        } else if ((user.subscription_months || 1) >= 3 || (user.monthly_price || 15000) >= 35000) {
+                            maxQuota = 60;
+                        } else {
+                            maxQuota = 20;
+                        }
+
+                        if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+                            maxQuota = user.custom_credits;
+                        }
+                    } else if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0) {
+                        maxQuota = user.custom_credits;
+                    }
+
+                    const used = user.is_unlimited ? cycle : cycle;
+                    const remaining = maxQuota === 9999 ? 9999 : Math.max(0, maxQuota - used);
+
+                    return {
+                        ...user,
+                        stats: {
+                            today: 0,
+                            week: 0,
+                            month: 0,
+                            year: 0,
+                            total,
+                            saved: total,
+                            cycleUsage: used,
+                            maxQuota,
+                            remainingQuota: remaining
+                        }
+                    };
+                });
+
+            } catch (e) {
+                console.error("🚀 Error en carga masiva de estadísticas:", e);
+            }
+        }
+
+        // Fallback local y modo offline: calcular estadísticas reales desde localStorage
+        return userList.map(u => {
+            const localStats = authService.getLocalUsageStats(u.email);
+            return {
+                ...u,
+                stats: localStats
+            };
+        });
+    },
+
+    logout: () => {
+        // Limpiar Presencia al salir
+        if (authService._hb) clearInterval(authService._hb);
+        if (authService._presenceChannel) {
+            authService._presenceChannel.unsubscribe();
+            authService._presenceChannel = null;
+        }
+        localStorage.removeItem(STORAGE_KEYS.AUTH);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.ROLE);
+        window.location.reload(); // Recarga limpia para resetear singletons
+    },
+
+    isAuthenticated: (): boolean => {
+        const auth = localStorage.getItem(STORAGE_KEYS.AUTH);
+        const user = localStorage.getItem(STORAGE_KEYS.USER);
+        const isAuth = (auth && user) ? deobfuscate(auth) === 'true' : false;
+        console.log('🔍 Verificando sesión:', isAuth ? '✅ Sesión activa' : '❌ No hay sesión');
+        return isAuth;
+    },
+
+    getUserStorageKey: (baseKey: string): string => {
+        const user = authService.getCurrentUser();
+        return user ? `${baseKey}_${user.email.toLowerCase()}` : baseKey;
+    },
+
+    getCurrentUser: (): User | null => {
+        const userJson = localStorage.getItem(STORAGE_KEYS.USER);
+        if (!userJson) return null;
+        try {
+            const parsed = JSON.parse(deobfuscate(userJson));
+            if (parsed && (parsed.email || '').toLowerCase().includes('alex.sanjuan')) {
+                parsed.is_unlimited = true;
+                parsed.subscription_months = 3;
+                parsed.monthly_price = 35000;
+                parsed.custom_credits = 60;
+                parsed.unlimited_start_date = parsed.unlimited_start_date || '2026-09-07T00:00:00.000Z';
+                localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(parsed)));
+            }
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    // --- MIGRACIÓN: LOCAL -> NUBE ---
+    migrationLocalToCloud: async () => {
+        if (!supabase) return { success: false, message: "Sin conexión a la nube" };
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, message: "No hay usuario activo" };
+
+        const email = user.email.toLowerCase();
+        let syncedCount = 0;
+
+        try {
+            // A. Sincronizar Secuencias Guardadas
+            const seqKey = `guaimaral_saved_sequences_${email}`;
+            const localSeqs = JSON.parse(localStorage.getItem(seqKey) || '[]');
+
+            // Ver qué hay ya en la nube para no duplicar
+            const { data: cloudSeqs } = await supabase.from('generated_sequences').select('tema').eq('user_email', email);
+            const cloudTemas = new Set((cloudSeqs || []).map(s => s.tema));
+
+            for (const s of localSeqs) {
+                if (!cloudTemas.has(s.theme)) {
+                    await supabase.from('generated_sequences').insert([{
+                        user_email: email,
+                        grado: s.grade,
+                        area: s.area,
+                        tema: s.theme,
+                        content: s.content
+                    }]);
+
+                    // También crear un log de actividad retroactivo
+                    await supabase.from('usage_logs').insert([{
+                        user_email: email,
+                        action: `Migración Local: ${s.theme}`
+                    }]);
+
+                    syncedCount++;
+                }
+            }
+
+            console.log(`✅ [Migración] ${syncedCount} secuencias sincronizadas con éxito.`);
+            return { success: true, count: syncedCount };
+        } catch (e) {
+            console.error("❌ Error en migración:", e);
+            return { success: false, message: "Fallo técnico en migración" };
+        }
+    },
+
+
+    // --- REAL-TIME PRESENCE (PRESENCE MANAGER) ---
+    _presenceChannel: null as any,
+    _presenceState: {} as Record<string, any>,
+    _presenceListeners: [] as ((state: any) => void)[],
+    _hb: null as any,
+
+    trackPresence: (user: User, onSync?: (state: any) => void) => {
+        if (!supabase) return null;
+        const lowEmail = user.email.toLowerCase();
+
+        // 1. Manejo de Listeners
+        let listenerWrapper: ((state: any) => void) | null = null;
+        if (onSync) {
+            listenerWrapper = (state: any) => onSync(state);
+            authService._presenceListeners.push(listenerWrapper);
+        }
+
+        const notifyAll = () => {
+            if (!authService._presenceChannel) return;
+            const state = authService._presenceChannel.presenceState();
+            authService._presenceState = state;
+            authService._presenceListeners.forEach(l => l(state));
+        };
+
+        // 2. Inicialización del Canal (Nuclear Singleton)
+        if (!authService._presenceChannel || (authService as any)._currentEmail !== lowEmail) {
+            if (authService._hb) clearInterval(authService._hb);
+            if (authService._presenceChannel) authService._presenceChannel.unsubscribe();
+
+            (authService as any)._currentEmail = lowEmail;
+
+            const channel = supabase.channel('online-users', {
+                config: { presence: { key: lowEmail } }
+            });
+
+            authService._presenceChannel = channel;
+
+            const updateTrack = async () => {
+                try {
+                    await channel.track({
+                        name: user.name,
+                        role: user.role,
+                        email: lowEmail,
+                        ts: Date.now()
+                    });
+                } catch (e) { }
+            };
+
+            channel
+                .on('presence', { event: 'sync' }, notifyAll)
+                .on('presence', { event: 'join' }, () => { notifyAll(); })
+                .on('presence', { event: 'leave' }, () => { notifyAll(); })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await updateTrack();
+                        if (authService._hb) clearInterval(authService._hb);
+                        authService._hb = setInterval(updateTrack, 60000); // Cada 60s (menos spam)
+                    }
+                });
+        } else {
+            // Si ya existe el canal, notificar inmediatamente al nuevo listener
+            if (onSync) onSync(authService._presenceChannel.presenceState());
+        }
+
+        // Devolver un objeto que simule el canal pero maneje el unsubscribe del listener solamente
+        return {
+            unsubscribe: () => {
+                if (listenerWrapper) {
+                    authService._presenceListeners = authService._presenceListeners.filter(l => l !== listenerWrapper);
+                }
+            },
+            presenceState: () => authService._presenceChannel?.presenceState() || {}
+        };
+    }
+};

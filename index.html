@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema Clases Ideal - I.E. Guaimaral Planificación AI</title>
+  <!-- Favicon y Logos de la Aplicación -->
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="shortcut icon" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta property="og:image" content="/logo.png" />
+  <meta property="og:title" content="Sistema Clases Ideal - I.E. Guaimaral" />
+  <meta property="og:description" content="Plataforma de Planificación Académica Inteligente con IA" />
+
+  <!-- Librería para Exportación a PDF Nativa -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Eliminado CDN de Tailwind para uso de PostCSS Nativo -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Premium Root Styles */
+    :root {
+      --primary: #2563eb;
+      --secondary: #6366f1;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      overflow-x: hidden;
+    }
+
+    /* Print Overrides */
+    @media print {
+      @page {
+        size: portrait;
+        margin: 0.6cm;
+      }
+
+      html, body {
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        animation: none !important;
+        transition: none !important;
+        box-shadow: none !important;
+      }
+
+      .no-print, header, nav, .fixed, .sticky, [role="dialog"] {
+        display: none !important;
+      }
+
+      .activity-block,
+      .evaluation-card,
+      .institutional-section,
+      tr,
+      td,
+      th {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

@@ -1,0 +1,12 @@
+{
+  "pregunta": "Un grupo de estudiantes de la I.E. Guaimaral observa que en una zona del patio con sombra permanente las plantas crecen más lentas y con hojas amarillentas en comparación con las del jardín soleado. ¿Cuál de las siguientes hipótesis explica mejor este fenómeno?",
+  "tipo": "Selección Múltiple con Única Respuesta",
+  "opciones": [
+    "A) Las plantas de la sombra reciben menos agua que las del jardín soleado.",
+    "B) La falta de luz solar directa reduce la tasa fotosintética y la producción de clorofila.",
+    "C) El suelo a la sombra contiene sustancias químicas que impiden el crecimiento radicular.",
+    "D) El aire en las zonas sombreadas tiene un menor porcentaje de oxígeno disponible."
+  ],
+  "respuesta_correcta": "B) La falta de luz solar directa reduce la tasa fotosintética y la producción de clorofila.",
+  "justificacion": "La opción B es la clave correcta porque la radiación solar es el insumo lumínico indispensable para la fase luminosa de la fotosíntesis y la síntesis de pigmentos fotosintéticos (clorofila). Las opciones A, C y D corresponden a distractores basados en inferencias sin evidencia experimental previa."
+}

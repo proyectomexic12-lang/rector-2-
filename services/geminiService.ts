@@ -1,0 +1,1220 @@
+import { SequenceInput, DidacticSequence, EvaluationItem } from "../types";
+import { supabase } from "./supabaseClient";
+
+export const modelHealthStatus: Record<string, 'online' | 'offline' | 'checking'> = {
+  "deepseek-chat": "online"
+};
+
+export interface KeyConfigInfo {
+  key: string;
+  index: number;
+  id: string;
+  label: string;
+}
+
+const DEFAULT_KEY_LABELS = [
+  "DeepSeek Oficial",
+  "DeepSeek Respaldo 2",
+  "DeepSeek Respaldo 3",
+  "DeepSeek Respaldo 4"
+];
+
+export function getAvailableKeysInfo(): KeyConfigInfo[] {
+  const keysInfo: KeyConfigInfo[] = [];
+
+  for (let i = 1; i <= 15; i++) {
+    const envVarName = `VITE_API_KEY_${i}`;
+    const rawVal = (import.meta.env as any)[envVarName] || 
+      (typeof process !== 'undefined' && process.env ? (process.env as any)[envVarName] : undefined);
+      
+    if (typeof rawVal === 'string' && rawVal.trim().length > 5) {
+      const id = `key${i}`;
+      const label = DEFAULT_KEY_LABELS[i - 1] || `Canal ${i}`;
+      keysInfo.push({
+        key: rawVal.trim(),
+        index: i - 1,
+        id,
+        label
+      });
+    }
+  }
+
+  if (keysInfo.length === 0) {
+    const singleVal = (import.meta.env as any).VITE_API_KEY || 
+      (typeof process !== 'undefined' && process.env ? process.env.VITE_API_KEY : undefined);
+    if (typeof singleVal === 'string' && singleVal.trim().length > 5) {
+      keysInfo.push({
+        key: singleVal.trim(),
+        index: 0,
+        id: "key1",
+        label: "Canal Principal"
+      });
+    }
+  }
+
+  return keysInfo;
+}
+
+const LOCAL_STORAGE_METRICS_KEY = "guaimaral_api_metrics_store";
+
+function loadMetricsFromStorage(): Record<string, any> {
+  if (typeof window === 'undefined' || !window.localStorage) return {};
+  try {
+    const raw = window.localStorage.getItem(LOCAL_STORAGE_METRICS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveMetricsToStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(LOCAL_STORAGE_METRICS_KEY, JSON.stringify(apiMetrics));
+  } catch (e) {}
+}
+
+export const apiMetrics: Record<string, { 
+  requests: number; 
+  success: number; 
+  errors: number; 
+  tokens: number;
+  lastUsed: string; 
+  label: string;
+  errorLogs: { time: string; message: string }[];
+}> = {};
+
+// Inicializar métricas para todas las llaves detectadas con persistencia local
+const savedMetrics = loadMetricsFromStorage();
+getAvailableKeysInfo().forEach(k => {
+  const existing = savedMetrics[k.id];
+  apiMetrics[k.id] = {
+    requests: existing?.requests || 0,
+    success: existing?.success || 0,
+    errors: existing?.errors || 0,
+    tokens: existing?.tokens || 0,
+    lastUsed: existing?.lastUsed || "",
+    label: k.label,
+    errorLogs: Array.isArray(existing?.errorLogs) ? existing.errorLogs : []
+  };
+});
+
+export const resetApiMetrics = async () => {
+  try {
+    localStorage.removeItem('guaimaral_api_metrics_v2');
+    Object.keys(apiMetrics).forEach(key => delete apiMetrics[key]);
+    getAvailableKeysInfo().forEach(k => {
+      apiMetrics[k.id] = {
+        requests: 0,
+        success: 0,
+        errors: 0,
+        tokens: 0,
+        lastUsed: "",
+        label: k.label,
+        errorLogs: []
+      };
+    });
+    saveMetricsToStorage();
+    if (supabase) {
+      await supabase.from('api_key_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    }
+  } catch (e) {
+    console.warn("Reset metrics error:", e);
+  }
+};
+
+const sanitizeInput = (text: string | undefined): string => {
+  if (!text) return "";
+  return text.trim().replace(/['"<>]/g, "");
+};
+
+// Función de auto-reparación inteligente de JSON para modelos que dejan comas colgantes, caracteres de control o corchetes abiertos
+export const tryRepairAndParseJson = (raw: string): any => {
+  // Helper: Sanear caracteres de control (\n, \r, \t sin escapar) dentro de cadenas de JSON
+  const sanitizeControlCharacters = (jsonStr: string): string => {
+    let inString = false;
+    let result = '';
+    for (let i = 0; i < jsonStr.length; i++) {
+      const char = jsonStr[i];
+      const prevChar = i > 0 ? jsonStr[i - 1] : '';
+
+      if (char === '"' && prevChar !== '\\') {
+        inString = !inString;
+        result += char;
+        continue;
+      }
+
+      if (inString) {
+        if (char === '\n') {
+          result += '\\n';
+        } else if (char === '\r') {
+          result += '\\r';
+        } else if (char === '\t') {
+          result += '\\t';
+        } else if (char.charCodeAt(0) < 32) {
+          result += '';
+        } else {
+          result += char;
+        }
+      } else {
+        result += char;
+      }
+    }
+    return result;
+  };
+
+  try {
+    return JSON.parse(raw);
+  } catch (e1) {
+    try {
+      const sanitized = sanitizeControlCharacters(raw);
+      return JSON.parse(sanitized);
+    } catch (e1_1) {
+      // 1. Quitar comas colgantes antes de llaves o corchetes de cierre: ,} o ,]
+      let fixed = raw.replace(/,\s*([\]}])/g, '$1');
+      
+      // 2. Normalizar comillas especiales si las hubiera
+      fixed = fixed.replace(/[\u201C\u201D]/g, '"');
+
+      // 3. Aplicar saneamiento de caracteres de control
+      fixed = sanitizeControlCharacters(fixed);
+
+      try {
+        return JSON.parse(fixed);
+      } catch (e2) {
+        // 4. Reparación de JSON truncado por límite de tokens: cerrar estructuras abiertas
+        let openBraces = (fixed.match(/{/g) || []).length;
+        let closeBraces = (fixed.match(/}/g) || []).length;
+        let openBrackets = (fixed.match(/\[/g) || []).length;
+        let closeBrackets = (fixed.match(/\]/g) || []).length;
+
+        // Quitar coma huérfana al final
+        fixed = fixed.trim().replace(/,\s*$/, '');
+
+        // Cerrar corchetes y llaves faltantes
+        while (openBrackets > closeBrackets) {
+          fixed += ']';
+          closeBrackets++;
+        }
+        while (openBraces > closeBraces) {
+          fixed += '}';
+          closeBraces++;
+        }
+
+        try {
+          return JSON.parse(fixed);
+        } catch (e3) {
+          throw e1; // Lanzar el error original si no se pudo auto-reparar
+        }
+      }
+    }
+  }
+};
+
+const logApiKeyUsage = async (keyLabel: string, status: 'success' | 'error', errorMsg?: any, modelName?: string, tokensUsed: number = 0) => {
+  if (!supabase) return;
+  try {
+    const rawMsg = errorMsg ? (typeof errorMsg === 'string' ? errorMsg : String(errorMsg?.message || errorMsg)) : '';
+    const cleanMsg = rawMsg ? rawMsg.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ').slice(0, 250) : null;
+    const actionDesc = tokensUsed > 0 
+      ? `Respuesta de: ${modelName || 'Desconocido'} (${tokensUsed} tokens)`
+      : `Respuesta de: ${modelName || 'Desconocido'}`;
+
+    const payloadWithAction: any = {
+      key_name: keyLabel,
+      status,
+      action: actionDesc
+    };
+    if (cleanMsg) payloadWithAction.error_message = cleanMsg;
+
+    const { error } = await supabase.from('api_key_logs').insert([payloadWithAction]);
+    
+    // Si la tabla api_key_logs en Supabase no tiene la columna 'action', reintentamos automáticamente sin ella
+    if (error && (error.message?.includes('action') || error.code === 'PGRST204')) {
+      const fallbackPayload: any = {
+        key_name: keyLabel,
+        status
+      };
+      if (cleanMsg) fallbackPayload.error_message = cleanMsg;
+      await supabase.from('api_key_logs').insert([fallbackPayload]);
+    }
+  } catch (e) {
+    // Silencioso para cero interrupciones al usuario
+  }
+};
+
+
+
+// Helper to categorize and parse Colombian school grades accurately
+export type GradeCategory = 'preescolar' | 'primaria_baja' | 'primaria_alta' | 'secundaria' | 'media' | 'multigrado';
+
+export interface GradeMetadata {
+  category: GradeCategory;
+  gradeLabel: string;
+  searchSuffix: string;
+  cleanGradeName: string;
+}
+
+export function getGradeCategory(grado: string): GradeMetadata {
+  const raw = (grado || '').toLowerCase().trim();
+  // Normalizar tildes y caracteres especiales
+  const g = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Multigrado
+  if (g.includes('multi')) {
+    const isBachillerato = g.includes('6') || g.includes('11') || g.includes('secundaria') || g.includes('media') || g.includes('postprimaria');
+    return {
+      category: 'multigrado',
+      gradeLabel: isBachillerato ? 'Aula Multigrado Bachillerato (6° a 11°)' : 'Aula Multigrado Primaria (1° a 5°)',
+      searchSuffix: isBachillerato ? 'secundaria bachillerato explicacion didactica clase adolescentes' : 'primaria para niños clase didactica explicacion infantil',
+      cleanGradeName: isBachillerato ? 'Multigrado Bachillerato' : 'Multigrado Primaria'
+    };
+  }
+
+  // 2. Preescolar / Transición / Jardín
+  if (g.includes('transici') || g.includes('preescolar') || g.includes('jardin') || g.includes('parvulo') || g === '0' || g === '0°') {
+    return {
+      category: 'preescolar',
+      gradeLabel: 'Transición / Preescolar',
+      searchSuffix: 'para niños preescolar infantil cancion cuento educativo',
+      cleanGradeName: 'Preescolar'
+    };
+  }
+
+  // 3. Media Académica / Vocacional (10° y 11° - evaluar primero para evitar falso positivo con '1')
+  if (g.includes('undecim') || g.includes('once') || g === '11' || g === '11°' || g === '11ro' || g === '11vo' || g.includes('grado 11') || g.startsWith('11 ') || g.startsWith('11.')) {
+    return {
+      category: 'media',
+      gradeLabel: 'Grado 11° Media',
+      searchSuffix: 'grado 11 once bachillerato preparacion icfes saber 11 explicacion clase',
+      cleanGradeName: 'Undécimo (11°)'
+    };
+  }
+
+  if (g.includes('decim') || g === '10' || g === '10°' || g === '10mo' || g.includes('grado 10') || g.startsWith('10 ') || g.startsWith('10.')) {
+    return {
+      category: 'media',
+      gradeLabel: 'Grado 10° Media',
+      searchSuffix: 'grado 10 decimo bachillerato explicacion clase preparacion saber',
+      cleanGradeName: 'Décimo (10°)'
+    };
+  }
+
+  // 4. Primaria Baja (1° a 3°)
+  if (g.includes('primer') || g === '1' || g === '1°' || g === '1ro' || g.includes('grado 1') || g.startsWith('1 ') || g.startsWith('1.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 1° Primaria',
+      searchSuffix: 'para niños de 1 primaria primer grado educativo infantil explicacion facil',
+      cleanGradeName: 'Primero de Primaria'
+    };
+  }
+  if (g.includes('segund') || g === '2' || g === '2°' || g === '2do' || g.includes('grado 2') || g.startsWith('2 ') || g.startsWith('2.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 2° Primaria',
+      searchSuffix: 'para niños de 2 primaria segundo grado explicacion infantil didactica',
+      cleanGradeName: 'Segundo de Primaria'
+    };
+  }
+  if (g.includes('tercer') || g === '3' || g === '3°' || g === '3ro' || g.includes('grado 3') || g.startsWith('3 ') || g.startsWith('3.')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Grado 3° Primaria',
+      searchSuffix: 'para niños de 3 primaria tercer grado explicacion didactica',
+      cleanGradeName: 'Tercero de Primaria'
+    };
+  }
+
+  // 5. Primaria Alta (4° y 5°)
+  if (g.includes('cuart') || g === '4' || g === '4°' || g === '4to' || g.includes('grado 4') || g.startsWith('4 ') || g.startsWith('4.')) {
+    return {
+      category: 'primaria_alta',
+      gradeLabel: 'Grado 4° Primaria',
+      searchSuffix: 'para niños cuarto de primaria 4 grado explicacion didactica clase',
+      cleanGradeName: 'Cuarto de Primaria'
+    };
+  }
+  if (g.includes('quint') || g === '5' || g === '5°' || g === '5to' || g.includes('grado 5') || g.startsWith('5 ') || g.startsWith('5.')) {
+    return {
+      category: 'primaria_alta',
+      gradeLabel: 'Grado 5° Primaria',
+      searchSuffix: 'para niños quinto de primaria 5 grado clase explicativa',
+      cleanGradeName: 'Quinto de Primaria'
+    };
+  }
+
+  // 6. Secundaria Básica (6° a 9°)
+  if (g.includes('sext') || g === '6' || g === '6°' || g === '6to' || g.includes('grado 6') || g.startsWith('6 ') || g.startsWith('6.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 6° Secundaria',
+      searchSuffix: 'grado 6 sexto secundaria explicacion clase',
+      cleanGradeName: 'Sexto de Secundaria'
+    };
+  }
+  if (g.includes('septim') || g === '7' || g === '7°' || g === '7mo' || g.includes('grado 7') || g.startsWith('7 ') || g.startsWith('7.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 7° Secundaria',
+      searchSuffix: 'grado 7 septimo secundaria explicacion clase',
+      cleanGradeName: 'Séptimo de Secundaria'
+    };
+  }
+  if (g.includes('octav') || g === '8' || g === '8°' || g === '8vo' || g.includes('grado 8') || g.startsWith('8 ') || g.startsWith('8.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 8° Secundaria',
+      searchSuffix: 'grado 8 octavo secundaria explicacion clase',
+      cleanGradeName: 'Octavo de Secundaria'
+    };
+  }
+  if (g.includes('noven') || g === '9' || g === '9°' || g === '9no' || g.includes('grado 9') || g.startsWith('9 ') || g.startsWith('9.')) {
+    return {
+      category: 'secundaria',
+      gradeLabel: 'Grado 9° Secundaria',
+      searchSuffix: 'grado 9 noveno secundaria explicacion clase',
+      cleanGradeName: 'Noveno de Secundaria'
+    };
+  }
+
+  // Fallback para primaria genérica
+  if (g.includes('primaria')) {
+    return {
+      category: 'primaria_baja',
+      gradeLabel: 'Primaria',
+      searchSuffix: 'para niños de primaria explicacion infantil didactica',
+      cleanGradeName: 'Primaria'
+    };
+  }
+
+  return {
+    category: 'secundaria',
+    gradeLabel: `Grado ${grado}`,
+    searchSuffix: `grado ${grado} explicacion clase`,
+    cleanGradeName: `Grado ${grado}`
+  };
+}
+
+// Helper to build grade-aware YouTube search query for age-appropriate video resources
+export function buildGradeAwareVideoQuery(rawTitle: string, tema: string, grado: string): string {
+  // Limpiar título de prefijos como 'video:', comillas y signos
+  let cleanTitle = (rawTitle || '')
+    .replace(/^(video|video explicativo|video tutorial|tutorial|recurso audiovisual|recurso|material)\s*[:-]?\s*/i, '')
+    .replace(/['"«»“”]/g, '')
+    .trim();
+
+  const cleanTema = (tema || '').replace(/['"«»“”]/g, '').trim();
+  const gradeMeta = getGradeCategory(grado);
+
+  // Determinar núcleo de búsqueda
+  let coreTerm = cleanTitle;
+  if (!coreTerm) {
+    coreTerm = cleanTema || 'conceptos clave';
+  } else if (cleanTema && !coreTerm.toLowerCase().includes(cleanTema.toLowerCase())) {
+    coreTerm = `${coreTerm} ${cleanTema}`;
+  }
+
+  // Remover palabras numéricas o menciones contradictorias de grado dentro del coreTerm para evitar cruces
+  coreTerm = coreTerm
+    .replace(/\b(grado\s*\d+°?|\d+°?\s*grado|\b(primero|segundo|tercero|cuarto|quinto|sexto|septimo|séptimo|octavo|noveno|decimo|décimo|undecimo|undécimo|once)\b)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return `${coreTerm} ${gradeMeta.searchSuffix}`.replace(/\s+/g, ' ').trim();
+}
+
+export interface ResourceAction {
+  isVideo: boolean;
+  url: string | null;
+  label: string;
+}
+
+export function resolveResourceAction(nombreRaw: string, descripcionRaw: string, tema: string, grado: string): ResourceAction {
+  const nombre = (nombreRaw || '').toLowerCase();
+  const desc = (descripcionRaw || '').toLowerCase();
+
+  // 1. Detección exclusiva de Video -> YouTube Direct
+  if (nombre.includes("video") || desc.includes("video") || nombre.includes("youtube") || desc.includes("youtube")) {
+    const rawTitle = nombreRaw.replace(/^video\s*[:-]?\s*/i, "").replace(/['"]/g, "").trim();
+    const query = buildGradeAwareVideoQuery(rawTitle, tema, grado);
+    return {
+      isVideo: true,
+      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+      label: "▶ Ver en YouTube ↗"
+    };
+  }
+
+  // Cualquier otro recurso es texto didáctico limpio de aula sin botones ni badges
+  return {
+    isVideo: false,
+    url: null,
+    label: ""
+  };
+}
+
+// Helper functions for dynamic pedagogical contexts
+function getGradeContext(grado: string): string {
+  const { category, gradeLabel } = getGradeCategory(grado);
+  switch (category) {
+    case 'preescolar':
+      return `ENFOQUE DE PREESCOLAR / TRANSICIÓN: Estimulación sensorial, juego estructurado, canciones infantiles, rondas, cuentos ilustrados, grafomotricidad y motricidad gruesa/fina. Lenguaje de ternura, lúdico y visual. CERO abstracciones teóricas.`;
+    case 'primaria_baja':
+      return `ENFOQUE DE PRIMARIA BÁSICA (1° a 3°): Uso intensivo de material concreto (bloques, fichas, regletas, dibujos), juegos de roles, canciones, retos de conteo/lectura inicial y actividades motrices cortas. Lenguaje afectivo, motivador y sumamente didáctico infantil.`;
+    case 'primaria_alta':
+      return `ENFOQUE DE PRIMARIA ALTA (4° y 5°): Transición al razonamiento lógico estructurado. Retos grupales, descubrimientos guiados, proyectos manuales, preguntas de indagación y resolución de problemas cotidianos contextualizados para niños.`;
+    case 'secundaria':
+      return `ENFOQUE DE SECUNDARIA BÁSICA (6° a 9°): Pensamiento crítico, debates, conexión con la realidad social y cotidiana, trabajo en equipo, argumentación fundamentada y desarrollo de la autonomía cognoscitiva.`;
+    case 'media':
+      return `ENFOQUE DE MEDIA ACADÉMICA / TÉCNICA (10° y 11°): Alto rigor conceptual pre-universitario, competencias Saber 11 / ICFES, análisis crítico de textos complejos, ensayos argumentativos, formulación de hipótesis y proyectos de vida.`;
+    case 'multigrado':
+      return `ENFOQUE MULTIGRADO PRIMARIA (Escuela Nueva / Altomira): Estrategia de aula unificada con actividades multinivel diferenciadas por ciclo (Transición a 5°), guías de autoaprendizaje y aprendizaje colaborativo entre pares de diferentes edades.`;
+  }
+}
+
+function getAreaContext(area: string): string {
+  const areaLower = area.toLowerCase();
+  if (areaLower.includes('matemática')) {
+    return "ENFOQUE MATEMÁTICO: Evitar la mecanización. Centrarse en la resolución de problemas (Polya), pensamiento lógico, y el uso del error como oportunidad de aprendizaje.";
+  }
+  if (areaLower.includes('lenguaje') || areaLower.includes('español')) {
+    return "ENFOQUE LENGUAJE: Prácticas sociales del lenguaje. Énfasis en comprensión crítica, producción textual argumentativa y lectura inferencial.";
+  }
+  if (areaLower.includes('ciencia') || areaLower.includes('natural')) {
+    return "ENFOQUE CIENTÍFICO: Método científico empírico. Laboratorios 'low-cost', formulación de hipótesis, y conciencia ambiental.";
+  }
+  if (areaLower.includes('sociales') || areaLower.includes('historia')) {
+    return "ENFOQUE SOCIALES: Pensamiento histórico y crítico. Análisis de multiperspectividad, geografía viva y formación ciudadana (constitución).";
+  }
+  return "ENFOQUE DISCIPLINAR: Énfasis en las competencias específicas de esta área según los lineamientos del MEN.";
+}
+
+
+export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
+  const availableKeys = getAvailableKeysInfo();
+
+  if (availableKeys.length === 0) {
+    throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
+  }
+
+  // Monopolio DeepSeek - Única configuración
+  const modelsToTry = ["deepseek-chat"];
+
+  const safeTema = sanitizeInput(input.tema);
+  const areaNormativa = {
+    conDBA: ['MATEMATICAS', 'LENGUAJE', 'CIENCIAS NATURALES', 'CIENCIAS SOCIALES', 'INGLES', 'FISICA', 'ESTADISTICA', 'GEOMETRIA', 'BIOLOGIA', 'QUIMICA'],
+    conOrientaciones: ['EDUCACION ARTISTICA', 'EDUCACION FISICA', 'ETICA', 'VALORES', 'RELIGION', 'TECNOLOGIA', 'FILOSOFIA', 'CONVIVENCIA', 'AGROPECUARIA', 'CATEDRA DE LA PAZ']
+  };
+
+  const currentArea = input.area.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const isMultigrado = input.grado.toLowerCase().includes("multigrado");
+  const isIntegral = input.area.toLowerCase().includes("integral");
+
+  const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a)) || isIntegral;
+
+  let pedagogicalInstruction = hasDBA
+    ? `- **DBA Oficial:** Debes identificar el número exacto del DBA (ej: "DBA #3") y transcribir su contenido literal que se está abordando.
+       - **Input del Usuario:** ${sanitizeInput(input.dba) || 'Sin DBA previo'}. Si este input es un número, busca el contenido oficial. Si es texto, valida su correspondencia con el número.`
+    : `- **Referencia Pedagógica:** Esta área NO utiliza DBA. Debes citar explícitamente las **"Orientaciones Pedagógicas y Curriculares del MEN para ${input.area}"**. 
+       - **Instrucción Especial:** En la casilla de DBA, debes colocar: "Tomado de las Orientaciones Pedagógicas del MEN: [Citar el eje o lineamiento específico usado]". NO inventes un número de DBA.`;
+
+  if (isMultigrado) {
+    const gLower = input.grado.toLowerCase();
+    const isBachillerato = gLower.includes('6') || gLower.includes('11') || gLower.includes('secundaria') || gLower.includes('media');
+
+    if (isBachillerato) {
+      pedagogicalInstruction += `
+    - **INSTRUCCIÓN ESPECIAL MULTIGRADO BACHILLERATO (6° a 11° - Modalidad Rural):** Esta secuencia es para un aula MULTIGRADO DE BACHILLERATO. Debes especificar actividades diferenciadas y niveles de complejidad graduados para los grados: **6°, 7°, 8°, 9°, 10° y 11°**.
+    - **Enfoque Pedagógico:** Aprendizaje Basado en Proyectos (ABP), resolución de problemas contextualizados, pensamiento crítico, trabajo autónomo con guías y roles de liderazgo colaborativo entre grados.`;
+    } else {
+      pedagogicalInstruction += `
+    - **INSTRUCCIÓN ESPECIAL MULTIGRADO PRIMARIA (1° a 5° - Modelo Escuela Nueva / Sede Rural):** Esta secuencia es para un aula MULTIGRADO DE PRIMARIA. Debes especificar acciones y niveles de complejidad diferenciados para cada grado: **1°, 2°, 3°, 4° y 5°** (incluyendo adaptación para transición si aplica).
+    - **Enfoque Integrador & Escuela Nueva:** Guías de autoaprendizaje, rincones de trabajo por niveles, tutoría entre pares infantiles y vinculación con la vida cotidiana y rural. Si el área es Integral, fusionar armónicamente las 4 áreas básicas.`;
+    }
+  }
+
+  // Guía de estructura JSON estricta para DeepSeek
+  const jsonStructureGuidance = `
+    DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA EXACTA. NADA DE TEXTO ANTES NI DESPUÉS DEL JSON:
+    {
+      "tema_principal": "string",
+      "titulo_secuencia": "string",
+      "descripcion_secuencia": "string",
+      "objetivo_aprendizaje": "string",
+      "contenidos": ["string"],
+      "competencias_men": "string",
+      "estandar": "string",
+      "metodologia": "string",
+      "corporiedad_adi": "string",
+      "actividades": [
+        { "sesion": 1, "fase_inicio": "string", "fase_desarrollo": "string", "fase_cierre": "string", "preguntas_socraticas": ["string"], "materiales": ["string"], "tiempo": "string", "imprimibles": "string", "adi_especifico": "string" }
+      ],
+      "rubrica": [
+        { "criterio": "string", "bajo": "string", "basico": "string", "alto": "string", "superior": "string", "retroalimentacion": "string" }
+      ],
+      "evaluacion": [
+        { "pregunta": "string", "tipo": "string", "opciones": ["string"], "respuesta_correcta": "string", "justificacion": "string" }
+      ],
+      "recursos": [
+        { "nombre": "string", "descripcion": "string" }
+      ],
+      "productos_asociados": "string",
+      "instrumentos_evaluacion": "string",
+      "bibliografia": "string",
+      "observaciones": "string",
+      "adecuaciones_piar": "string",
+      "taller_imprimible": {
+        "introduccion": "string",
+        "instrucciones": "string",
+        "bitacora_test_inicial": "string",
+        "ejercicios": ["string"],
+        "reto_creativo": "string"
+      },
+      "alertas_generadas": ["string"],
+      "dba_utilizado": "string",
+      "eje_crese_utilizado": "string",
+      "glosario": [{ "termino": "string", "definicion": "string" }],
+      "aula_invertida": "string"
+    }
+  `;
+
+  const prompt = `
+    ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM EDITION)
+    Eres la Autoridad Pedagógica y Curricular Suprema de la I.E. Guaimaral. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
+
+    ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
+    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (Inicio, Desarrollo, Cierre) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
+    2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el Ministerio de Educación Nacional (MEN) de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
+    3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
+       - **Fase de Inicio (Exploración):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
+       - **Fase de Desarrollo (Estructuración y Práctica):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
+       - **Fase de Cierre (Transferencia y Metacognición):** Evaluación formativa, síntesis, socialización y preguntas de autorreflexión.
+       - **Adecuaciones DUA / PIAR:** Es OBLIGATORIO detallar en 'adecuaciones_piar' apoyos visuales/auditivos, flexibilización de tiempos, guía paso a paso y adaptaciones específicas del Plan Individual de Ajustes Razonables (PIAR).
+    4. **MOMENTOS ADI (Corporiedad y Bienestar):** Pausa activa cerebral de 3 a 5 minutos detallada en cada sesión (ej. ejercicios de respiración, gimnasia cerebral, coordinación motriz).
+    5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
+    6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
+    7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
+    8. **RECURSOS DIDÁCTICOS (1 SOLO VIDEO PRINCIPAL + MATERIALES REALES DE AULA):** En 'recursos', incluye EXACTAMENTE 1 video audiovisual principal explicativo de alta calidad adaptado al grado ${input.grado}. Los demás elementos deben ser presentaciones, guías impresas o materiales manipulativos de aula (CERO videos secundarios artificiales o forzados).
+    9. **TALLER DE EXCELENCIA PARA EL ESTUDIANTE (VISTA ESTUDIANTE / GUÍA IMPRIMIBLE DE ALTO IMPACTO):**
+       La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante, extremadamente rica en preguntas potentes, ejercicios contextualizados y retos cognitivos ajustados al grado ("Vista Estudiante"). Debe incluir:
+       - 'introduccion': Texto introductorio motivador y cercano de 2 párrafos que conecte el tema con la vida real del estudiante.
+       - 'instrucciones': Pasos metodológicos claros para el desarrollo individual o colaborativo.
+       - 'bitacora_test_inicial': 2 a 3 preguntas profundas de indagación y pensamiento metacognitivo inicial.
+       - 'ejercicios': Un arreglo de 5 A 6 ACTIVIDADES Y PROBLEMAS COMPLEJOS con subpreguntas detalladas (a, b, c), lecturas cortas de análisis, esquemas de razonamiento, problemas de aplicación real y preguntas de juicio crítico (HOTS).
+       - 'reto_creativo': Un desafío innovador de creación de producto (infografía, propuesta de solución, esquema o modelo).
+    10. **FORMATO JSON PURO:** Devuelve ÚNICAMENTE el objeto JSON estructurado sin ningún texto introductorio ni final.
+
+    ### PARÁMETROS DEL CURRÍCULO
+    - **Grado:** ${input.grado} (${getGradeContext(input.grado)})
+    - **Área:** ${input.area} (${getAreaContext(input.area)})
+    - **Tema:** ${safeTema} | **Cantidad de Sesiones a Desarrollar:** ${input.sesiones}
+    ${pedagogicalInstruction}
+    - **Eje Transversal Socioemocional (CRESE):** ${input.ejeCrese || 'Educación para la paz, empatía y ciudadanía democrática.'}
+    ${refinementInstruction ? `- **COMANDO DE AJUSTE DOCENTE:** ${sanitizeInput(refinementInstruction)}` : ''}
+
+    ${jsonStructureGuidance}
+    Responde ÚNICAMENTE con el JSON.`;
+
+  let lastError: any;
+
+  // Bucle multi-modelo y multi-llave con conmutación por error (Failover)
+  for (const modelName of modelsToTry) {
+    // Ordenar las llaves disponibles según menor cantidad de errores y menos peticiones (balanceo inteligente)
+    const sortedKeys = [...availableKeys].sort((a, b) => {
+      const mA = apiMetrics[a.id] || { requests: 0, errors: 0 };
+      const mB = apiMetrics[b.id] || { requests: 0, errors: 0 };
+      if (mA.errors !== mB.errors) return mA.errors - mB.errors;
+      return mA.requests - mB.requests;
+    });
+
+    for (const keyInfo of sortedKeys) {
+      const key = keyInfo.key;
+      const label = keyInfo.label;
+      const keyId = keyInfo.id;
+
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[🔍 Orquestador DeepSeek] Conectando a api.deepseek.com con llave: ${label} (${keyId}) - Intento ${attempt}/${maxRetries}...`);
+          let text = "";
+          let tokensUsed = 0;
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout para anti-congelamiento
+
+          try {
+            const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${key}`
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.2,
+                max_tokens: 4096
+              })
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+            }
+
+            const data = await res.json();
+            text = data.choices?.[0]?.message?.content || "";
+            const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
+            tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              throw new Error(`Timeout: La API de DeepSeek tardó demasiado en responder.`);
+            }
+            throw fetchError;
+          }
+
+        // 1. Eliminar cualquier bloque de pensamiento <think>...</think> generado por modelos como Qwen / DeepSeek
+        let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+        // 2. Extraer bloques ```json ... ``` si existen
+        const jsonBlockMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (jsonBlockMatch && jsonBlockMatch[1]) {
+          cleanText = jsonBlockMatch[1].trim();
+        }
+
+        // 3. Aislar estrictamente desde el primer '{' hasta el último '}'
+        const firstBrace = cleanText.indexOf('{');
+        const lastBrace = cleanText.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+        }
+        
+        let parsed: any;
+        try {
+          parsed = tryRepairAndParseJson(cleanText);
+        } catch (parseError) {
+          console.error("JSON Inválido devuelto por la IA:", cleanText.substring(0, 500) + '...');
+          throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
+        }
+
+        // =========================================================================
+        // 🛡️ MOTOR DE AUDITORÍA AUTÓNOMA Y CONTROL DE CALIDAD PEDAGÓGICA (5 NIVELES)
+        // =========================================================================
+        if (parsed) {
+          // 1. Auditoría Curricular (DBA vs Orientación Pedagógica MEN)
+          if (!parsed.dba_utilizado || typeof parsed.dba_utilizado !== 'string' || parsed.dba_utilizado.trim().length < 5) {
+            if (hasDBA) {
+              parsed.dba_utilizado = (input.dba && input.dba.trim().length > 5)
+                ? input.dba
+                : `DBA #1 (MEN Colombia - ${input.area} Grado ${input.grado}): Identifica, comprende y analiza los referentes oficiales del MEN en relación con ${safeTema}.`;
+            } else {
+              parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): Promueve el análisis crítico, la indagación y la reflexión en torno a ${safeTema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
+            }
+          } else if (!hasDBA && (parsed.dba_utilizado.toLowerCase().includes("dba oficial") || parsed.dba_utilizado.toLowerCase().startsWith("dba"))) {
+            parsed.dba_utilizado = `Orientación Pedagógica del MEN para ${input.area} (Grado ${input.grado}): ${parsed.dba_utilizado.replace(/^DBA\s*(Oficial\s*del\s*MEN\s*\([^)]*\))?\s*[:-]?\s*/i, "")}`;
+          }
+
+          // 2. Auditoría de Inclusión (DUA / PIAR)
+          if (!parsed.adecuaciones_piar || typeof parsed.adecuaciones_piar !== 'string' || parsed.adecuaciones_piar.trim().length < 15) {
+            parsed.adecuaciones_piar = "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).";
+          }
+
+          // 3. Auditoría del Taller del Estudiante ("Vista Estudiante")
+          if (!parsed.taller_imprimible || typeof parsed.taller_imprimible !== 'object') {
+            parsed.taller_imprimible = {
+              introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades de análisis y producción.`,
+              instrucciones: "Lee con atención cada lectura o situación presentada, resuelve las preguntas con argumentos claros y realiza el reto creativo al finalizar.",
+              bitacora_test_inicial: `1. ¿Qué conocimientos previos tienes sobre ${safeTema} y dónde lo has observado en tu vida cotidiana?\n2. ¿Por qué consideras importante comprender este tema?`,
+              ejercicios: [
+                `Actividad 1 (Análisis de Caso): Lee el escenario sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones fundamentadas.`,
+                `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los componentes esenciales de ${safeTema} y elabora un esquema explicativo.`,
+                `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales aplicando los estándares trabajados en clase sobre ${safeTema}.`,
+                `Actividad 4 (Resolución de Problemas): Analiza el siguiente caso de estudio relacionado con ${safeTema} y explica el procedimiento de solución.`,
+                `Actividad 5 (Síntesis y Juicio Crítico): Redacta una conclusión de 5 líneas evaluando el impacto de ${safeTema} en el entorno escolar y cotidiano.`
+              ],
+              reto_creativo: `Diseña un mapa de ideas innovador o afiche explicativo que resuma los aprendizajes clave logrados sobre ${safeTema}.`
+            };
+          } else {
+            if (!parsed.taller_imprimible.introduccion || parsed.taller_imprimible.introduccion.length < 15) {
+              parsed.taller_imprimible.introduccion = `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${safeTema}. A lo largo de este taller explorarás situaciones reales, resolverás retos conceptuales y pondrás a prueba tus habilidades.`;
+            }
+            if (!parsed.taller_imprimible.instrucciones) {
+              parsed.taller_imprimible.instrucciones = "Lee con atención cada lectura o situación, resuelve las preguntas con argumentos claros y completa cada actividad.";
+            }
+            if (!Array.isArray(parsed.taller_imprimible.ejercicios) || parsed.taller_imprimible.ejercicios.length < 3) {
+              const baseEj = Array.isArray(parsed.taller_imprimible.ejercicios) ? parsed.taller_imprimible.ejercicios : [];
+              parsed.taller_imprimible.ejercicios = [
+                ...baseEj,
+                `Actividad 1 (Análisis de Caso): Analiza la situación sobre ${safeTema} y responde: a) ¿Cuál es la problemática central? b) Propón 2 soluciones.`,
+                `Actividad 2 (Desarrollo Conceptual): Explica con tus palabras los conceptos clave de ${safeTema} con un ejemplo real.`,
+                `Actividad 3 (Aplicación Práctica): Desarrolla los ejercicios procedimentales sobre ${safeTema}.`,
+                `Actividad 4 (Resolución de Problemas): Analiza y resuelve el caso hipotético del tema.`,
+                `Actividad 5 (Síntesis Crítica): Redacta un resumen de 5 líneas con tus conclusiones sobre ${safeTema}.`
+              ].slice(0, 5);
+            }
+          }
+
+          // 4. Auditoría Estructural de Arreglos y Fases de Sesión Ricas
+          parsed.contenidos = Array.isArray(parsed.contenidos) ? parsed.contenidos : [parsed.contenidos || "Contenido Principal"];
+          parsed.actividades = Array.isArray(parsed.actividades) 
+            ? parsed.actividades.map((act: any, aIdx: number) => {
+                const inicio = (act.fase_inicio && act.fase_inicio.trim().length > 25) 
+                  ? act.fase_inicio 
+                  : `El docente inicia la sesión activando saberes previos sobre ${safeTema} mediante una situación problema detonante del entorno cotidiano. Los estudiantes expresan sus hipótesis iniciales y comparten sus experiencias previas en parejas.`;
+
+                const desarrollo = (act.fase_desarrollo && act.fase_desarrollo.trim().length > 35) 
+                  ? act.fase_desarrollo 
+                  : `Fase de estructuración y práctica guiada: El docente expone dialogadamente los principios esenciales de ${safeTema} apoyado en organizadores gráficos y ejemplos concretos. Posteriormente, los estudiantes resuelven ejercicios procedimentales y casos situados en equipos de trabajo colaborativo.`;
+
+                const cierre = (act.fase_cierre && act.fase_cierre.trim().length > 25) 
+                  ? act.fase_cierre 
+                  : `Plenaria y metacognición: Socialización colectiva de resultados, sintetización de las ideas clave sobre ${safeTema} por parte del docente y evaluación formativa reflexiva integrando el eje CRESE.`;
+
+                return {
+                  ...act,
+                  sesion: act.sesion || (aIdx + 1),
+                  fase_inicio: inicio,
+                  fase_desarrollo: desarrollo,
+                  fase_cierre: cierre,
+                  materiales: Array.isArray(act.materiales) ? act.materiales : (act.materiales ? [String(act.materiales)] : ["Tablero, cuadernos de apuntes, guía de trabajo e indicadores visuales"]),
+                  preguntas_socraticas: Array.isArray(act.preguntas_socraticas) && act.preguntas_socraticas.length > 0 
+                    ? act.preguntas_socraticas 
+                    : [
+                        `¿De qué manera el concepto de ${safeTema} se manifiesta en situaciones reales de tu entorno?`,
+                        `¿Qué estrategia procedimental te permitió verificar la validez de tu respuesta?`
+                      ]
+                };
+              })
+            : [];
+          parsed.rubrica = Array.isArray(parsed.rubrica) ? parsed.rubrica : [];
+          // 4. Normalización estricta de Recursos: Exactamente 1 SOLO VIDEO PRINCIPAL + materiales de aula
+          let cleanRecursos: any[] = [];
+
+          if (Array.isArray(parsed.recursos) && parsed.recursos.length > 0) {
+            const videos = parsed.recursos.filter((r: any) => {
+              const n = (r?.nombre || "").toString().toLowerCase();
+              const d = (r?.descripcion || "").toString().toLowerCase();
+              return n.includes("video") || d.includes("video") || n.includes("youtube");
+            });
+
+            const nonVideos = parsed.recursos.filter((r: any) => {
+              const n = (r?.nombre || "").toString().toLowerCase();
+              const d = (r?.descripcion || "").toString().toLowerCase();
+              return !n.includes("video") && !d.includes("video") && !n.includes("youtube");
+            });
+
+            // 1 Solo Video Principal (Único Recurso)
+            if (videos.length > 0) {
+              cleanRecursos.push(videos[0]);
+            } else {
+              cleanRecursos.push({
+                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado})'`,
+                descripcion: `Tutorial audiovisual adaptado para niños y estudiantes de ${input.grado}.`
+              });
+            }
+          } else {
+            cleanRecursos = [
+              {
+                nombre: `Video Explicativo: '${safeTema} - Conceptos Clave (${input.grado})'`,
+                descripcion: `Tutorial audiovisual adaptado para ${input.grado}.`
+              }
+            ];
+          }
+
+          parsed.recursos = cleanRecursos.map((r: any) => ({
+            nombre: (r?.nombre || "Video Explicativo").toString(),
+            descripcion: (r?.descripcion || "Material audiovisual de apoyo pedagógico.").toString().replace(/\s*\(Ver en YouTube:\s*https?:\/\/[^\)]+\)/gi, "").trim()
+          }));
+          parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
+
+          // 5. Auditoría Institucional de Textos
+          parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
+          parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
+          parsed.objetivo_aprendizaje = parsed.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
+          parsed.metodologia = parsed.metodologia || "Aprendizaje Basado en Problemas (ABP) y Diseño Universal para el Aprendizaje (DUA)";
+          parsed.productos_asociados = parsed.productos_asociados || `Bitácora de evidencias y taller completado sobre ${safeTema}`;
+          parsed.instrumentos_evaluacion = parsed.instrumentos_evaluacion || "Rúbrica de desempeño Decreto 1290, observación directa y lista de cotejo";
+          parsed.bibliografia = parsed.bibliografia || "Lineamientos Curriculares y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)";
+          parsed.observaciones = parsed.observaciones || "Planeación alineada con los requerimientos pedagógicos institucionales.";
+          parsed.corporiedad_adi = parsed.corporiedad_adi || "Pausa activa cerebral de 3 a 5 minutos (gimnasia cerebral y respiración guiada).";
+        }
+
+        // Auto-corrección y saneamiento de la Rúbrica (Garantiza los 4 niveles colombianos Decreto 1290)
+        if (parsed && Array.isArray(parsed.rubrica) && parsed.rubrica.length > 0) {
+          parsed.rubrica = parsed.rubrica.map((item: any) => {
+            const crit = item.criterio || "Criterio de Evaluación";
+            const bajoClean = (item.bajo && item.bajo.trim().length > 0) 
+              ? item.bajo 
+              : `Demuestra dificultades iniciales en ${crit.toLowerCase()} y requiere acompañamiento pedagógico continuo.`;
+            return {
+              criterio: crit,
+              bajo: bajoClean,
+              basico: item.basico || "Alcanza de manera básica las competencias y los aprendizajes esperados.",
+              alto: item.alto || item.satisfactorio || "Demuestra un nivel alto de apropiación, análisis y aplicación del criterio.",
+              superior: item.superior || item.avanzado || "Supera las expectativas con un dominio superior, liderazgo y pensamiento crítico.",
+              retroalimentacion: item.retroalimentacion || "Continuar promoviendo el pensamiento crítico y la autonomía."
+            };
+          });
+        }
+
+        console.log(`%c[✨ ÉXITO EXTREMO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
+
+        // Actualizar métricas
+        if (!apiMetrics[keyId]) {
+          apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
+        }
+        apiMetrics[keyId].requests++;
+        apiMetrics[keyId].success++;
+        apiMetrics[keyId].tokens = (apiMetrics[keyId].tokens || 0) + tokensUsed;
+        apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
+        saveMetricsToStorage();
+
+        modelHealthStatus[modelName] = "online";
+        logApiKeyUsage(label, 'success', undefined, modelName, tokensUsed);
+        lastWorkingModel = modelName;
+
+        return parsed as DidacticSequence;
+
+        } catch (err: any) {
+          lastError = err;
+          const errMsg = err?.message || String(err);
+          console.warn(`%c[🔄 Intento Fallido] Falló ${modelName} con llave ${label} (Intento ${attempt}/${maxRetries}). Error: ${errMsg}`, "color: #f59e0b;");
+          
+          // Detección Inteligente: Si es límite de cuota (429), modelo no existe (404/400) o JSON no estructurable,
+          // no tiene sentido esperar en la misma llave. Saltamos inmediatamente a la siguiente opción.
+          const isFatalApiError = errMsg.includes('429') || errMsg.includes('404') || errMsg.includes('400') || errMsg.includes('JSON') || errMsg.includes('SyntaxError');
+          
+          if (attempt === maxRetries || isFatalApiError) {
+            modelHealthStatus[modelName] = "offline";
+            
+            if (!apiMetrics[keyId]) {
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
+            }
+            apiMetrics[keyId].requests++;
+            apiMetrics[keyId].errors++;
+            apiMetrics[keyId].errorLogs.unshift({
+              time: new Date().toLocaleTimeString(),
+              message: errMsg
+            });
+            saveMetricsToStorage();
+
+            logApiKeyUsage(label, 'error', errMsg, modelName);
+            console.warn(`[⚠️ Conmutación Inteligente] Llave ${label} falló o está bloqueada. Saltando a la siguiente llave...`);
+            break; // Rompe el ciclo de reintentos actual y pasa a la siguiente llave
+          } else {
+            // Pausa de 2.5 segundos solo para errores transitorios (ej. JSON malformado temporal, red inestable)
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        }
+      }
+    }
+  }
+
+  console.warn("🛡️ [Escudo de Autoreparación Activo] Generando planeación de respaldo pedagógico institucional...");
+  return buildFailSafeSequence(input);
+};
+
+// Generador de Respaldo Inmune (Escudo 100% Inmune a Fallas de Servidor o Red - Nivel Platinum)
+function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
+  const tema = input.tema || "Contenido Curricular";
+  const grado = input.grado || "General";
+  const area = input.area || "Área Principal";
+  const crese = input.ejeCrese || "Educación Socioemocional y Ciudadanía";
+
+  const areaNormativa = {
+    conDBA: ['MATEMATICAS', 'LENGUAJE', 'CIENCIAS NATURALES', 'CIENCIAS SOCIALES', 'INGLES', 'FISICA', 'ESTADISTICA', 'GEOMETRIA', 'BIOLOGIA', 'QUIMICA'],
+  };
+  const currentArea = area.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a));
+
+  const dbaFormatted = hasDBA
+    ? (input.dba && input.dba.trim().length > 5 ? input.dba : `DBA #2 (MEN Colombia - ${area} Grado ${grado}): Utiliza conceptos, relaciones y procedimientos fundamentales de ${tema} para formular, interpretar y resolver problemas del contexto real.`)
+    : `Orientación Pedagógica del MEN para ${area} (Grado ${grado}): Promueve el análisis crítico, la indagación y la reflexión sistemática sobre ${tema}, de acuerdo con los Lineamientos Curriculares Nacionales del MEN.`;
+
+  return {
+    tema_principal: tema,
+    titulo_secuencia: `Unidad Didáctica de Alto Impacto: ${tema}`,
+    descripcion_secuencia: `Secuencia didáctica integral estructurada para el grado ${grado} en el área de ${area}. Está diseñada bajo la metodología de Aprendizaje Basado en Problemas (ABP) y los principios del Diseño Universal para el Aprendizaje (DUA), garantizando el desarrollo de competencias de alto orden cognitivo (HOTS), el pensamiento crítico y la vivencia transversal de los valores socioemocionales del eje CRESE (${crese}).`,
+    objetivo_aprendizaje: `Desarrollar y consolidar competencias de análisis, interpretación y aplicación práctica en el área de ${area}, capacitando al estudiante de grado ${grado} para resolver situaciones problema complejas relacionadas con ${tema}.`,
+    contenidos: [
+      `Marco conceptual y fundamentos procedimentales de ${tema}`,
+      `Estrategias de indagación, modelado y resolución de problemas situados`,
+      `Transferencia del conocimiento, producción autónoma y trabajo colaborativo`
+    ],
+    competencias_men: `Comprende, analiza y aplica con rigor los postulados esenciales de ${area} según los Estándares Básicos de Competencia del MEN para grado ${grado}, comunicando sus hallazgos de forma asertiva.`,
+    estandar: `Comprende, argumenta y produce saberes científicos y procedimentales sobre ${tema}, demostrando pensamiento crítico, autonomía y responsabilidad ciudadana en su entorno escolar.`,
+    metodologia: "Aprendizaje Basado en Problemas (ABP) y Diseño Universal para el Aprendizaje (DUA)",
+    corporiedad_adi: "Pausas activas cerebrales de 3 a 5 minutos (gimnasia cerebral, coordinación motriz y respiración consciente) ejecutadas antes de la estructuración.",
+    dba_utilizado: dbaFormatted,
+    actividades: [
+      {
+        sesion: 1,
+        fase_inicio: `El docente inicia la sesión dando una cálida bienvenida e introduciendo una situación problema detonante del entorno cotidiano sobre ${tema}. Se realiza una lluvia de ideas guiada utilizando preguntas socráticas para activar saberes previos, permitiendo que los estudiantes expresen sus hipótesis e identifiquen la relevancia práctica de la temática.`,
+        fase_desarrollo: `Durante la fase de estructuración, el docente expone dialogadamente los conceptos clave de ${tema} apoyándose en organizadores gráficos y material didáctico. Posteriormente, los estudiantes se organizan en equipos de trabajo colaborativo para resolver una guía orientada, analizando casos reales, aplicando modelos procedimentales y argumentando cada paso de su resolución.`,
+        fase_cierre: `Para el cierre de la sesión, los grupos socializan sus hallazgos en plenaria. El docente sintetiza las ideas fuerza, institucionaliza los conceptos aprendidos y concluye con una rutina de metacognición donde los estudiantes responden en sus bitácoras: ¿Qué aprendimos hoy sobre ${tema} y cómo lo aplicaremos?`,
+        preguntas_socraticas: [
+          `¿De qué manera el concepto de ${tema} se manifiesta en situaciones reales de tu entorno?`,
+          `¿Qué estrategias procedimentales aplicaste para verificar que tu respuesta sea correcta y coherente?`,
+          `¿Cómo la colaboración en equipo facilitó la resolución del problema planteado?`
+        ],
+        materiales: ["Tablero e indicadores visuales", "Cuaderno de apuntes", "Guía de taller y fotocopias", "Recursos didácticos del aula"],
+        tiempo: "60 minutos",
+        imprimibles: "Guía de exploración y taller práctico de la Sesión 1",
+        adi_especifico: "Pausa activa ADI (3 min): Ejercicios de respiración diafragmática y gimnasia cerebral de coordinación cruzada."
+      },
+      {
+        sesion: 2,
+        fase_inicio: `Se retoman los conceptos fundamentales de la clase anterior mediante un micro-desafío conceptual o acertijo procedimental presentado en el tablero. Los estudiantes discuten brevemente en parejas para justificar su respuesta inicial.`,
+        fase_desarrollo: `Fase de profundización y aplicación práctica: los estudiantes abordan la resolución independiente del Taller del Estudiante sobre ${tema}. El docente realiza monitoreo diferenciado por las mesas (DUA/PIAR), brindando andamiaje pedagógico y aclarando dudas procedimentales a quienes lo requieran.`,
+        fase_cierre: `Evaluación formativa y síntesis: se realiza una coevaluación entre pares con base en la rúbrica del Decreto 1290. Se reflexiona colectivamente sobre los aprendizajes socioemocionales del eje CRESE vivenciados durante la actividad.`,
+        preguntas_socraticas: [
+          `¿Qué obstáculo o dificultad conceptual encontraste al resolver la guía y cómo lo superaste?`,
+          `¿Qué relación encuentras entre ${tema} y los aprendizajes de otras asignaturas?`
+        ],
+        materiales: ["Guía de Taller Imprimible", "Papelógrafos", "Marcadores", "Rúbrica de desempeño"],
+        tiempo: "60 minutos",
+        imprimibles: "Taller del Estudiante completo y matriz de autoevaluación",
+        adi_especifico: "Pausa activa ADI (3 min): Dinámica de estiramiento postural y pausa visual para oxigenar la concentración."
+      }
+    ],
+    rubrica: [
+      {
+        criterio: `Apropiación Conceptual y Procedimental de ${tema}`,
+        bajo: `Muestra dificultades iniciales para identificar y aplicar los conceptos básicos de ${tema}, requiriendo acompañamiento pedagógico continuo.`,
+        basico: `Comprende, describe y aplica de forma satisfactoria los conceptos esenciales de ${tema} en la resolución de ejercicios básicos.`,
+        alto: `Analiza, argumenta y aplica con fluidez y precisión los postulados de ${tema} en la resolución de situaciones problema complejas.`,
+        superior: `Domina con maestría los contenidos de ${tema}, proponen soluciones creativas, lidera reflexiones y orienta con empatía a sus pares.`,
+        retroalimentacion: "Mantener el rigor investigativo y continuar fortaleciendo la autonomía y el liderazgo académico."
+      },
+      {
+        criterio: "Convivencia y Trabajo Colaborativo (Eje CRESE)",
+        bajo: "Muestra reticencia a integrarse en equipos; requiere motivación docente constante para participar activamente.",
+        basico: "Participa de forma receptiva en las actividades grupales y cumple con los compromisos asignados.",
+        alto: "Colabora de manera activa, escucha con respeto las opiniones ajenas y aporta soluciones asertivas en equipo.",
+        superior: "Demuestra liderazgo empático, resuelve conflictos pacíficamente y promueve un clima escolar de excelencia.",
+        retroalimentacion: "Continuar ejercitando la empatía y la comunicación asertiva en proyectos de aula."
+      }
+    ],
+    evaluacion: [
+      {
+        pregunta: `En una situación práctica donde se requiere analizar el comportamiento de ${tema} en ${area}, ¿cuál de las siguientes opciones describe el procedimiento metodológico más riguroso?`,
+        tipo: "Selección Múltiple con Única Respuesta (Tipo ICFES)",
+        opciones: [
+          `A) Identificar las variables involucradas, aplicar la propiedad procedimental de ${tema} y verificar la coherencia del resultado.`,
+          `B) Omitir el análisis de datos e improvisar una solución sin justificación técnica.`,
+          `C) Depender exclusivamente de memorizar fórmulas sin comprender su aplicación en el contexto real.`,
+          `D) Considerar únicamente los resultados intuitivos sin realizar la comprobación correspondiente.`
+        ],
+        respuesta_correcta: "A",
+        justificacion: `La opción A es la correcta porque refleja el ciclo de competencia del MEN: indagación, modelado procedimental y verificación crítica del resultado en ${area}.`
+      }
+    ],
+    recursos: [
+      { 
+        nombre: `Video Explicativo: '${tema} - Conceptos Clave (${grado})'`, 
+        descripcion: `Material audiovisual didáctico adaptado para ${grado}.` 
+      }
+    ],
+    productos_asociados: `Taller del Estudiante completado con bitácora de evidencias sobre ${tema}`,
+    instrumentos_evaluacion: "Rúbrica analítica Decreto 1290, cuestionario tipo Saber-ICFES y matriz de autoevaluación",
+    bibliografia: "Lineamientos Curriculares, Estándares Básicos de Competencia (EBC) y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)",
+    observaciones: "Secuencia didáctica totalmente alineada con el Modelo Pedagógico Institucional de la I.E. Guaimaral.",
+    adecuaciones_piar: "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).",
+    taller_imprimible: {
+      introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${tema}. A lo largo de este taller explorarás situaciones del entorno real, resolverás desafíos procedimentales y pondrás a prueba tus habilidades de pensamiento crítico y creación.`,
+      instrucciones: "Lee detenidamente cada lectura y situación problema, responde las preguntas justificando tus razonamientos y completa el reto creativo al finalizar la guía.",
+      bitacora_test_inicial: `1. ¿Qué saberes previos o ideas iniciales posees sobre ${tema} y en qué situaciones de la vida diaria lo has observado?\n2. ¿Por qué consideras importante dominar este tema en ${area}?`,
+      ejercicios: [
+        `Actividad 1 (Análisis de Caso): Lee con atención la situación planteada sobre ${tema} y responde: a) ¿Cuál es el problema central identificado? b) Formula 2 alternativas de solución justificando tu postura.`,
+        `Actividad 2 (Estructuración Conceptual): Con tus propias palabras, define los 3 componentes esenciales de ${tema} y elabora un esquema o cuadro comparativo explicativo.`,
+        `Actividad 3 (Aplicación Procedimental): Desarrolla los ejercicios prácticos aplicando los algoritmos y reglas trabajadas en clase sobre ${tema}.`,
+        `Actividad 4 (Resolución de Problemas): Un compañero presenta la siguiente hipótesis sobre ${tema}. Analiza si su razonamiento es correcto o erróneo y explica la respuesta con un ejemplo.`,
+        `Actividad 5 (Síntesis y Juicio Crítico): Redacta una conclusión de 5 líneas donde evalúes la importancia de ${tema} en el ámbito personal, académico y social.`
+      ],
+      reto_creativo: `Diseña una infografía, afiche informativo o esquema innovador que resuma de forma gráfica y atractiva las enseñanzas principales de ${tema}.`
+    },
+    alertas_generadas: [],
+    eje_crese_utilizado: crese,
+    glosario: [
+      { termino: tema, definicion: `Concepto pedagógico clave en ${area} para el grado ${grado}.` },
+      { termino: "Metacognición", definicion: "Capacidad de autorreflexión sobre el propio proceso de aprendizaje." }
+    ],
+    aula_invertida: "Revisar previamente el material de lectura sugerido o buscar un ejemplo cotidiano en casa antes de la próxima clase."
+  };
+}
+
+export let lastWorkingModel = "omni-model";
+
+// =========================================================================
+// GENERADOR DE EXÁMENES ICFES (NUEVA FASE 1)
+// =========================================================================
+
+export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, input?: SequenceInput): Promise<EvaluationItem[]> => {
+  const availableKeys = getAvailableKeysInfo();
+
+  if (availableKeys.length === 0) {
+    throw new Error("No se encontraron llaves de API configuradas. Revisa tus variables VITE_API_KEY_1..7 en tu archivo .env.");
+  }
+
+  // Monopolio DeepSeek para el examen
+  const modelsToTry = ["deepseek-chat"];
+  const gradoStr = input?.grado || "";
+  const areaStr = input?.area || "";
+
+  const prompt = `
+  Actúa como un experto en evaluación educativa del ICFES (Colombia).
+  Tu tarea es generar un examen riguroso de 10 preguntas de selección múltiple con única respuesta (opciones A, B, C, D) 
+  basado EXCLUSIVAMENTE en la siguiente planeación de clase y rigurosamente adaptado al grado y nivel cognitivo escolar:
+
+  ${gradoStr ? `Grado Escolar: ${gradoStr} (${getGradeContext(gradoStr)})` : ''}
+  ${areaStr ? `Área del Conocimiento: ${areaStr}` : ''}
+  Tema Principal: ${sequenceData.tema_principal}
+  Objetivo: ${sequenceData.objetivo_aprendizaje}
+  DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
+  Contenidos: ${sequenceData.contenidos.join(', ')}
+
+  REGLAS ESTRICTAS:
+  1. Genera EXACTAMENTE 10 preguntas. Ni una más, ni una menos.
+  2. Las preguntas deben tener diferentes niveles de complejidad:
+     - 3 preguntas de nivel literal (reconocimiento de información).
+     - 4 preguntas de nivel inferencial (análisis, deducción).
+     - 3 preguntas de nivel crítico (toma de postura, evaluación).
+  3. Cada pregunta debe tener 4 opciones (A, B, C, D) donde solo una es correcta.
+  4. La respuesta correcta debe estar explícitamente indicada.
+  5. Debes proporcionar una justificación pedagógica clara de por qué la respuesta correcta es la elegida.
+  6. ADAPTACIÓN COGNITIVA AL GRADO (${gradoStr || 'Nivel Escolar'}): El vocabulario, la extensión de las situaciones problema y la dificultad DEBEN corresponder con exactitud al grado escolar. Para Primaria (Transición a 5°), el lenguaje debe ser claro, comprensible y didáctico para niños, sin abstracciones universitarias.
+
+  DEVUELVE ÚNICAMENTE UN ARRAY DE OBJETOS JSON CON ESTA ESTRUCTURA EXACTA:
+  [
+    {
+      "pregunta": "Texto de la pregunta...",
+      "tipo": "Múltiple Opción",
+      "opciones": ["A. Opción 1", "B. Opción 2", "C. Opción 3", "D. Opción 4"],
+      "respuesta_correcta": "La opción correcta (ej. A)",
+      "justificacion": "Por qué es correcta."
+    }
+  ]
+  `;
+
+  let lastError: any;
+
+  // Bucle multi-modelo y multi-llave con conmutación por error (Failover)
+  for (const modelName of modelsToTry) {
+    const sortedKeys = [...availableKeys].sort((a, b) => {
+      const mA = apiMetrics[a.id] || { requests: 0, errors: 0 };
+      const mB = apiMetrics[b.id] || { requests: 0, errors: 0 };
+      if (mA.errors !== mB.errors) return mA.errors - mB.errors;
+      return mA.requests - mB.requests;
+    });
+
+    for (const keyInfo of sortedKeys) {
+      const key = keyInfo.key;
+      const label = keyInfo.label;
+      const keyId = keyInfo.id;
+
+      const maxRetries = 2;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[🔍 ICFES Generator] Probando modelo ${modelName} con llave: ${label} (${keyId})`);
+          let text = "";
+          let tokensUsed = 0;
+
+          const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${key}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.0,
+              max_tokens: 4000
+            })
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+          }
+
+          const data = await res.json();
+          text = data.choices?.[0]?.message?.content || "";
+          const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
+          tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
+
+          if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
+
+          // Limpieza del JSON
+          let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          const jsonBlockMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+          if (jsonBlockMatch && jsonBlockMatch[1]) {
+            cleanText = jsonBlockMatch[1].trim();
+          }
+
+          const firstBracket = cleanText.indexOf('[');
+          const lastBracket = cleanText.lastIndexOf(']');
+          
+          if (firstBracket !== -1 && lastBracket !== -1) {
+            cleanText = cleanText.substring(firstBracket, lastBracket + 1);
+          }
+          
+          let parsed: any;
+          try {
+            parsed = tryRepairAndParseJson(cleanText);
+          } catch (parseError) {
+            throw new Error("La IA no devolvió un JSON estructurado válido. " + parseError);
+          }
+
+          if (!Array.isArray(parsed) || parsed.length < 5) {
+             throw new Error("El examen devuelto no contiene un array válido o tiene muy pocas preguntas.");
+          }
+
+          console.log(`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
+
+          if (!apiMetrics[keyId]) {
+            apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
+          }
+          apiMetrics[keyId].requests++;
+          apiMetrics[keyId].success++;
+          apiMetrics[keyId].tokens = (apiMetrics[keyId].tokens || 0) + tokensUsed;
+          apiMetrics[keyId].lastUsed = new Date().toLocaleTimeString();
+          saveMetricsToStorage();
+          logApiKeyUsage(label, 'success', undefined, modelName, tokensUsed);
+
+          return parsed as EvaluationItem[];
+
+        } catch (err: any) {
+          lastError = err;
+          const errMsg = err?.message || String(err);
+          
+          const isFatalApiError = errMsg.includes('429') || errMsg.includes('404') || errMsg.includes('400');
+          
+          if (attempt === maxRetries || isFatalApiError) {
+            if (!apiMetrics[keyId]) {
+              apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
+            }
+            apiMetrics[keyId].requests++;
+            apiMetrics[keyId].errors++;
+            apiMetrics[keyId].errorLogs.unshift({
+              time: new Date().toLocaleTimeString(),
+              message: `ICFES Gen Error: ${errMsg}`
+            });
+            saveMetricsToStorage();
+
+            break; 
+          } else {
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+      }
+    }
+  }
+
+  throw new Error(`[ICFES Generator] Falló la generación del examen. Causa: ${lastError?.message || 'Sin respuesta'}`);
+};
