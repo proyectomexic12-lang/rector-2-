@@ -471,8 +471,8 @@ export const authService = {
                 planName = 'Plan Mensual (20 Planeaciones / Mes)';
             }
 
-            // Si el administrador asignó un cupo personalizado explícito (diferente al default básico 6)
-            if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+            // Si el administrador asignó un cupo personalizado explícito que supere la cuota o sea especial (no residuos de cortesía como 3 o 6)
+            if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 6 && user.custom_credits !== 20 && user.custom_credits !== 60 && user.custom_credits !== 120) {
                 maxQuota = user.custom_credits;
                 planName = `Plan Asignado (${maxQuota} Planeaciones)`;
             }
@@ -1400,7 +1400,7 @@ export const authService = {
                             maxQuota = 20;
                         }
 
-                        if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0 && user.custom_credits !== 6) {
+                        if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 6 && user.custom_credits !== 20 && user.custom_credits !== 60 && user.custom_credits !== 120) {
                             maxQuota = user.custom_credits;
                         }
                     } else if (user.custom_credits !== undefined && user.custom_credits !== null && user.custom_credits > 0) {

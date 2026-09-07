@@ -202,7 +202,7 @@ export const UserManagement: React.FC = () => {
                 areas: tempAreas,
                 grados: tempGrados,
                 is_unlimited: tempIsUnlimited,
-                custom_credits: tempCustomCredits,
+                custom_credits: tempIsUnlimited ? (tempSubscriptionMonths >= 6 ? 120 : tempSubscriptionMonths >= 3 ? 60 : 20) : tempCustomCredits,
                 unlimited_start_date: tempIsUnlimited ? (tempStartDate ? tempStartDate.substring(0, 10) + 'T12:00:00' : new Date().toISOString()) : null,
                 monthly_price: tempMonthlyPrice,
                 subscription_months: tempSubscriptionMonths,
@@ -755,6 +755,7 @@ export const UserManagement: React.FC = () => {
                                                                     onClick={() => {
                                                                         setTempSubscriptionMonths(plan.months);
                                                                         setTempMonthlyPrice(plan.price);
+                                                                        setTempCustomCredits(plan.months >= 6 ? 120 : plan.months >= 3 ? 60 : 20);
                                                                     }}
                                                                     className={`p-3 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between ${isSelected
                                                                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20 scale-[1.02]'
