@@ -394,23 +394,19 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         style={tooltipStyle}
         className="w-[92vw] max-w-[450px] bg-white dark:bg-slate-900 border-2 border-violet-500 rounded-3xl shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 flex flex-col gap-4 animate-scale-in pointer-events-auto"
       >
-        {/* Encabezado */}
+        {/* Encabezado sin botón X */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-violet-600 text-white font-black text-xs flex items-center justify-center shadow-md">
               {currentStepIndex + 1}
             </span>
             <span className="text-[11px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400">
-              Paso {currentStepIndex + 1} de {TOUR_STEPS.length}
+              Paso {currentStepIndex + 1} de {TOUR_STEPS.length} · Guía Obligatoria
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Cerrar guía"
-          >
-            <X size={20} />
-          </button>
+          <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            Flujo Guiado
+          </span>
         </div>
 
         {/* Estado especial durante la generación */}
