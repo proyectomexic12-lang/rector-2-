@@ -21,12 +21,29 @@ export interface SyncResponse {
 
 class ApiSyncService {
   private getApiBaseUrl(): string {
-    const envUrl = import.meta.env.VITE_REVISION_API_URL;
-    if (envUrl) {
-      // Si la URL termina en /recibir, quitarlo para obtener la base
-      return envUrl.replace(/\/recibir\/?$/, '');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('guaimaral_revision_api_url') : null;
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/recibir\/?$/, '').replace(/\/$/, '');
     }
-    return 'http://localhost:3001/api/planeaciones';
+
+    const envUrl = import.meta.env.VITE_REVISION_API_URL;
+    if (envUrl && envUrl.trim()) {
+      // Si la URL termina en /recibir, quitarlo para obtener la base
+      return envUrl.trim().replace(/\/recibir\/?$/, '').replace(/\/$/, '');
+    }
+
+    // Endpoint oficial institucional en la nube (Vercel)
+    return 'https://manuel-red.vercel.app/api/planeaciones';
+  }
+
+  public setApiBaseUrl(url: string): void {
+    if (typeof window !== 'undefined') {
+      if (url && url.trim()) {
+        localStorage.setItem('guaimaral_revision_api_url', url.trim());
+      } else {
+        localStorage.removeItem('guaimaral_revision_api_url');
+      }
+    }
   }
 
   /**
