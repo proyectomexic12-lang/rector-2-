@@ -74,6 +74,7 @@ interface GuidedTourProps {
   onClose: () => void;
   hasGeneratedSequence?: boolean;
   isLoading?: boolean;
+  userEmail?: string;
 }
 
 export const GuidedTour: React.FC<GuidedTourProps> = ({
@@ -81,6 +82,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   onClose,
   hasGeneratedSequence = false,
   isLoading = false,
+  userEmail,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -281,6 +283,11 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           <button
             type="button"
             onClick={() => {
+              if (userEmail) {
+                try {
+                  localStorage.setItem(`guaimaral_tour_completed_${userEmail.toLowerCase().trim()}`, 'true');
+                } catch (e) {}
+              }
               setIsCompleted(false);
               onClose();
             }}

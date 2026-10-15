@@ -100,6 +100,15 @@ function App() {
         if (!sessionDismissed && !localDismissed) {
           setShowPolicyModal(true);
         }
+
+        // Auto-iniciar la Guía Obligatoria para cada docente nuevo que ingrese
+        const userEmail = (currentUser.email || '').toLowerCase().trim();
+        const tourDone = localStorage.getItem(`guaimaral_tour_completed_${userEmail}`);
+        if (!tourDone && currentUser.role !== 'admin') {
+          setTimeout(() => {
+            setIsTourActive(true);
+          }, 700);
+        }
       }
     }
   }, [isAuthenticated, currentUser?.email]);
@@ -919,6 +928,7 @@ function App() {
           onClose={() => setIsTourActive(false)}
           hasGeneratedSequence={Boolean(sequence)}
           isLoading={isLoading}
+          userEmail={currentUser?.email}
         />
       </main>
     </div>
