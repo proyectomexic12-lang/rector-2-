@@ -109,6 +109,12 @@ class ApiSyncService {
     };
 
     try {
+      // Guardar respaldo local de seguridad antes del envío para evitar pérdida de datos
+      try {
+        const backupKey = `guaimaral_draft_envio_${Date.now()}`;
+        localStorage.setItem(backupKey, JSON.stringify(payload));
+      } catch (e) {}
+
       const response = await fetch(`${baseUrl}/recibir`, {
         method: 'POST',
         headers: {
@@ -142,6 +148,11 @@ class ApiSyncService {
       };
     } catch (error: any) {
       console.error('❌ Error enviando planeación:', error);
+      if (error?.message === 'Failed to fetch' || error?.name === 'TypeError') {
+        throw new Error(
+          'No se pudo conectar con el servidor receptor de coordinación (puerto 3001 apagado). Por favor inicia el servidor ejecutando: npm run server'
+        );
+      }
       throw new Error(error.message || 'No se pudo conectar con el software receptor.');
     }
   }
