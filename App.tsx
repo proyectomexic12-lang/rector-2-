@@ -915,6 +915,7 @@ function App() {
           isActive={isTourActive}
           onClose={() => setIsTourActive(false)}
           hasGeneratedSequence={Boolean(sequence)}
+          isLoading={isLoading}
         />
       </main>
     </div>
