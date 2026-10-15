@@ -673,6 +673,7 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
               Cancelar
             </button>
             <button
+              id="tour-btn-confirmar-envio"
               type="submit"
               disabled={isSubmitting}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-indigo-600/30 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"

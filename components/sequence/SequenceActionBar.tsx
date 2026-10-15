@@ -135,6 +135,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
           {/* Botón Registrar Planeación en SIGEP */}
           {editableData && (
             <button
+              id="tour-btn-registrar"
               onClick={() => setShowRevisionModal(true)}
               className="px-3.5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95"
               title="Registrar y enviar planeación a SIGEP / Coordinación"

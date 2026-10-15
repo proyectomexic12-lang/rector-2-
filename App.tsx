@@ -10,9 +10,10 @@ import { AdminChatPanel } from './components/AdminChatPanel';
 import { ChatWidget } from './components/ChatWidget';
 import { PolicyAnnouncementModal } from './components/PolicyAnnouncementModal';
 import { SettingsModal } from './components/SettingsModal';
+import { GuidedTour } from './components/GuidedTour';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard, HelpCircle } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
@@ -44,6 +45,7 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [isTourActive, setIsTourActive] = useState(false);
   const [userQuota, setUserQuota] = useState<PlanQuotaInfo | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 
@@ -440,6 +442,21 @@ function App() {
                 <span className="text-xs font-semibold text-slate-200">{currentUser?.name}</span>
                 <span className="text-[9px] text-slate-500 uppercase mt-0.5">{currentUser?.role}</span>
               </div>
+
+              {/* Botón Modo Guiado Tutorial */}
+              <button
+                onClick={() => setIsTourActive(prev => !prev)}
+                className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black transition-all shadow-md shrink-0 ${
+                  isTourActive 
+                    ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse' 
+                    : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500 shadow-indigo-600/30 hover:scale-105 active:scale-95'
+                }`}
+                title="Activar tutorial guiado paso a paso con flechas y spotlight"
+              >
+                <Sparkles size={14} className={isTourActive ? 'animate-spin' : ''} />
+                <span className="hidden md:inline">{isTourActive ? 'Modo Guiado Activo' : '🎓 Guía Docente'}</span>
+                <span className="md:hidden">🎓 Guía</span>
+              </button>
 
               {/* Settings (Engranaje) Button */}
               <button
@@ -876,6 +893,28 @@ function App() {
             }
           }}
           onLogout={handleAppLogout}
+        />
+
+        {/* Botón Flotante Permanente de Ayuda Guiada (Paso a Paso) */}
+        {currentUser && !isTourActive && (
+          <button
+            onClick={() => setIsTourActive(true)}
+            className="fixed bottom-6 left-6 z-[9990] bg-gradient-to-r from-violet-700 via-indigo-600 to-purple-600 hover:from-violet-600 hover:to-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 font-black text-xs border-2 border-white/40 hover:scale-105 active:scale-95 transition-all group animate-bounce no-print"
+            title="Abrir guía con flechas y spotlight para profesores"
+          >
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+              <Sparkles size={14} className="text-yellow-300 animate-spin" />
+            </div>
+            <span className="hidden sm:inline">🎓 ¿Cómo crear y subir planeación? (Guía con Flechas)</span>
+            <span className="sm:hidden">🎓 Guía Paso a Paso</span>
+          </button>
+        )}
+
+        {/* Componente del Tour Guiado Interactivo */}
+        <GuidedTour
+          isActive={isTourActive}
+          onClose={() => setIsTourActive(false)}
+          hasGeneratedSequence={Boolean(sequence)}
         />
       </main>
     </div>
