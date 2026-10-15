@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, ArrowRight, ArrowLeft, X, CheckCircle2, Send, HelpCircle, Eye, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, X, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 
 export interface TourStep {
   id: string;
@@ -7,8 +7,7 @@ export interface TourStep {
   title: string;
   description: string;
   highlightNote?: string;
-  arrowDirection?: 'up' | 'down' | 'left' | 'right';
-  actionPrompt?: string;
+  actionPrompt: string;
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -18,8 +17,7 @@ const TOUR_STEPS: TourStep[] = [
     title: '👨‍🏫 Paso 1: Selecciona el Grado Escolar',
     description: 'Haz clic en esta casilla y elige el grado de tus estudiantes (por ejemplo: Jardín, 1°, 4°, etc.).',
     highlightNote: 'El sistema adaptará el nivel de lenguaje y competencias pedagógicas al grado seleccionado.',
-    arrowDirection: 'down',
-    actionPrompt: 'Elige el grado para continuar'
+    actionPrompt: 'Elige un grado para avanzar al siguiente campo'
   },
   {
     id: 'area',
@@ -27,8 +25,7 @@ const TOUR_STEPS: TourStep[] = [
     title: '📚 Paso 2: Elige el Área del Conocimiento',
     description: 'Selecciona la materia oficial que vas a impartir (Matemáticas, Lengua Castellana, Ciencias, Inglés, etc.).',
     highlightNote: 'Alineado con los estándares curriculares del Ministerio de Educación Nacional (MEN).',
-    arrowDirection: 'down',
-    actionPrompt: 'Selecciona el área de enseñanza'
+    actionPrompt: 'Selecciona el área de enseñanza para avanzar'
   },
   {
     id: 'crese',
@@ -36,25 +33,22 @@ const TOUR_STEPS: TourStep[] = [
     title: '🤝 Paso 3: Elige el Eje Transversal (CRESE)',
     description: 'Selecciona el componente de formación ciudadana, socioemocional y de convivencia escolar.',
     highlightNote: 'La planeación incluirá actividades pedagógicas para cultivar empatía y convivencia en el aula.',
-    arrowDirection: 'down',
-    actionPrompt: 'Selecciona el eje socioemocional'
+    actionPrompt: 'Selecciona el eje socioemocional para avanzar'
   },
   {
     id: 'tema',
     targetSelector: '#tour-tema',
     title: '✏️ Paso 4: Escribe el Tema Principal',
     description: 'Escribe aquí qué tema vas a enseñar en la clase (ejemplo: "Los ecosistemas", "Suma de fracciones", etc.).',
-    highlightNote: 'Sé lo más específico posible. La IA creará una clase completa y dinámica alrededor de este tema.',
-    arrowDirection: 'up',
-    actionPrompt: 'Escribe el nombre del tema'
+    highlightNote: 'Al terminar de escribir el tema, presiona Enter o haz clic fuera del campo para continuar.',
+    actionPrompt: 'Escribe el tema de la clase'
   },
   {
     id: 'btn-generar',
     targetSelector: '#tour-btn-generar',
     title: '⚡ Paso 5: Haz clic en Generar Planeación',
     description: '¡Todo listo! Presiona este botón azul para que la Inteligencia Artificial redacte tu planeación completa.',
-    highlightNote: 'Al darle clic, espera unos segundos a que la IA ensamble y redacte los 4 momentos pedagógicos, DUA y evaluación.',
-    arrowDirection: 'left',
+    highlightNote: 'Al darle clic, espera unos segundos a que la IA ensamble los 4 momentos pedagógicos, DUA y evaluación.',
     actionPrompt: '¡Presiona el botón Generar Planeación!'
   },
   {
@@ -63,7 +57,6 @@ const TOUR_STEPS: TourStep[] = [
     title: '🚀 Botón Morado: Registrar Planeación',
     description: '¡Excelente, profesor! Ahora ya NO vas a tener que ir a la otra aplicación para montar tus clases. Desde este mismo botón morado puedes montar y sincronizar tus planeaciones al servidor institucional sin salir de aquí.',
     highlightNote: 'Al hacer clic aquí, se abrirá la misma ventana oficial con los mismos datos para subirla de una vez.',
-    arrowDirection: 'down',
     actionPrompt: 'Haz clic en el botón morado Registrar Planeación'
   },
   {
@@ -72,7 +65,6 @@ const TOUR_STEPS: TourStep[] = [
     title: '☁️ Confirmar y Subir al Servidor Institucional',
     description: '¡Aquí tienes la misma formulación oficial para subir tu planeación! Tu área, grado y tema ya se colocaron solos. Solo revisa la semana lectiva y presiona este botón morado para subir la planeación que elijas.',
     highlightNote: 'Al presionar este botón, tu planeación se subirá automáticamente a la otra plataforma (manuel-red.vercel.app) donde se alojan todas las planeaciones oficiales.',
-    arrowDirection: 'up',
     actionPrompt: '¡Presiona Confirmar y Enviar a Revisión!'
   }
 ];
@@ -92,34 +84,124 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [canAdvanceTema, setCanAdvanceTema] = useState<boolean>(false);
 
-  // Auto-detección inteligente del estado de la pantalla
+  // Auto-detección inteligente del flujo y avance obligatorio por interacción real
   useEffect(() => {
     if (!isActive) return;
 
+    // Detectar elementos en tiempo real
     const checkState = () => {
-      // 1. Si el modal de confirmación está abierto en el DOM, ir al paso 7
+      // 1. Si el modal de confirmación está abierto en el DOM, ir estrictamente al paso 7
       const modalBtn = document.querySelector('#tour-btn-confirmar-envio');
       if (modalBtn) {
         if (currentStepIndex !== 6) setCurrentStepIndex(6);
         return;
       }
 
-      // 2. Si ya hay planeación generada en pantalla y el modal no está abierto, ir al paso 6
+      // 2. Si ya hay planeación generada y el modal no está abierto, ir al paso 6 (Botón morado)
       const regBtn = document.querySelector('#tour-btn-registrar');
       if (regBtn && hasGeneratedSequence) {
         if (currentStepIndex < 5) setCurrentStepIndex(5);
+        return;
+      }
+
+      // 3. Verificar si el tema ya tiene contenido para habilitar el avance al botón generar
+      const temaInput = document.querySelector('#tour-tema') as HTMLInputElement | null;
+      if (temaInput && temaInput.value.trim().length >= 4) {
+        setCanAdvanceTema(true);
+      } else {
+        setCanAdvanceTema(false);
       }
     };
 
     checkState();
-    const interval = setInterval(checkState, 350);
+    const interval = setInterval(checkState, 300);
     return () => clearInterval(interval);
   }, [hasGeneratedSequence, isActive, currentStepIndex]);
 
+  // Event Listeners en los campos para obligar el flujo real:
+  // Al elegir grado -> salta a área
+  // Al elegir área -> salta a CRESE
+  // Al elegir CRESE -> salta a tema
+  // Al escribir tema (Enter o Blur) -> salta a botón generar
+  useEffect(() => {
+    if (!isActive) return;
+
+    const gradoEl = document.querySelector('#tour-grado') as HTMLSelectElement | null;
+    const areaEl = document.querySelector('#tour-area') as HTMLSelectElement | null;
+    const creseEl = document.querySelector('#tour-crese') as HTMLSelectElement | null;
+    const temaEl = document.querySelector('#tour-tema') as HTMLInputElement | null;
+
+    const handleGradoChange = (e: Event) => {
+      const val = (e.target as HTMLSelectElement).value;
+      if (val) {
+        setTimeout(() => setCurrentStepIndex(1), 200);
+      }
+    };
+
+    const handleAreaChange = (e: Event) => {
+      const val = (e.target as HTMLSelectElement).value;
+      if (val) {
+        setTimeout(() => setCurrentStepIndex(2), 200);
+      }
+    };
+
+    const handleCreseChange = (e: Event) => {
+      const val = (e.target as HTMLSelectElement).value;
+      if (val) {
+        setTimeout(() => setCurrentStepIndex(3), 200);
+      }
+    };
+
+    const handleTemaInput = (e: Event) => {
+      const val = (e.target as HTMLInputElement).value;
+      if (val.trim().length >= 4) {
+        setCanAdvanceTema(true);
+      }
+    };
+
+    const handleTemaKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        const val = (e.target as HTMLInputElement).value;
+        if (val.trim().length >= 4) {
+          e.preventDefault();
+          setTimeout(() => setCurrentStepIndex(4), 150);
+        }
+      }
+    };
+
+    const handleTemaBlur = (e: Event) => {
+      const val = (e.target as HTMLInputElement).value;
+      if (val.trim().length >= 4 && currentStepIndex === 3) {
+        setTimeout(() => setCurrentStepIndex(4), 250);
+      }
+    };
+
+    if (gradoEl) gradoEl.addEventListener('change', handleGradoChange);
+    if (areaEl) areaEl.addEventListener('change', handleAreaChange);
+    if (creseEl) creseEl.addEventListener('change', handleCreseChange);
+    if (temaEl) {
+      temaEl.addEventListener('input', handleTemaInput);
+      temaEl.addEventListener('keydown', handleTemaKeyDown);
+      temaEl.addEventListener('blur', handleTemaBlur);
+    }
+
+    return () => {
+      if (gradoEl) gradoEl.removeEventListener('change', handleGradoChange);
+      if (areaEl) areaEl.removeEventListener('change', handleAreaChange);
+      if (creseEl) creseEl.removeEventListener('change', handleCreseChange);
+      if (temaEl) {
+        temaEl.removeEventListener('input', handleTemaInput);
+        temaEl.removeEventListener('keydown', handleTemaKeyDown);
+        temaEl.removeEventListener('blur', handleTemaBlur);
+      }
+    };
+  }, [isActive, currentStepIndex]);
+
   const currentStep = TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0];
 
-  // Calcular y actualizar la posición del elemento objetivo
+  // Medir posición exacta del elemento objetivo
   const updateTargetPosition = () => {
     if (!isActive || !currentStep) return;
 
@@ -129,7 +211,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
       setTimeout(() => {
         const rect = el.getBoundingClientRect();
         setTargetRect(rect);
-      }, 120);
+      }, 100);
     } else {
       setTargetRect(null);
     }
@@ -150,7 +232,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
     window.addEventListener('resize', handleResizeOrScroll);
     window.addEventListener('scroll', handleResizeOrScroll, true);
 
-    const interval = setInterval(handleResizeOrScroll, 300);
+    const interval = setInterval(handleResizeOrScroll, 250);
 
     return () => {
       window.removeEventListener('resize', handleResizeOrScroll);
@@ -160,20 +242,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   }, [currentStepIndex, isActive, currentStep?.targetSelector]);
 
   if (!isActive) return null;
-
-  const handleNext = () => {
-    if (currentStepIndex < TOUR_STEPS.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
-    } else {
-      onClose();
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(prev => prev - 1);
-    }
-  };
 
   const padding = 10;
   const isTargetVisible = Boolean(targetRect && targetRect.width > 0 && targetRect.height > 0);
@@ -242,7 +310,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         />
       </svg>
 
-      {/* 2. Bloqueadores invisibles de clic alrededor del target (para que solo se pueda interactuar con el elemento activo) */}
+      {/* 2. Bloqueadores invisibles alrededor del target: OBLIGA A INTERACTUAR SOLO CON EL ELEMENTO ACTIVO */}
       {isTargetVisible && targetRect && (
         <>
           {/* Bloqueador Superior */}
@@ -313,7 +381,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           className="pointer-events-none animate-bounce flex flex-col items-center justify-center"
         >
           <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-[11px] uppercase tracking-wider px-3.5 py-1 rounded-full shadow-2xl flex items-center gap-1.5 border-2 border-white">
-            <span>👇 {currentStep.actionPrompt || 'Haz clic aquí'}</span>
+            <span>👇 {currentStep.actionPrompt}</span>
           </div>
           <svg className="w-8 h-8 text-violet-500 filter drop-shadow-lg -mt-1" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 21l-9-9h6V3h6v9h6l-9 9z" />
@@ -321,7 +389,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         </div>
       )}
 
-      {/* 5. Tarjeta Explicativa Flotante con Letra Grande */}
+      {/* 5. Tarjeta Explicativa Flotante con Letra Grande (SIN BOTONES SIGUIENTE/ANTERIOR: OBLIGA EL FLUJO REAL) */}
       <div
         style={tooltipStyle}
         className="w-[92vw] max-w-[450px] bg-white dark:bg-slate-900 border-2 border-violet-500 rounded-3xl shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 flex flex-col gap-4 animate-scale-in pointer-events-auto"
@@ -333,13 +401,13 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               {currentStepIndex + 1}
             </span>
             <span className="text-[11px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400">
-              Guía Docente ({currentStepIndex + 1} de {TOUR_STEPS.length})
+              Paso {currentStepIndex + 1} de {TOUR_STEPS.length}
             </span>
           </div>
           <button
             onClick={onClose}
             className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Cerrar guía interactiva"
+            title="Cerrar guía"
           >
             <X size={20} />
           </button>
@@ -378,40 +446,24 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           </>
         )}
 
-        {/* Controles de Navegación */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 mt-1">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={currentStepIndex === 0}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1.5"
-          >
-            <ArrowLeft size={14} /> Anterior
-          </button>
-
-          <div className="flex items-center gap-1">
-            {TOUR_STEPS.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentStepIndex(idx)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  idx === currentStepIndex
-                    ? 'w-7 bg-violet-600 dark:bg-violet-400'
-                    : 'bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
-                }`}
-                title={`Ir al paso ${idx + 1}`}
-              />
-            ))}
+        {/* Pie de tarjeta: Indicador de acción obligatoria en pantalla */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300 font-bold text-xs">
+            <span className="w-2 h-2 rounded-full bg-violet-600 animate-ping" />
+            <span>Selecciona o interactúa en pantalla</span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
-          >
-            <span>{currentStepIndex === TOUR_STEPS.length - 1 ? '¡Finalizar!' : 'Siguiente'}</span>
-            {currentStepIndex === TOUR_STEPS.length - 1 ? <CheckCircle2 size={14} /> : <ArrowRight size={14} />}
-          </button>
+          {/* Botón contextual de avance para el campo Tema si ya escribió */}
+          {currentStepIndex === 3 && canAdvanceTema && (
+            <button
+              type="button"
+              onClick={() => setCurrentStepIndex(4)}
+              className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse"
+            >
+              <span>Ir a Generar</span>
+              <ArrowRight size={13} />
+            </button>
+          )}
         </div>
       </div>
     </div>
