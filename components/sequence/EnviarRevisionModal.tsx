@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, AlertCircle, RefreshCw } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Send, AlertCircle, RefreshCw, Sparkles, BookOpen, GraduationCap, Clock } from 'lucide-react';
 import { DidacticSequence, SequenceInput } from '../../types';
 import { authService } from '../../services/authService';
+import { apiSyncService, RevisionMetadata } from '../../services/apiSyncService';
+
 
 interface EnviarRevisionModalProps {
   isOpen: boolean;
@@ -101,6 +104,52 @@ function mapToSigepArea(aStr?: string): string {
   return aStr;
 }
 
+function detectArea(input?: SequenceInput, secuencia?: DidacticSequence): string {
+  const direct = input?.area || (secuencia as any)?.area || (secuencia as any)?.asignatura || '';
+  if (direct && direct.trim()) return mapToSigepArea(direct.trim());
+
+  const comp = (secuencia?.competencias_men || '').toLowerCase();
+  const tema = (secuencia?.tema_principal || secuencia?.titulo_secuencia || '').toLowerCase();
+  const full = `${comp} ${tema}`;
+
+  if (full.includes('lectura') || full.includes('crítica') || full.includes('critica')) return 'Lectura Crítica';
+  if (full.includes('matemática') || full.includes('algebra') || full.includes('geometría') || full.includes('estadística')) return 'Matemáticas';
+  if (full.includes('lengua') || full.includes('castellana') || full.includes('español') || full.includes('literatura')) return 'Humanidades y Lengua Castellana';
+  if (full.includes('inglés') || full.includes('ingles') || full.includes('english')) return 'Idioma Extranjero (Inglés)';
+  if (full.includes('naturales') || full.includes('ambiental') || full.includes('ecosistema') || full.includes('biología') || full.includes('celular')) return 'Ciencias Naturales y Ed. Ambiental';
+  if (full.includes('sociales') || full.includes('historia') || full.includes('geografía') || full.includes('democracia')) return 'Ciencias Sociales, Historia y Geografía';
+  if (full.includes('paz') || full.includes('constitución') || full.includes('ciudadanía')) return 'Constitución Política y Cátedra de la Paz';
+  if (full.includes('tecnología') || full.includes('informática') || full.includes('computación') || full.includes('programación')) return 'Tecnología e Informática';
+  if (full.includes('física') || full.includes('newton') || full.includes('fuerza') || full.includes('energía')) return 'Física';
+  if (full.includes('química') || full.includes('átomo') || full.includes('reacciones')) return 'Química';
+  if (full.includes('filosofía') || full.includes('ética') || full.includes('moral')) return 'Filosofía';
+  if (full.includes('artística') || full.includes('dibujo') || full.includes('teatro') || full.includes('música')) return 'Educación Artística y Cultural';
+  if (full.includes('deporte') || full.includes('educación física') || full.includes('motricidad')) return 'Educación Física, Recreación y Deportes';
+
+  return direct || 'Lectura Crítica';
+}
+
+function detectGrado(input?: SequenceInput, secuencia?: DidacticSequence): string {
+  const direct = input?.grado || (secuencia as any)?.grado || '';
+  if (direct && direct.trim()) return mapToSigepGrade(direct.trim());
+
+  const text = `${secuencia?.titulo_secuencia || ''} ${secuencia?.tema_principal || ''}`.toLowerCase();
+  if (text.includes('transición') || text.includes('transicion')) return 'Transición';
+  if (text.includes('1°') || text.includes('primero') || text.includes('grado 1')) return '1°';
+  if (text.includes('2°') || text.includes('segundo') || text.includes('grado 2')) return '2°';
+  if (text.includes('3°') || text.includes('tercero') || text.includes('grado 3')) return '3°';
+  if (text.includes('4°') || text.includes('cuarto') || text.includes('grado 4')) return '4°';
+  if (text.includes('5°') || text.includes('quinto') || text.includes('grado 5')) return '5°';
+  if (text.includes('6°') || text.includes('sexto') || text.includes('grado 6')) return '6°';
+  if (text.includes('7°') || text.includes('séptimo') || text.includes('septimo')) return '7°';
+  if (text.includes('8°') || text.includes('octavo')) return '8°';
+  if (text.includes('9°') || text.includes('noveno')) return '9°';
+  if (text.includes('10°') || text.includes('décimo') || text.includes('decimo')) return '10°';
+  if (text.includes('11°') || text.includes('undécimo') || text.includes('once')) return '11°';
+
+  return '1°';
+}
+
 function getMondayOfWeek(week: number, year: number = new Date().getFullYear()): string {
   const simple = new Date(year, 0, 1 + (week - 1) * 7);
   const dow = simple.getDay();
@@ -114,6 +163,16 @@ function getMondayOfWeek(week: number, year: number = new Date().getFullYear()):
   const m = String(ISOweekStart.getMonth() + 1).padStart(2, '0');
   const d = String(ISOweekStart.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function getSundayOfWeek(week: number, year: number = new Date().getFullYear()): string {
+  const monStr = getMondayOfWeek(week, year);
+  const parts = monStr.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2] + 6);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getColombiaDate(): Date {
@@ -200,7 +259,7 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
   const [misAreas, setMisAreas] = useState<string[]>([]);
   const [currentAcademicWeek, setCurrentAcademicWeek] = useState<number>(initialIsoWeek);
   const [maxWeekLimit, setMaxWeekLimit] = useState<number>(initialMaxWeek);
-  const [fechaMaxima, setFechaMaxima] = useState<string>(getMondayOfWeek(initialMaxWeek, nowInit.getFullYear()));
+  const [fechaMaxima, setFechaMaxima] = useState<string>(getSundayOfWeek(initialMaxWeek, nowInit.getFullYear()));
   const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(false);
 
   // Estados del Formulario
@@ -250,18 +309,18 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
     const currentUser = authService.getCurrentUser();
     const email = currentUser?.email || '';
 
-    // Mapeo inicial
-    const initArea = mapToSigepArea(input?.area) || input?.area || '';
-    const initGrado = mapToSigepGrade(input?.grado) || input?.grado || '';
-    const initSesiones = Math.min(5, Math.max(1, input?.sesiones || (secuencia.actividades ? secuencia.actividades.length : 1)));
+    // Mapeo inicial inteligente a partir de la planeación activa
+    const initArea = detectArea(input, secuencia);
+    const initGrado = detectGrado(input, secuencia);
+    const initSesiones = Math.min(5, Math.max(1, input?.sesiones || (secuencia?.actividades ? secuencia.actividades.length : 1)));
 
     const now = getColombiaDate();
     const currIsoWeek = weekNumber(now);
     const maxAllowed = getMaxAllowedWeek(now);
     const dynamicWeeks = generateDynamicWeeks(currIsoWeek, maxAllowed, now.getFullYear());
 
-    setArea(initArea);
-    setGrado(initGrado);
+    if (initArea) setArea(initArea);
+    if (initGrado) setGrado(initGrado);
     setDuracionClases(initSesiones);
     setErrorMessage(null);
     setCurrentAcademicWeek(currIsoWeek);
@@ -269,19 +328,18 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
     setSemanasList(dynamicWeeks);
     setSemana(maxAllowed);
     setFechaAplicacion(getMondayOfWeek(maxAllowed, now.getFullYear()));
-    setFechaMaxima(getMondayOfWeek(maxAllowed, now.getFullYear()));
+    setFechaMaxima(getSundayOfWeek(maxAllowed, now.getFullYear()));
 
-    // Consulta en vivo
+    // Consulta en vivo mediante apiSyncService
     setIsLoadingConfig(true);
-    const configUrl = (import.meta.env.VITE_REVISION_API_URL || 'http://localhost:3001/api/planeaciones/recibir')
-      .replace('/recibir', '/config-entrega');
-
-    fetch(`${configUrl}?docente_email=${encodeURIComponent(email)}`)
-      .then(res => res.json())
+    apiSyncService.getConfigEntrega(email)
       .then(data => {
         if (data) {
           if (data.semanas && data.semanas.length > 0) {
             setSemanasList(data.semanas);
+          }
+          if (data.semana_maxima_permitida) {
+            setMaxWeekLimit(data.semana_maxima_permitida);
           }
           if (data.areas) setAreasList(data.areas);
           if (data.grados) setGradosList(data.grados);
@@ -387,17 +445,19 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
     }
   };
 
-  return (
+  if (!isOpen) return null;
+
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[9999999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-[540px] overflow-hidden flex flex-col max-h-[94vh] transition-all"
+        className="relative my-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-[620px] overflow-hidden flex flex-col max-h-[92vh] transition-all transform animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/40">
           <div>
             <h3 className="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
               <span>Registrar Planeación</span>
@@ -429,6 +489,37 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
           </div>
         )}
 
+        {/* Tarjeta de Resumen Automático de la Planeación Activa */}
+        <div className="px-6 pt-3">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-sky-500/10 border border-violet-200/80 dark:border-violet-800/50 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                  <Sparkles size={12} className="text-violet-600 dark:text-violet-400" />
+                  <span>Datos Detectados Automáticamente</span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate mt-1">
+                  {secuencia?.titulo_secuencia || secuencia?.tema_principal || input?.tema || 'Planeación Pedagógica Activa'}
+                </h4>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                    <BookOpen size={11} /> {area || 'Área Detectada'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300">
+                    <GraduationCap size={11} /> {gradosList.find(g => g.value === grado)?.label || grado || 'Grado Detectado'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
+                    <Clock size={11} /> {duracionClases} {duracionClases === 1 ? 'Clase' : 'Clases'}
+                  </span>
+                </div>
+              </div>
+              <span className="shrink-0 text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                ✓ Precargado
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1 text-slate-800 dark:text-slate-100">
           {errorMessage && (
@@ -450,6 +541,9 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none transition-all"
             >
               <option value="">Seleccione el área o asignatura...</option>
+              {area && !areasList.includes(area) && !misAreas.includes(area) && (
+                <option value={area}>{area} (Detectada de la planeación)</option>
+              )}
               {misAreas.length > 0 && (
                 <optgroup label="⭐ Mis Asignaturas Asignadas">
                   {misAreas.map((a) => (
@@ -477,6 +571,9 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none transition-all"
             >
               <option value="">Seleccione el grado académico...</option>
+              {grado && !gradosList.some(g => g.value === grado) && (
+                <option value={grado}>{grado} (Detectado de la planeación)</option>
+              )}
               {gradosList.map((g) => (
                 <option key={g.value} value={g.value}>{g.label}</option>
               ))}
@@ -588,4 +685,6 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

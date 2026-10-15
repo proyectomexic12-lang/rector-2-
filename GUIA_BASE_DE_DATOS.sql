@@ -37,6 +37,21 @@ create table if not exists app_users (
   created_at timestamptz default now()
 );
 
+-- ✅ PASO 2.5: CREAR TABLA DE SESIONES ACTIVAS (Control de acceso único)
+create table if not exists active_sessions (
+  id uuid default gen_random_uuid() primary key,
+  email text unique not null,
+  session_token text not null,
+  device_id text,
+  user_agent text,
+  updated_at timestamptz default now()
+);
+
+alter table active_sessions enable row level security;
+drop policy if exists "guaimaral_active_sessions_all" on active_sessions;
+create policy "guaimaral_active_sessions_all" on active_sessions for all using (true) with check (true);
+
+
 -- ✅ PASO 3: TABLA DE REGISTRO DE USO (USAGE LOGS)
 create table if not exists usage_logs (
   id uuid default gen_random_uuid() primary key,
