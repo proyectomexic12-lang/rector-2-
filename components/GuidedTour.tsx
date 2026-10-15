@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, X, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 
 export interface TourStep {
   id: string;
@@ -85,28 +85,50 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [canAdvanceTema, setCanAdvanceTema] = useState<boolean>(false);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [completionMessage, setCompletionMessage] = useState<string>('');
+
+  // Escuchar evento de envío exitoso desde cualquier parte de la app
+  useEffect(() => {
+    const handleSuccess = (e: any) => {
+      setIsCompleted(true);
+      if (e?.detail?.mensaje) {
+        setCompletionMessage(e.detail.mensaje);
+      }
+    };
+
+    window.addEventListener('guaimaral_tour_completed', handleSuccess);
+    return () => window.removeEventListener('guaimaral_tour_completed', handleSuccess);
+  }, []);
 
   // Auto-detección inteligente del flujo y avance obligatorio por interacción real
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isCompleted) return;
 
-    // Detectar elementos en tiempo real
     const checkState = () => {
-      // 1. Si el modal de confirmación está abierto en el DOM, ir estrictamente al paso 7
       const modalBtn = document.querySelector('#tour-btn-confirmar-envio');
+      
+      // 1. Si el modal de confirmación está abierto en el DOM, ir estrictamente al paso 7
       if (modalBtn) {
         if (currentStepIndex !== 6) setCurrentStepIndex(6);
         return;
       }
 
-      // 2. Si ya hay planeación generada y el modal no está abierto, ir al paso 6 (Botón morado)
+      // 2. Si estábamos en el paso 7 y el modal se cerró:
+      // Si se cerró sin evento de éxito previo, volver al paso 6 para que la pantalla no se quede trabada
+      if (currentStepIndex === 6 && !modalBtn) {
+        setCurrentStepIndex(5);
+        return;
+      }
+
+      // 3. Si ya hay planeación generada y el modal no está abierto, ir al paso 6 (Botón morado)
       const regBtn = document.querySelector('#tour-btn-registrar');
       if (regBtn && hasGeneratedSequence) {
         if (currentStepIndex < 5) setCurrentStepIndex(5);
         return;
       }
 
-      // 3. Verificar si el tema ya tiene contenido para habilitar el avance al botón generar
+      // 4. Verificar si el tema ya tiene contenido para habilitar el avance al botón generar
       const temaInput = document.querySelector('#tour-tema') as HTMLInputElement | null;
       if (temaInput && temaInput.value.trim().length >= 4) {
         setCanAdvanceTema(true);
@@ -116,17 +138,13 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
     };
 
     checkState();
-    const interval = setInterval(checkState, 300);
+    const interval = setInterval(checkState, 250);
     return () => clearInterval(interval);
-  }, [hasGeneratedSequence, isActive, currentStepIndex]);
+  }, [hasGeneratedSequence, isActive, currentStepIndex, isCompleted]);
 
-  // Event Listeners en los campos para obligar el flujo real:
-  // Al elegir grado -> salta a área
-  // Al elegir área -> salta a CRESE
-  // Al elegir CRESE -> salta a tema
-  // Al escribir tema (Enter o Blur) -> salta a botón generar
+  // Event Listeners en los campos para obligar el flujo real
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isCompleted) return;
 
     const gradoEl = document.querySelector('#tour-grado') as HTMLSelectElement | null;
     const areaEl = document.querySelector('#tour-area') as HTMLSelectElement | null;
@@ -135,30 +153,22 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 
     const handleGradoChange = (e: Event) => {
       const val = (e.target as HTMLSelectElement).value;
-      if (val) {
-        setTimeout(() => setCurrentStepIndex(1), 200);
-      }
+      if (val) setTimeout(() => setCurrentStepIndex(1), 200);
     };
 
     const handleAreaChange = (e: Event) => {
       const val = (e.target as HTMLSelectElement).value;
-      if (val) {
-        setTimeout(() => setCurrentStepIndex(2), 200);
-      }
+      if (val) setTimeout(() => setCurrentStepIndex(2), 200);
     };
 
     const handleCreseChange = (e: Event) => {
       const val = (e.target as HTMLSelectElement).value;
-      if (val) {
-        setTimeout(() => setCurrentStepIndex(3), 200);
-      }
+      if (val) setTimeout(() => setCurrentStepIndex(3), 200);
     };
 
     const handleTemaInput = (e: Event) => {
       const val = (e.target as HTMLInputElement).value;
-      if (val.trim().length >= 4) {
-        setCanAdvanceTema(true);
-      }
+      if (val.trim().length >= 4) setCanAdvanceTema(true);
     };
 
     const handleTemaKeyDown = (e: KeyboardEvent) => {
@@ -197,13 +207,13 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         temaEl.removeEventListener('blur', handleTemaBlur);
       }
     };
-  }, [isActive, currentStepIndex]);
+  }, [isActive, currentStepIndex, isCompleted]);
 
   const currentStep = TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0];
 
   // Medir posición exacta del elemento objetivo
   const updateTargetPosition = () => {
-    if (!isActive || !currentStep) return;
+    if (!isActive || !currentStep || isCompleted) return;
 
     const el = document.querySelector(currentStep.targetSelector);
     if (el) {
@@ -218,7 +228,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   };
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isCompleted) return;
 
     updateTargetPosition();
 
@@ -239,9 +249,50 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
       window.removeEventListener('scroll', handleResizeOrScroll, true);
       clearInterval(interval);
     };
-  }, [currentStepIndex, isActive, currentStep?.targetSelector]);
+  }, [currentStepIndex, isActive, currentStep?.targetSelector, isCompleted]);
 
   if (!isActive) return null;
+
+  // PANTALLA FINAL DE CELEBRACIÓN / ÉXITO AL ENVIAR LA PLANEACIÓN
+  if (isCompleted) {
+    return (
+      <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in pointer-events-auto">
+        <div className="w-[92vw] max-w-[480px] bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-3xl shadow-2xl p-7 text-center flex flex-col items-center gap-4 animate-scale-in">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border-2 border-emerald-500 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xl animate-bounce">
+            <CheckCircle2 size={36} />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+            🎉 Entrega Institucional Exitosa
+          </span>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+            ¡Planeación Radicada con Éxito!
+          </h3>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+            Profesor, tu planeación ya fue enviada y quedó alojada directamente en la plataforma oficial (<span className="font-bold text-violet-600 dark:text-violet-400">manuel-red.vercel.app</span>).
+          </p>
+          {completionMessage && (
+            <div className="w-full p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+              {completionMessage}
+            </div>
+          )}
+          <div className="w-full p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+            ✓ Quedó registrada con fecha y hora oficial para coordinación sin necesidad de abrir la otra aplicación.
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsCompleted(false);
+              onClose();
+            }}
+            className="w-full mt-2 py-3 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 size={18} />
+            <span>Finalizar y Continuar</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const padding = 10;
   const isTargetVisible = Boolean(targetRect && targetRect.width > 0 && targetRect.height > 0);
@@ -310,10 +361,9 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         />
       </svg>
 
-      {/* 2. Bloqueadores invisibles alrededor del target: OBLIGA A INTERACTUAR SOLO CON EL ELEMENTO ACTIVO */}
+      {/* 2. Bloqueadores invisibles alrededor del target */}
       {isTargetVisible && targetRect && (
         <>
-          {/* Bloqueador Superior */}
           <div
             className="fixed pointer-events-auto cursor-not-allowed"
             style={{
@@ -324,7 +374,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               zIndex: 9999982,
             }}
           />
-          {/* Bloqueador Inferior */}
           <div
             className="fixed pointer-events-auto cursor-not-allowed"
             style={{
@@ -335,7 +384,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               zIndex: 9999982,
             }}
           />
-          {/* Bloqueador Izquierdo */}
           <div
             className="fixed pointer-events-auto cursor-not-allowed"
             style={{
@@ -346,7 +394,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               zIndex: 9999982,
             }}
           />
-          {/* Bloqueador Derecho */}
           <div
             className="fixed pointer-events-auto cursor-not-allowed"
             style={{
@@ -389,7 +436,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         </div>
       )}
 
-      {/* 5. Tarjeta Explicativa Flotante con Letra Grande (SIN BOTONES SIGUIENTE/ANTERIOR: OBLIGA EL FLUJO REAL) */}
+      {/* 5. Tarjeta Explicativa Flotante con Letra Grande */}
       <div
         style={tooltipStyle}
         className="w-[92vw] max-w-[450px] bg-white dark:bg-slate-900 border-2 border-violet-500 rounded-3xl shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 flex flex-col gap-4 animate-scale-in pointer-events-auto"

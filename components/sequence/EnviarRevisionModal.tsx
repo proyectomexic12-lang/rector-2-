@@ -432,6 +432,10 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
 
       const res = await apiSyncService.enviarPlaneacionARevision(secuencia, input, null, metadata);
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { mensaje: res.mensaje } }));
+      }
+
       if (onSuccess) {
         onSuccess(res.mensaje || "Planeación enviada exitosamente a SIGEP-IEG.");
       } else {
