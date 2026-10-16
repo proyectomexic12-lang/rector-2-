@@ -5,6 +5,8 @@ export interface SequenceInput {
   dba: string; // Derecho Básico de Aprendizaje
   sesiones: number;
   ejeCrese: string;
+  docente?: string;
+  docente_email?: string;
 }
 
 export interface Activity {
@@ -74,6 +76,8 @@ export interface DidacticSequence {
   aula_invertida?: string;
   // Nuevos campos para facilitar la vida al docente
   taller_imprimible: TallerImprimible;
+  docente?: string;
+  docente_email?: string;
 }
 
 export interface TallerImprimible {
