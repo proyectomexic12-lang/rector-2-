@@ -994,6 +994,95 @@ export const authService = {
         return finalUser;
     },
 
+    loginWithGoogle: async (email: string, name: string, institutionId: string = 'guaimaral'): Promise<User> => {
+        const lowEmail = email.toLowerCase().trim();
+        const sessionId = crypto.randomUUID();
+
+        let existingUser: User | null = null;
+        if (supabase) {
+            try {
+                const { data } = await supabase
+                    .from('app_users')
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months, institution_id')
+                    .eq('email', lowEmail)
+                    .maybeSingle();
+
+                if (data) {
+                    existingUser = {
+                        name: data.name || name,
+                        email: data.email,
+                        role: data.role as 'admin' | 'docente',
+                        areas: data.areas || [],
+                        grados: data.grados || [],
+                        custom_credits: data.custom_credits,
+                        is_unlimited: data.is_unlimited,
+                        unlimited_start_date: data.unlimited_start_date,
+                        monthly_price: data.monthly_price,
+                        subscription_months: data.subscription_months,
+                        institution_id: data.institution_id || institutionId
+                    };
+                } else {
+                    const cleanName = name.trim() || 'Docente ' + lowEmail.split('@')[0];
+                    const newUserPayload = {
+                        email: lowEmail,
+                        name: cleanName,
+                        role: 'docente',
+                        institution_id: institutionId,
+                        areas: [],
+                        grados: [],
+                        is_unlimited: false,
+                        custom_credits: 10,
+                        password: obfuscate('google_oauth_verified')
+                    };
+
+                    await supabase.from('app_users').insert([newUserPayload]);
+
+                    existingUser = {
+                        name: cleanName,
+                        email: lowEmail,
+                        role: 'docente',
+                        institution_id: institutionId,
+                        areas: [],
+                        grados: [],
+                        custom_credits: 10,
+                        is_unlimited: false
+                    };
+                }
+            } catch (e) {
+                console.warn("Supabase Google login sync error:", e);
+            }
+        }
+
+        if (!existingUser) {
+            const authUser = AUTHORIZED_USERS.find(u => u.email.toLowerCase() === lowEmail);
+            existingUser = authUser ? { ...authUser, institution_id: institutionId } : {
+                name: name.trim() || 'Docente ' + lowEmail.split('@')[0],
+                email: lowEmail,
+                role: 'docente',
+                institution_id: institutionId,
+                is_unlimited: false,
+                custom_credits: 10,
+                areas: [],
+                grados: []
+            };
+        }
+
+        const finalUser: User = {
+            ...existingUser,
+            institution_id: existingUser.institution_id || institutionId,
+            session_id: sessionId
+        };
+
+        localStorage.setItem(STORAGE_KEYS.AUTH, obfuscate('true'));
+        localStorage.setItem(STORAGE_KEYS.USER, obfuscate(JSON.stringify(finalUser)));
+        localStorage.setItem(`user_institution_${lowEmail}`, institutionId);
+
+        await authService.registerSession(lowEmail);
+        await authService.logSecurityEvent(lowEmail, `Inicio de sesión con Google verificado (${institutionId})`, "low");
+
+        return finalUser;
+    },
+
 
     // --- GENERATED SEQUENCES PERSISTENCE & LOGGING ---
     saveAndLogSequence: async (user: User, sequence: any, details: { grade: string, area: string, theme: string }) => {

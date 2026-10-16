@@ -97,6 +97,20 @@ function App() {
         const userEmail = (currentUser.email || '').toLowerCase().trim();
         const tourDone = localStorage.getItem(`guaimaral_tour_completed_${userEmail}`) === 'true';
         const uploadedDone = localStorage.getItem(`guaimaral_has_uploaded_${userEmail}`) === 'true';
+        const savedSeqs = JSON.parse(localStorage.getItem(`guaimaral_saved_sequences_${userEmail}`) || '[]');
+        const historyKey = authService.getUserStorageKey('guaimaral_history');
+        const historySeqs = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        const hasExistingData = tourDone || uploadedDone || savedSeqs.length > 0 || historySeqs.length > 0;
+
+        // Comprobar políticas institucionales primero
+        const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
+        const localDismissed = localStorage.getItem('guaimaral_policy_ack_2026');
+        const needsPolicyAck = !sessionDismissed && !localDismissed;
+
+        if (needsPolicyAck) {
+          setShowPolicyModal(true);
+          setIsTourActive(false);
+        }
 
         authService.getUserQuotaInfo(currentUser).then(quota => {
           setUserQuota(quota);
@@ -106,27 +120,20 @@ function App() {
             setCreditsLeft(quota.remainingQuota);
           }
 
-          // Si el docente ya tiene planeaciones registradas o ya subió, desactivar guía y quitar botones
-          const hasExistingPlaneaciones = (quota?.usedQuota && quota.usedQuota > 0) || tourDone || uploadedDone;
+          // Si el docente ya tiene planeaciones registradas o ya subió, desactivar guía y quitar botones definitivamente
+          const hasExistingPlaneaciones = hasExistingData || (quota?.usedQuota !== undefined && quota.usedQuota > 0);
           if (hasExistingPlaneaciones) {
             setHasUploadedPlaneacion(true);
             setIsTourActive(false);
             localStorage.setItem(`guaimaral_has_uploaded_${userEmail}`, 'true');
             localStorage.setItem(`guaimaral_tour_completed_${userEmail}`, 'true');
-          } else if (currentUser.role !== 'admin') {
-            // Solo auto-iniciar para docentes 100% nuevos sin planeaciones
+          } else if (currentUser.role !== 'admin' && !needsPolicyAck) {
+            // Solo auto-iniciar para docentes 100% nuevos si NO hay modal de políticas pendiente
             setTimeout(() => {
               setIsTourActive(true);
             }, 700);
           }
         });
-
-        // Mostrar comunicado oficial de políticas de una al ingresar (Solo 1 vez en la vida útil)
-        const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
-        const localDismissed = localStorage.getItem('guaimaral_policy_ack_2026');
-        if (!sessionDismissed && !localDismissed) {
-          setShowPolicyModal(true);
-        }
       }
     }
   }, [isAuthenticated, currentUser?.email]);
@@ -257,10 +264,8 @@ function App() {
       const result = await generateDidacticSequence(input, refinementConfig?.instruction);
       setSequence(result);
 
-      // ACTIVACIÓN AUTOMÁTICA DEL MODO GUIADO SOLO PARA DOCENTES NUEVOS QUE NO HAN SUBIDO PLANEACIÓN
-      if (!hasUploadedPlaneacion && currentUser?.role !== 'admin') {
-        setIsTourActive(true);
-      }
+      // Al generar con éxito una planeación, no forzar tour si el docente ya interactuó
+      setIsTourActive(false);
 
       // SAVE & LOG TO CLOUD
       if (currentUser) {
@@ -1042,8 +1047,16 @@ function App() {
 
         {/* Componente del Tour Guiado Interactivo */}
         <GuidedTour
-          isActive={isTourActive}
-          onClose={() => setIsTourActive(false)}
+          isActive={isTourActive && !hasUploadedPlaneacion && currentUser?.role !== 'admin' && !showPolicyModal}
+          onClose={() => {
+            setIsTourActive(false);
+            if (currentUser?.email) {
+              const email = currentUser.email.toLowerCase().trim();
+              localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+              localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
+              setHasUploadedPlaneacion(true);
+            }
+          }}
           hasGeneratedSequence={Boolean(sequence)}
           isLoading={isLoading}
           userEmail={currentUser?.email}

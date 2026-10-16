@@ -464,6 +464,11 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               const email = userEmail?.toLowerCase().trim();
               if (email) {
                 localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+                localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { email } }));
+                  window.dispatchEvent(new CustomEvent('guaimaral_planeacion_subida', { detail: { email } }));
+                }
               }
               onClose();
             }}
