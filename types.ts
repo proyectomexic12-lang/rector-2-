@@ -92,9 +92,11 @@ export interface PlanQuotaInfo {
   usedQuota: number;
   remainingQuota: number;
   canGenerate: boolean;
-  reason?: 'ok' | 'vencido' | 'quota_exceeded' | 'sin_creditos';
+  reason?: 'ok' | 'vencido' | 'quota_exceeded' | 'sin_creditos' | 'cancelado';
   cycleStartDate: string | null;
   nextBillingDateStr: string;
+  monthsOverdue?: number;
+  totalDebt?: number;
 }
 
 export interface SubscriptionStatus {
