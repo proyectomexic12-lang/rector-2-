@@ -133,4 +133,40 @@ export interface ChatConversation {
   messages: ChatMessage[];
 }
 
+export interface CustomFormatField {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'list' | 'table';
+  description?: string;
+  section: 'identificacion' | 'desarrollo' | 'evaluacion' | 'institucional';
+}
+
+export interface CustomFormatSchema {
+  hasCorporeidadAdi?: boolean;
+  hasEjeCrese?: boolean;
+  momento1Name: string; // e.g. 'Inicio' | 'Exploración' | 'Vivencia'
+  momento2Name: string; // e.g. 'Desarrollo' | 'Estructuración' | 'Conceptualización'
+  momento3Name: string; // e.g. 'Cierre' | 'Transferencia' | 'Valoración'
+  procesoName: string; // e.g. 'PROCESO: GESTIÓN ACADÉMICA - PREPARACIÓN DE CLASES'
+  lema: string; // e.g. 'Calidad Humana y Excelencia Académica'
+  daneCode?: string;
+  nit?: string;
+  customFormatNotes?: string;
+  promptInstructions?: string; // Prompt tweak injected to Gemini for this school
+}
+
+export interface Institution {
+  id: string; // unique slug e.g. 'guaimaral', 'col-san-jose'
+  name: string; // e.g. 'INSTITUCIÓN EDUCATIVA GUAIMARAL'
+  shortName: string; // e.g. 'I.E. Guaimaral'
+  slug: string;
+  logoUrl: string; // URL, relative path (/logo_guaimaral.png) or base64 data URI
+  primaryColor: string; // Hex color e.g. '#2563eb'
+  accentColor?: string;
+  status: 'active' | 'inactive';
+  formatSchema: CustomFormatSchema;
+  totalTeachers?: number;
+  createdAt: string;
+}
+
 

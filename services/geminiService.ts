@@ -1,5 +1,6 @@
 import { SequenceInput, DidacticSequence, EvaluationItem } from "../types";
 import { supabase } from "./supabaseClient";
+import { institutionService } from "./institutionService";
 
 export const modelHealthStatus: Record<string, 'online' | 'offline' | 'checking'> = {
   "deepseek-chat": "online"
@@ -491,6 +492,12 @@ function getAreaContext(area: string): string {
 
 
 export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
+  const activeInstitution = institutionService.getActiveInstitution();
+  const instName = activeInstitution.name || "la institución educativa";
+  const m1 = activeInstitution.formatSchema?.momento1Name || "Inicio";
+  const m2 = activeInstitution.formatSchema?.momento2Name || "Desarrollo";
+  const m3 = activeInstitution.formatSchema?.momento3Name || "Cierre";
+
   const availableKeys = getAvailableKeysInfo();
 
   if (availableKeys.length === 0) {
@@ -580,15 +587,16 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
   const prompt = `
     ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM EDITION)
-    Eres la Autoridad Pedagógica y Curricular Suprema de la I.E. Guaimaral. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
+    Eres la Autoridad Pedagógica y Curricular Suprema de ${instName}. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL para esta institución, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
+    ${activeInstitution.formatSchema?.promptInstructions ? `\n    ### DIRECTRICES INSTITUCIONALES DEL COLEGIO:\n    ${activeInstitution.formatSchema.promptInstructions}\n` : ''}
 
     ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
-    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (Inicio, Desarrollo, Cierre) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
+    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (${m1}, ${m2}, ${m3}) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
     2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el Ministerio de Educación Nacional (MEN) de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
     3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
-       - **Fase de Inicio (Exploración):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
-       - **Fase de Desarrollo (Estructuración y Práctica):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
-       - **Fase de Cierre (Transferencia y Metacognición):** Evaluación formativa, síntesis, socialización y preguntas de autorreflexión.
+       - **Fase 1 (${m1}):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
+       - **Fase 2 (${m2}):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
+       - **Fase 3 (${m3}):** Evaluación formativa, síntesis, socialización y preguntas de autorreflexión.
        - **Adecuaciones DUA / PIAR:** Es OBLIGATORIO detallar en 'adecuaciones_piar' apoyos visuales/auditivos, flexibilización de tiempos, guía paso a paso y adaptaciones específicas del Plan Individual de Ajustes Razonables (PIAR).
     4. **MOMENTOS ADI (Corporiedad y Bienestar):** Pausa activa cerebral de 3 a 5 minutos detallada en cada sesión (ej. ejercicios de respiración, gimnasia cerebral, coordinación motriz).
     5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
@@ -1023,7 +1031,7 @@ function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
     productos_asociados: `Taller del Estudiante completado con bitácora de evidencias sobre ${tema}`,
     instrumentos_evaluacion: "Rúbrica analítica Decreto 1290, cuestionario tipo Saber-ICFES y matriz de autoevaluación",
     bibliografia: "Lineamientos Curriculares, Estándares Básicos de Competencia (EBC) y Derechos Básicos de Aprendizaje (DBA) - Ministerio de Educación Nacional (MEN)",
-    observaciones: "Secuencia didáctica totalmente alineada con el Modelo Pedagógico Institucional de la I.E. Guaimaral.",
+    observaciones: `Secuencia didáctica totalmente alineada con el Modelo Pedagógico Institucional de ${instName}.`,
     adecuaciones_piar: "1. Apoyos Visuales y Gráficos: Esquemas conceptuales y guías paso a paso.\n2. Flexibilización de Tiempos: Tiempo adicional adaptado para lectura y procesamiento de tareas.\n3. Trabajo por Pares y Tutoría: Acompañamiento guiado en mesa de trabajo según el Plan Individual de Ajustes Razonables (PIAR).",
     taller_imprimible: {
       introduccion: `Bienvenido a esta Guía Práctica de Aprendizaje Autónomo sobre ${tema}. A lo largo de este taller explorarás situaciones del entorno real, resolverás desafíos procedimentales y pondrás a prueba tus habilidades de pensamiento crítico y creación.`,

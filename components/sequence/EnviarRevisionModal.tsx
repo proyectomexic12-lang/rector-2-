@@ -432,8 +432,15 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
 
       const res = await apiSyncService.enviarPlaneacionARevision(secuencia, input, null, metadata);
 
+      const docEmail = (secuencia?.docente_email || input?.docente || '').toLowerCase().trim();
+      if (docEmail) {
+        localStorage.setItem(`guaimaral_has_uploaded_${docEmail}`, 'true');
+        localStorage.setItem(`guaimaral_tour_completed_${docEmail}`, 'true');
+      }
+
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { mensaje: res.mensaje } }));
+        window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { mensaje: res.mensaje, email: docEmail } }));
+        window.dispatchEvent(new CustomEvent('guaimaral_planeacion_subida', { detail: { email: docEmail } }));
       }
 
       if (onSuccess) {

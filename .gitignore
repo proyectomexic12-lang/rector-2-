@@ -34,3 +34,6 @@ DEBUG_SESSION.js
 storage_sigep/
 planeaciones_recibidas.json
 
+# Data backups
+backup_*
+

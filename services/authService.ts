@@ -57,6 +57,7 @@ export interface User {
     monthly_price?: number;
     subscription_months?: number;
     session_id?: string; // Para control de sesión única tipo WhatsApp
+    institution_id?: string; // ID del colegio al que pertenece (por defecto 'guaimaral')
     stats?: {
         today: number;
         week: number;
@@ -75,7 +76,18 @@ export interface User {
 export const AUTHORIZED_USERS: User[] = [
     // Directivos / Administradores
     { name: 'Administrador Institucional', email: 'admin@guaimaral.edu.co', role: 'admin', is_unlimited: true },
-    { name: 'JESUS (PRUEBAS)', email: 'jesus@guaimaral.edu.co', role: 'docente', is_unlimited: true },
+    {
+        name: 'JESUS (PRUEBAS)',
+        email: 'jesus@guaimaral.edu.co',
+        role: 'docente',
+        is_unlimited: true,
+        unlimited_start_date: '2026-10-01T00:00:00.000Z',
+        subscription_months: 1,
+        monthly_price: 15000,
+        custom_credits: 20,
+        areas: ['Matemáticas', 'Ciencias Naturales y Ed. Ambiental'],
+        grados: ['3°', '4°', '5°']
+    },
     { name: 'Docente Demo', email: 'demo@guaimaral.edu.co', role: 'docente', is_unlimited: true },
 
     // 24 Docentes Oficiales de Planta - I.E. Guaimaral
@@ -161,7 +173,9 @@ export const authService = {
             };
         }
 
-        const startDateStr = user.unlimited_start_date || (authUser as any)?.unlimited_start_date || new Date().toISOString();
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const startDateStr = user.unlimited_start_date || (authUser as any)?.unlimited_start_date || currentMonthStart;
         const start = startDateStr.includes('T') ? new Date(startDateStr) : new Date(startDateStr + 'T12:00:00');
         const monthsPaid = user.subscription_months || (authUser as any)?.subscription_months || 1;
         const monthlyPrice = user.monthly_price || (authUser as any)?.monthly_price || defaultPrice;
@@ -169,7 +183,6 @@ export const authService = {
         const nextBilling = new Date(start);
         nextBilling.setMonth(nextBilling.getMonth() + monthsPaid);
 
-        const now = new Date();
         const nextStr = nextBilling.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 
         if (now <= nextBilling) {
@@ -260,8 +273,8 @@ export const authService = {
             } catch (e) { }
         }
 
-        // 1. Admin o Cuenta Demo
-        if (currentUserData.role === 'admin' || lowEmail.includes('demo') || lowEmail === 'jesus@guaimaral.edu.co') {
+        // 1. Admin o Cuenta Demo (Jesus es docente de pruebas y debe reflejar cuota y conteos reales de planeaciones)
+        if (currentUserData.role === 'admin' || lowEmail.includes('demo')) {
             return {
                 hasPlan: true,
                 isUnlimitedAdmin: true,
@@ -344,6 +357,19 @@ export const authService = {
                 const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
                 usedQuota = localSeqs.length;
             }
+
+            // Respaldo local inmediato: si se acaban de generar secuencias en este navegador, asegurar que el conteo no espere la red
+            try {
+                const localSavedKey = `guaimaral_saved_sequences_${lowEmail}`;
+                const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                const localCycleCount = localSeqs.filter((s: any) => {
+                    const t = s.timestamp ? new Date(s.timestamp) : new Date();
+                    return t >= countFromDate;
+                }).length;
+                if (localCycleCount > usedQuota) {
+                    usedQuota = localCycleCount;
+                }
+            } catch (e) {}
 
             const remainingQuota = Math.max(0, maxQuota - usedQuota);
             const canGenerate = remainingQuota > 0;
@@ -731,11 +757,12 @@ export const authService = {
         console.log(`🔒 Sesiones inactivadas para ${lowEmail}.`);
     },
 
-    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number, password?: string }) => {
+    updateUserSettings: async (email: string, settings: { areas?: string[], grados?: string[], custom_credits?: number | null, is_unlimited?: boolean, unlimited_start_date?: string | null, monthly_price?: number, subscription_months?: number, password?: string, institution_id?: string }) => {
         const lowEmail = email.toLowerCase().trim();
         console.log(`🛠️ Iniciando guardado para: ${lowEmail}`, settings);
 
         // 1. Local (Legado/Respaldo)
+        if (settings.institution_id) localStorage.setItem(`user_institution_${lowEmail}`, settings.institution_id);
         if (settings.areas) localStorage.setItem(`guaimaral_areas_${lowEmail}`, JSON.stringify(settings.areas));
         if (settings.grados) localStorage.setItem(`guaimaral_grados_${lowEmail}`, JSON.stringify(settings.grados));
         if (settings.is_unlimited !== undefined) localStorage.setItem(`guaimaral_unlimited_${lowEmail}`, JSON.stringify(settings.is_unlimited));
@@ -1014,7 +1041,8 @@ export const authService = {
                     grado: details.grade,
                     area: details.area,
                     tema: details.theme,
-                    content: sequence
+                    content: sequence,
+                    timestamp: new Date().toISOString()
                 }]);
                 if (seqErr) console.error("❌ Error Repositorio Nube:", seqErr.message);
 
@@ -1200,13 +1228,31 @@ export const authService = {
                     userList = Array.from(emailMap.values());
                 }
 
-                // 2. OPTIMIZACIÓN CRÍTICA: Obtener secuencias con timestamp en una sola pasada
-                const { data: seqStats } = await supabase
-                    .from('generated_sequences')
-                    .select('user_email, timestamp');
+                // 2. OPTIMIZACIÓN CRÍTICA: Obtener TODAS las secuencias registradas (con paginación para superar el límite de 1000 filas de Supabase)
+                let seqStats: { user_email: string; timestamp: string }[] = [];
+                let from = 0;
+                const PAGE_SIZE = 1000;
+                while (true) {
+                    const { data: pageData, error: pageErr } = await supabase
+                        .from('generated_sequences')
+                        .select('user_email, timestamp')
+                        .order('timestamp', { ascending: false })
+                        .range(from, from + PAGE_SIZE - 1);
+                    if (pageErr || !pageData || pageData.length === 0) break;
+                    seqStats = seqStats.concat(pageData);
+                    if (pageData.length < PAGE_SIZE) break;
+                    from += PAGE_SIZE;
+                }
 
                 const totalCountsMap: Record<string, number> = {};
                 const cycleCountsMap: Record<string, number> = {};
+
+                const nowTime = new Date();
+                const dayOfWeek = nowTime.getDay();
+                const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+                const monday = new Date(nowTime.getFullYear(), nowTime.getMonth(), nowTime.getDate() + diffToMonday);
+                monday.setHours(0, 0, 0, 0);
+                const weekStart = monday.getTime();
 
                 // 3. Cruzar datos de forma ultra-rápida en memoria
                 return userList.map(user => {
@@ -1216,6 +1262,7 @@ export const authService = {
 
                     let total = 0;
                     let cycle = 0;
+                    let week = 0;
                     const quotaPolicyStartDate = new Date('2026-08-25T00:00:00.000Z');
                     const subStartDate = user.unlimited_start_date ? new Date(user.unlimited_start_date) : null;
                     const effectiveCountStart = (subStartDate && subStartDate > quotaPolicyStartDate) ? subStartDate : quotaPolicyStartDate;
@@ -1223,15 +1270,37 @@ export const authService = {
                     seqStats?.forEach(s => {
                         if (s.user_email && s.user_email.toLowerCase().trim() === low) {
                             total++;
-                            if (new Date(s.timestamp) >= effectiveCountStart) {
+                            const sDate = new Date(s.timestamp);
+                            if (sDate >= effectiveCountStart) {
                                 cycle++;
+                            }
+                            if (sDate.getTime() >= weekStart) {
+                                week++;
                             }
                         }
                     });
 
+                    // Fusionar con almacenamiento local para garantizar que la UI refleje inmediatamente la planeación generada
+                    try {
+                        const localSavedKey = `guaimaral_saved_sequences_${low}`;
+                        const localSeqs = JSON.parse(localStorage.getItem(localSavedKey) || '[]');
+                        if (localSeqs.length > total) {
+                            total = localSeqs.length;
+                            let localCycle = 0;
+                            let localWeek = 0;
+                            localSeqs.forEach((ls: any) => {
+                                const t = ls.timestamp ? new Date(ls.timestamp) : new Date();
+                                if (t >= effectiveCountStart) localCycle++;
+                                if (t.getTime() >= weekStart) localWeek++;
+                            });
+                            if (localCycle > cycle) cycle = localCycle;
+                            if (localWeek > week) week = localWeek;
+                        }
+                    } catch (e) {}
+
                     // Calcular cuota máxima del plan
                     let maxQuota = 6;
-                    if (user.role === 'admin' || low.includes('demo') || low === 'jesus@guaimaral.edu.co') {
+                    if (user.role === 'admin' || low.includes('demo')) {
                         maxQuota = 9999;
                     } else if (user.is_unlimited) {
                         if ((user.subscription_months || 1) >= 6 || (user.monthly_price || 15000) >= 75000) {
@@ -1256,9 +1325,9 @@ export const authService = {
                         ...user,
                         stats: {
                             today: 0,
-                            week: 0,
-                            month: 0,
-                            year: 0,
+                            week,
+                            month: cycle,
+                            year: total,
                             total,
                             saved: total,
                             cycleUsage: used,
@@ -1314,6 +1383,9 @@ export const authService = {
         if (!userJson) return null;
         try {
             const parsed = JSON.parse(deobfuscate(userJson));
+            if (parsed && !parsed.institution_id && parsed.email) {
+                parsed.institution_id = localStorage.getItem(`user_institution_${parsed.email.toLowerCase()}`) || 'guaimaral';
+            }
             return parsed;
         } catch (e) {
             return null;
