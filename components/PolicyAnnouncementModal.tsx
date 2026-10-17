@@ -142,13 +142,6 @@ export const PolicyAnnouncementModal: React.FC<PolicyAnnouncementModalProps> = (
               </h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-            title="Cerrar ventana"
-          >
-            <X size={16} />
-          </button>
         </div>
 
         {/* Notification Toast */}

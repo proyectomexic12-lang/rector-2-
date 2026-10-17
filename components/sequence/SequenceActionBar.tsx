@@ -3,7 +3,6 @@ import { Printer, FileDown, BookOpen, GraduationCap, Copy, ArrowLeft, FileText, 
 import { generateDocx } from '../../services/docxService';
 import { DidacticSequence, SequenceInput } from '../../types';
 import { EnviarRevisionModal } from './EnviarRevisionModal';
-import { institutionService } from '../../services/institutionService';
 
 interface SequenceActionBarProps {
   onReset: () => void;
@@ -27,7 +26,6 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(false);
-  const activeInstitution = institutionService.getActiveInstitution();
 
   const handleCopyText = () => {
     const el = document.getElementById('preview-container');
@@ -44,7 +42,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
     if (el && typeof html2pdf === 'function') {
       try {
         setIsExportingPDF(true);
-        const title = editableData?.titulo_secuencia || input?.tema || `Planeacion_${activeInstitution.shortName}`;
+        const title = editableData?.titulo_secuencia || input?.tema || 'Planeacion_Guaimaral';
         const cleanTitle = title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').substring(0, 50);
         const fileName = `${cleanTitle}.pdf`;
 
@@ -73,7 +71,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
     if (!editableData || !input) return;
     try {
       setIsExportingDocx(true);
-      await generateDocx(editableData, input, activeInstitution);
+      await generateDocx(editableData, input);
     } catch (e) {
       console.error("Error al exportar DOCX:", e);
       alert("No se pudo generar el archivo Word (.docx). Revisa la consola.");
@@ -103,7 +101,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
 
           <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/50">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{activeInstitution.shortName} Pro</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">I.E. Guaimaral Pro</span>
           </div>
         </div>
 

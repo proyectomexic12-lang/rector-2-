@@ -43,9 +43,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
-    authService.logout();
-    setIsAuthenticated(false);
-    setCurrentUser(null);
+    if (confirm("¿Cerrar sesión?")) {
+      authService.logout();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    }
   };
 
   const refreshUser = async () => {

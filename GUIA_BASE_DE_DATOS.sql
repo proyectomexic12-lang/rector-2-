@@ -20,33 +20,6 @@ begin
 end;
 $$;
 
--- ✅ PASO 1.5: CREAR TABLA DE COLEGIOS / INSTITUCIONES (ARQUITECTURA MULTI-TENANT SAAS)
-create table if not exists institutions (
-  id text primary key, -- e.g. 'guaimaral', 'col-san-jose'
-  name text not null,
-  short_name text not null,
-  slug text unique not null,
-  logo_url text default '/logo_guaimaral.png',
-  primary_color text default '#2563eb',
-  accent_color text default '#4f46e5',
-  status text default 'active' check (status in ('active', 'inactive')),
-  format_schema jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
-);
-
--- Registrar colegio base Guaimaral por defecto
-insert into institutions (id, name, short_name, slug, logo_url, primary_color, format_schema)
-values (
-  'guaimaral',
-  'INSTITUCIÓN EDUCATIVA GUAIMARAL',
-  'I.E. Guaimaral',
-  'guaimaral',
-  '/logo_guaimaral.png',
-  '#2563eb',
-  '{"procesoName": "PROCESO: GESTIÓN ACADÉMICA - PREPARACIÓN DE CLASES", "lema": "Calidad Humana y Excelencia Académica", "momento1Name": "Inicio", "momento2Name": "Desarrollo", "momento3Name": "Cierre", "hasCorporeidadAdi": true, "hasEjeCrese": true}'::jsonb
-)
-on conflict (id) do nothing;
-
 -- ✅ PASO 2: CREAR TABLA DE USUARIOS (Con todos los campos de Créditos y Suscripción)
 create table if not exists app_users (
   id uuid default gen_random_uuid() primary key,
@@ -54,7 +27,6 @@ create table if not exists app_users (
   password text not null default 'Mw==',
   name text not null default '',
   role text not null default 'docente' check (role in ('admin', 'docente')),
-  institution_id text default 'guaimaral' references institutions(id) on delete set null,
   areas text[] default '{}',
   grados text[] default '{}',
   custom_credits int default null,

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { DidacticSequence, SequenceInput } from '../../types';
 import { Sparkles, PenTool, Lock, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
 import { generateExtendedIcfesExam, buildGradeAwareVideoQuery, resolveResourceAction } from '../../services/geminiService';
-import { institutionService } from '../../services/institutionService';
 
 interface SequenceDocumentProps {
   editableData: DidacticSequence;
@@ -26,7 +25,6 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
   const setActiveView = propSetActiveView || setInternalActiveView;
   const [isGeneratingIcfes, setIsGeneratingIcfes] = useState(false);
   const [icfesError, setIcfesError] = useState('');
-  const activeInstitution = institutionService.getActiveInstitution();
 
   const handleGenerateIcfes = async () => {
     try {
@@ -108,23 +106,15 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
         {/* ENCABEZADO INSTITUCIONAL */}
         <div className="flex gap-4 items-center mb-4 border-b-2 border-slate-900 pb-2 print:mb-2 print:pb-1">
           <div className="w-20 h-20 flex items-center justify-center shrink-0">
-            <img 
-              src={activeInstitution.logoUrl} 
-              alt={activeInstitution.name} 
-              className="institutional-logo w-20 h-20 object-contain" 
-              style={{ maxWidth: '80px', maxHeight: '80px' }} 
-              onError={(e) => { (e.target as HTMLImageElement).src = '/logo_guaimaral.png'; }}
-            />
+            <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="institutional-logo w-20 h-20 object-contain" style={{ maxWidth: '80px', maxHeight: '80px' }} />
           </div>
 
           <div className="flex-grow text-center">
-            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">{activeInstitution.name}</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">Institución Educativa Guaimaral</h1>
             <div className="mt-2 py-1.5 border-y border-slate-800">
-              <h2 className="text-[12px] font-bold uppercase text-slate-700">{activeInstitution.formatSchema.procesoName || "Proceso: Gestión Académica - Preparación de Clases"}</h2>
+              <h2 className="text-[12px] font-bold uppercase text-slate-700">Proceso: Gestión Académica - Preparación de Clases</h2>
             </div>
-            {activeInstitution.formatSchema.lema && (
-              <p className="text-[10px] text-slate-400 mt-1 font-bold">"{activeInstitution.formatSchema.lema}"</p>
-            )}
+            <p className="text-[10px] text-slate-400 mt-1 font-bold">"Calidad Humana y Excelencia Académica"</p>
           </div>
         </div>
 
@@ -449,7 +439,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                 {act.fase_inicio || act.fase_desarrollo || act.fase_cierre ? (
                   <div className="mb-3 flex flex-col gap-3">
                     <div className="bg-white p-2 rounded border border-gray-200">
-                      <span className="font-bold text-[11px] text-blue-800 uppercase tracking-wider mb-1 block">Fase 1: {activeInstitution.formatSchema.momento1Name || 'Inicio'}</span>
+                      <span className="font-bold text-[11px] text-blue-800 uppercase tracking-wider mb-1 block">Fase de Inicio (Exploración)</span>
                       <EditableContent
                         value={act.fase_inicio || ''}
                         className="whitespace-pre-line leading-relaxed text-gray-800"
@@ -461,7 +451,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                       />
                     </div>
                     <div className="bg-white p-2 rounded border border-gray-200">
-                      <span className="font-bold text-[11px] text-green-800 uppercase tracking-wider mb-1 block">Fase 2: {activeInstitution.formatSchema.momento2Name || 'Desarrollo'}</span>
+                      <span className="font-bold text-[11px] text-green-800 uppercase tracking-wider mb-1 block">Fase de Desarrollo (Estructuración)</span>
                       <EditableContent
                         value={act.fase_desarrollo || ''}
                         className="whitespace-pre-line leading-relaxed text-gray-800"
@@ -473,7 +463,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
                       />
                     </div>
                     <div className="bg-white p-2 rounded border border-gray-200">
-                      <span className="font-bold text-[11px] text-purple-800 uppercase tracking-wider mb-1 block">Fase 3: {activeInstitution.formatSchema.momento3Name || 'Cierre'}</span>
+                      <span className="font-bold text-[11px] text-purple-800 uppercase tracking-wider mb-1 block">Fase de Cierre (Transferencia)</span>
                       <EditableContent
                         value={act.fase_cierre || ''}
                         className="whitespace-pre-line leading-relaxed text-gray-800"
@@ -751,16 +741,10 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
         <div className="border-2 border-slate-900 mb-4 p-3 bg-slate-50/50">
           <div className="flex gap-4 items-center border-b border-slate-400 pb-2 mb-2">
             <div className="w-14 h-14 flex items-center justify-center shrink-0">
-              <img 
-                src={activeInstitution.logoUrl} 
-                alt="Logo" 
-                className="institutional-logo w-14 h-14 object-contain" 
-                style={{ maxWidth: '56px', maxHeight: '56px' }} 
-                onError={(e) => { (e.target as HTMLImageElement).src = '/logo_guaimaral.png'; }}
-              />
+              <img src="/logo_guaimaral.png" alt="Logo" className="institutional-logo w-14 h-14 object-contain" style={{ maxWidth: '56px', maxHeight: '56px' }} />
             </div>
             <div className="flex-grow">
-              <h3 className="font-black text-base uppercase leading-none text-slate-900">{activeInstitution.name}</h3>
+              <h3 className="font-black text-base uppercase leading-none text-slate-900">INSTITUCIÓN EDUCATIVA GUAIMARAL</h3>
               <p className="text-[10px] text-slate-700 font-bold uppercase tracking-wider mt-1">Guía & Taller de Aprendizaje Autónomo • {input.area}</p>
             </div>
             <div className="text-right border-l border-slate-400 pl-3 text-[9px] font-bold text-slate-600">
@@ -889,7 +873,7 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
         </div>
 
         <p className="mt-8 text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest italic no-print print:mt-4">
-          `"${activeInstitution.formatSchema.lema || 'Calidad y formación integral'} — ${activeInstitution.shortName} 2026"`
+          "Calidad humana y excelencia académica para la vida — I.E. Guaimaral 2026"
         </p>
       </div>
       {/* --- FIN TALLER --- */}

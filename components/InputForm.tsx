@@ -3,7 +3,6 @@ import { SequenceInput } from '../types';
 import { GRADOS, AREAS, EJES_CRESE } from '../constants';
 import { BookOpen, Calendar, Target, Layers, BrainCircuit, Play, Sparkles, Wand2, PenTool, Network, CheckCircle2, Cpu, Zap, AlertCircle } from 'lucide-react';
 import { authService, User } from '../services/authService';
-import { institutionService } from '../services/institutionService';
 import { useToast } from '../context/ToastContext';
 
 interface InputFormProps {
@@ -17,7 +16,6 @@ interface InputFormProps {
 
 export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerate, isLoading, user, creditsLeft }) => {
   const [dbaMode, setDbaMode] = useState<'manual' | 'auto'>('manual');
-  const activeInstitution = institutionService.getActiveInstitution(user);
 
   const isAdmin = user?.role === 'admin';
 
@@ -101,25 +99,14 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
           
           <div className="relative z-10 mb-8 border-b border-gray-100/80 pb-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="bg-gradient-to-br from-white to-blue-50 p-3 rounded-3xl shadow-lg border border-white transform hover:scale-105 hover:-rotate-3 transition-all duration-300 w-24 h-24 flex items-center justify-center shrink-0">
-              <img 
-                src={activeInstitution.logoUrl} 
-                alt={activeInstitution.name} 
-                className="institutional-logo w-20 h-20 object-contain drop-shadow-md" 
-                style={{ maxWidth: '80px', maxHeight: '80px' }} 
-                onError={(e) => { (e.target as HTMLImageElement).src = '/logo_guaimaral.png'; }}
-              />
+              <img src="/logo_guaimaral.png" alt="Logo I.E. Guaimaral" className="institutional-logo w-20 h-20 object-contain drop-shadow-md" style={{ maxWidth: '80px', maxHeight: '80px' }} />
             </div>
             <div className="text-center sm:text-left flex-1 mt-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-wider mb-2">
-                🏫 {activeInstitution.shortName || activeInstitution.name}
-              </div>
               <h2 className="text-3xl font-black text-slate-800 flex items-center justify-center sm:justify-start gap-3 tracking-tight">
                 <Layers className="text-blue-600" size={32} />
                 Diseño Pedagógico
               </h2>
-              <p className="text-slate-500 text-sm mt-1 font-medium max-w-lg">
-                Generando para <strong className="text-slate-700">{activeInstitution.shortName}</strong> con fases: <span className="text-blue-600 font-bold">{activeInstitution.formatSchema.momento1Name}</span> → <span className="text-blue-600 font-bold">{activeInstitution.formatSchema.momento2Name}</span> → <span className="text-blue-600 font-bold">{activeInstitution.formatSchema.momento3Name}</span>.
-              </p>
+              <p className="text-slate-500 text-sm mt-2 font-medium max-w-lg">Configura los cimientos de tu secuencia. La IA unirá estos conceptos para crear una experiencia de aprendizaje inolvidable.</p>
             </div>
           </div>
 

@@ -33,7 +33,5 @@ DEBUG_SESSION.js
 # SIGEP local storage & received plans
 storage_sigep/
 planeaciones_recibidas.json
-
-# Data backups
-backup_*
+backup_planeaciones_*
 
