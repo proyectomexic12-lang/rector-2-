@@ -256,16 +256,72 @@ async function syncToSupabase(registro) {
       timestamp: registro.fecha_recepcion
     };
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/generated_sequences`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(payload)
-    });
+    // 1. Verificar si ya existe una secuencia previa con el mismo radicado o del mismo docente y tema
+    let existingId = null;
+    try {
+      // Buscar primero por id_radicado si ya se había sincronizado antes
+      const checkRadicadoUrl = `${SUPABASE_URL}/rest/v1/generated_sequences?user_email=eq.${encodeURIComponent(registro.docente_email)}&content->>id_radicado=eq.${encodeURIComponent(registro.id)}&select=id&limit=1`;
+      const resRadicado = await fetch(checkRadicadoUrl, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      if (resRadicado.ok) {
+        const dataRadicado = await resRadicado.json();
+        if (dataRadicado && dataRadicado.length > 0) {
+          existingId = dataRadicado[0].id;
+        }
+      }
+
+      // Si no se encontró por radicado, buscar por docente y tema generado recientemente
+      if (!existingId && payload.tema) {
+        const checkTemaUrl = `${SUPABASE_URL}/rest/v1/generated_sequences?user_email=eq.${encodeURIComponent(registro.docente_email)}&tema=eq.${encodeURIComponent(payload.tema)}&select=id&order=timestamp.desc&limit=1`;
+        const resTema = await fetch(checkTemaUrl, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (resTema.ok) {
+          const dataTema = await resTema.json();
+          if (dataTema && dataTema.length > 0) {
+            existingId = dataTema[0].id;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ No se pudo verificar duplicado previo en Supabase:', e.message);
+    }
+
+    let res;
+    if (existingId) {
+      // Actualizar secuencia existente (Mantiene cuota exacta 1 a 1 sin duplicar en BD)
+      res = await fetch(`${SUPABASE_URL}/rest/v1/generated_sequences?id=eq.${existingId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          grado: registro.grado,
+          area: registro.area,
+          content: payload.content
+        })
+      });
+      if (res.ok) {
+        console.log(`☁️ [SUPABASE-SYNC] Actualizada secuencia existente ID [${existingId}] con radicado [${registro.radicado_oficial}] (1 a 1 sin duplicar cuota).`);
+        return { synced: true };
+      }
+    } else {
+      // Nueva secuencia primigenia
+      res = await fetch(`${SUPABASE_URL}/rest/v1/generated_sequences`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
 
     if (res.ok) {
       console.log(`☁️ [SUPABASE-SYNC] Sincronizada exitosamente planeación ${registro.radicado_oficial} en la nube.`);
