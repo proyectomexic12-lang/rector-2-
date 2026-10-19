@@ -1,6 +1,7 @@
 import { Institution, CustomFormatSchema } from '../types';
 import { User } from './authService';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { supabase } from './supabaseClient';
 
 const STORAGE_KEY = 'saas_institutions_v1';
 const ACTIVE_OVERRIDE_KEY = 'saas_active_institution_override';
@@ -88,9 +89,99 @@ export const INITIAL_INSTITUTIONS: Institution[] = [
 class InstitutionService {
   private institutions: Institution[] = [];
   private listeners: (() => void)[] = [];
+  private isSupabaseSubscribed = false;
 
   constructor() {
     this.loadFromStorage();
+    this.syncWithSupabase();
+  }
+
+  private mapFromSupabase(row: any): Institution {
+    return {
+      id: row.id,
+      name: row.name,
+      shortName: row.short_name || row.shortName || row.name,
+      slug: row.slug || row.id,
+      logoUrl: row.logo_url || row.logoUrl || '/logo_guaimaral.png',
+      primaryColor: row.primary_color || row.primaryColor || '#2563eb',
+      accentColor: row.accent_color || row.accentColor || '#4f46e5',
+      status: row.status || 'active',
+      formatSchema: row.format_schema || row.formatSchema || {},
+      totalTeachers: row.totalTeachers || 0,
+      createdAt: row.created_at || row.createdAt || new Date().toISOString()
+    };
+  }
+
+  public async syncWithSupabase() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('institutions')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('⚠️ [SaaS] No se pudieron cargar instituciones desde Supabase:', error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const cloudInsts = data.map(d => this.mapFromSupabase(d));
+        // Merge con locales garantizando Guaimaral siempre presente
+        const cloudIds = new Set(cloudInsts.map(i => i.id));
+        const merged = [...cloudInsts];
+
+        for (const local of this.institutions) {
+          if (!cloudIds.has(local.id)) {
+            merged.push(local);
+            // Respaldar a la nube si era local únicamente
+            this.persistToSupabase(local).catch(() => {});
+          }
+        }
+
+        this.institutions = merged;
+        this.saveToStorage(false); // No reenviar a Supabase para evitar bucle
+      } else {
+        // La tabla está vacía en Supabase: sembramos las instituciones iniciales
+        for (const initInst of INITIAL_INSTITUTIONS) {
+          await this.persistToSupabase(initInst);
+        }
+      }
+
+      // Suscripción Realtime para actualizar la lista de colegios instantáneamente en todas las pestañas
+      if (!this.isSupabaseSubscribed) {
+        this.isSupabaseSubscribed = true;
+        supabase
+          .channel('saas-institutions-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'institutions' }, () => {
+            this.syncWithSupabase();
+          })
+          .subscribe();
+      }
+    } catch (e) {
+      console.error('Error sincronizando instituciones con Supabase:', e);
+    }
+  }
+
+  private async persistToSupabase(inst: Institution) {
+    if (!supabase) return;
+    try {
+      const payload = {
+        id: inst.id,
+        name: inst.name,
+        short_name: inst.shortName,
+        slug: inst.slug,
+        logo_url: inst.logoUrl,
+        primary_color: inst.primaryColor,
+        accent_color: inst.accentColor,
+        status: inst.status,
+        format_schema: inst.formatSchema,
+        created_at: inst.createdAt
+      };
+      await supabase.from('institutions').upsert([payload]);
+    } catch (err) {
+      console.warn('Persist error to Supabase institutions:', err);
+    }
   }
 
   private loadFromStorage() {
@@ -99,7 +190,6 @@ class InstitutionService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Asegurar que las instituciones iniciales existan si no están añadidas aún
           const existingIds = new Set(parsed.map((p: any) => p.id));
           const merged = [...parsed];
           for (const initInst of INITIAL_INSTITUTIONS) {
@@ -115,10 +205,10 @@ class InstitutionService {
       console.warn('Error loading institutions from storage, using defaults', e);
     }
     this.institutions = [...INITIAL_INSTITUTIONS];
-    this.saveToStorage();
+    this.saveToStorage(false);
   }
 
-  private saveToStorage() {
+  private saveToStorage(notifyCloud: boolean = true) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.institutions));
       this.notifyListeners();
@@ -236,6 +326,7 @@ class InstitutionService {
     this.institutions = this.institutions.filter(i => i.id !== id);
     this.institutions.push(newInst);
     this.saveToStorage();
+    this.persistToSupabase(newInst).catch(() => {});
 
     return newInst;
   }
@@ -258,6 +349,7 @@ class InstitutionService {
 
     this.institutions[index] = updated;
     this.saveToStorage();
+    this.persistToSupabase(updated).catch(() => {});
     return updated;
   }
 
@@ -267,6 +359,11 @@ class InstitutionService {
     }
     this.institutions = this.institutions.filter(i => i.id !== id);
     this.saveToStorage();
+    if (supabase) {
+      supabase.from('institutions').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Error eliminando colegio en Supabase:", error);
+      });
+    }
     return true;
   }
 

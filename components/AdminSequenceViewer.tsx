@@ -27,7 +27,8 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
 
     const loadData = async () => {
         setIsLoading(true);
-        let seqData = await authService.getAllSequences();
+        const activeInst = institutionService.getActiveInstitution(user);
+        let seqData = await authService.getAllSequences(activeInst?.id);
 
         if (userEmail) {
             seqData = seqData.filter(s => (s.user_email || '').toLowerCase() === userEmail.toLowerCase());
@@ -47,9 +48,14 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
     useEffect(() => {
         loadData();
 
+        const unsubscribeInst = institutionService.subscribe(() => {
+            loadData();
+        });
+
         // Realtime subscription para cambios en secuencias y logs
+        let channel: any = null;
         if (supabase) {
-            const channel = supabase
+            channel = supabase
                 .channel('admin-sequences')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'generated_sequences' }, () => {
                     loadData();
@@ -58,12 +64,15 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                     loadData();
                 })
                 .subscribe();
-
-            return () => {
-                supabase.removeChannel(channel);
-            };
         }
-    }, []);
+
+        return () => {
+            unsubscribeInst();
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [userEmail, user]);
 
     const filteredSequences = sequences.filter(s =>
         (s.user_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -22,7 +22,7 @@ $$;
 
 -- ✅ PASO 1.5: CREAR TABLA DE COLEGIOS / INSTITUCIONES (ARQUITECTURA MULTI-TENANT SAAS)
 create table if not exists institutions (
-  id text primary key, -- e.g. 'guaimaral', 'col-san-jose'
+  id text primary key, -- e.g. 'guaimaral', 'sanjose', 'laesperanza'
   name text not null,
   short_name text not null,
   slug text unique not null,
@@ -34,20 +34,48 @@ create table if not exists institutions (
   created_at timestamptz default now()
 );
 
--- Registrar colegio base Guaimaral por defecto
-insert into institutions (id, name, short_name, slug, logo_url, primary_color, format_schema)
-values (
+-- Registrar colegios iniciales del SaaS
+insert into institutions (id, name, short_name, slug, logo_url, primary_color, accent_color, format_schema)
+values 
+(
   'guaimaral',
   'INSTITUCIÓN EDUCATIVA GUAIMARAL',
   'I.E. Guaimaral',
   'guaimaral',
   '/logo_guaimaral.png',
   '#2563eb',
+  '#4f46e5',
   '{"procesoName": "PROCESO: GESTIÓN ACADÉMICA - PREPARACIÓN DE CLASES", "lema": "Calidad Humana y Excelencia Académica", "momento1Name": "Inicio", "momento2Name": "Desarrollo", "momento3Name": "Cierre", "hasCorporeidadAdi": true, "hasEjeCrese": true}'::jsonb
+),
+(
+  'sanjose',
+  'COLEGIO INTEGRADO SAN JOSÉ',
+  'Col. San José',
+  'sanjose',
+  '/logo.png',
+  '#059669',
+  '#10b981',
+  '{"procesoName": "PROCESO CURRICULAR - APRENDIZAJE POR COMPETENCIAS", "lema": "Ciencia, Virtud y Liderazgo Innovador", "momento1Name": "Exploración", "momento2Name": "Estructuración", "momento3Name": "Transferencia", "hasCorporeidadAdi": false, "hasEjeCrese": true}'::jsonb
+),
+(
+  'laesperanza',
+  'CENTRO EDUCATIVO RURAL LA ESPERANZA',
+  'C.E.R. La Esperanza',
+  'laesperanza',
+  '/logo_minimal.png',
+  '#d97706',
+  '#f59e0b',
+  '{"procesoName": "MODELO PEDAGÓGICO ESCUELA NUEVA RURAL", "lema": "Sembrando Saber en el Campo Colombiano", "momento1Name": "Vivencia", "momento2Name": "Fundamentación", "momento3Name": "Aplicación", "hasCorporeidadAdi": false, "hasEjeCrese": true}'::jsonb
 )
-on conflict (id) do nothing;
+on conflict (id) do update set
+  name = excluded.name,
+  short_name = excluded.short_name,
+  logo_url = excluded.logo_url,
+  primary_color = excluded.primary_color,
+  accent_color = excluded.accent_color,
+  format_schema = excluded.format_schema;
 
--- ✅ PASO 2: CREAR TABLA DE USUARIOS (Con todos los campos de Créditos y Suscripción)
+-- ✅ PASO 2: CREAR TABLA DE USUARIOS (Con aislamiento institucional)
 create table if not exists app_users (
   id uuid default gen_random_uuid() primary key,
   email text unique not null,
@@ -79,11 +107,11 @@ alter table active_sessions enable row level security;
 drop policy if exists "guaimaral_active_sessions_all" on active_sessions;
 create policy "guaimaral_active_sessions_all" on active_sessions for all using (true) with check (true);
 
-
--- ✅ PASO 3: TABLA DE REGISTRO DE USO (USAGE LOGS)
+-- ✅ PASO 3: TABLA DE REGISTRO DE USO (USAGE LOGS CON INSTITUCIÓN)
 create table if not exists usage_logs (
   id uuid default gen_random_uuid() primary key,
   user_email text not null,
+  institution_id text default 'guaimaral' references institutions(id) on delete cascade,
   action text not null,
   timestamp timestamptz default now()
 );
@@ -98,10 +126,11 @@ create table if not exists api_key_logs (
   timestamp timestamptz default now()
 );
 
--- ✅ PASO 5: TABLA DE SECUENCIAS Y PLANEACIONES GENERADAS
+-- ✅ PASO 5: TABLA DE SECUENCIAS Y PLANEACIONES GENERADAS (AISLADAS POR COLEGIO)
 create table if not exists generated_sequences (
   id uuid default gen_random_uuid() primary key,
   user_email text not null,
+  institution_id text default 'guaimaral' references institutions(id) on delete cascade,
   grado text,
   area text,
   tema text,
@@ -141,7 +170,11 @@ create table if not exists chat_messages (
   timestamp timestamptz default now()
 );
 
--- ✅ PASO 8: ASEGURAR COLUMNAS SI LA TABLA YA EXISTÍA
+-- ✅ PASO 8: ASEGURAR COLUMNAS MULTI-TENANT E ÍNDICES EN TABLAS EXISTENTES
+alter table app_users add column if not exists institution_id text default 'guaimaral' references institutions(id) on delete set null;
+alter table generated_sequences add column if not exists institution_id text default 'guaimaral' references institutions(id) on delete cascade;
+alter table usage_logs add column if not exists institution_id text default 'guaimaral' references institutions(id) on delete cascade;
+
 alter table app_users add column if not exists areas text[] default '{}';
 alter table app_users add column if not exists grados text[] default '{}';
 alter table app_users add column if not exists custom_credits int default null;
@@ -152,6 +185,17 @@ alter table app_users add column if not exists subscription_months int default 1
 alter table app_users add column if not exists created_at timestamptz default now();
 alter table api_key_logs add column if not exists action text;
 alter table api_key_logs add column if not exists error_message text;
+
+-- Rellenar registros existentes con 'guaimaral' por retrocompatibilidad para evitar registros huérfanos
+update app_users set institution_id = 'guaimaral' where institution_id is null;
+update generated_sequences set institution_id = 'guaimaral' where institution_id is null;
+update usage_logs set institution_id = 'guaimaral' where institution_id is null;
+
+-- Índices de alto rendimiento para que las búsquedas por colegio sean instantáneas y no se crucen
+create index if not exists idx_app_users_institution on app_users(institution_id);
+create index if not exists idx_generated_sequences_institution on generated_sequences(institution_id);
+create index if not exists idx_generated_sequences_user_inst on generated_sequences(user_email, institution_id);
+create index if not exists idx_usage_logs_institution on usage_logs(institution_id);
 
 -- ✅ PASO 9: TRIGGER AUTOMÁTICO DE BACKUP AL ELIMINAR REGISTROS
 create or replace function fn_backup_deleted_record()
@@ -173,7 +217,8 @@ create trigger trg_backup_users_delete
 before delete on app_users
 for each row execute function fn_backup_deleted_record();
 
--- ✅ PASO 10: HABILITAR ROW LEVEL SECURITY (RLS) Y CREAR POLÍTICAS PERMISIVAS
+-- ✅ PASO 10: HABILITAR ROW LEVEL SECURITY (RLS) Y CREAR POLÍTICAS
+alter table institutions enable row level security;
 alter table app_users enable row level security;
 alter table usage_logs enable row level security;
 alter table api_key_logs enable row level security;
@@ -182,6 +227,7 @@ alter table security_logs enable row level security;
 alter table deleted_records_backup enable row level security;
 alter table chat_messages enable row level security;
 
+create policy "saas_institutions_all" on institutions for all using (true) with check (true);
 create policy "guaimaral_users_all" on app_users for all using (true) with check (true);
 create policy "guaimaral_logs_all" on usage_logs for all using (true) with check (true);
 create policy "guaimaral_api_all" on api_key_logs for all using (true) with check (true);
@@ -190,9 +236,9 @@ create policy "guaimaral_security_all" on security_logs for all using (true) wit
 create policy "guaimaral_backup_all" on deleted_records_backup for all using (true) with check (true);
 create policy "guaimaral_chat_all" on chat_messages for all using (true) with check (true);
 
--- ✅ PASO 11: PUBLICACIÓN CANAL REALTIME
+-- ✅ PASO 11: PUBLICACIÓN CANAL REALTIME (INCLUYENDO INSTITUTIONS)
 drop publication if exists supabase_realtime;
-create publication supabase_realtime for table app_users, usage_logs, api_key_logs, generated_sequences, chat_messages;
+create publication supabase_realtime for table institutions, app_users, usage_logs, api_key_logs, generated_sequences, chat_messages;
 
 -- ✅ PASO 12: REGISTRO E INSERTADO INICIAL DE DOCENTES CON PLANES E ILIMITADOS
 insert into app_users (email, password, name, role, areas, grados, is_unlimited, unlimited_start_date, monthly_price, subscription_months) values

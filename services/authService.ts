@@ -1084,9 +1084,10 @@ export const authService = {
     },
 
 
-    // --- GENERATED SEQUENCES PERSISTENCE & LOGGING ---
+    // --- GENERATED SEQUENCES PERSISTENCE & LOGGING (MULTI-TENANT SAAS) ---
     saveAndLogSequence: async (user: User, sequence: any, details: { grade: string, area: string, theme: string }) => {
         const email = user.email.toLowerCase().trim();
+        const instId = user.institution_id || 'guaimaral';
         const isDiag = details.theme.toLowerCase().includes('diagnóst');
         const actionPrefix = isDiag ? 'Diagnóstico' : 'Planeación';
         const actionText = `${actionPrefix}: ${details.theme} (${details.area} - ${details.grade})`;
@@ -1097,13 +1098,14 @@ export const authService = {
             const seqKey = `guaimaral_saved_sequences_${email}`;
 
             const stats = JSON.parse(localStorage.getItem(statsKey) || '[]');
-            stats.push({ timestamp: Date.now(), action: actionText });
+            stats.push({ timestamp: Date.now(), action: actionText, institution_id: instId });
             localStorage.setItem(statsKey, JSON.stringify(stats));
 
             const seqs = JSON.parse(localStorage.getItem(seqKey) || '[]');
             seqs.push({
                 id: crypto.randomUUID(),
                 timestamp: Date.now(),
+                institution_id: instId,
                 grade: details.grade,
                 area: details.area,
                 theme: details.theme,
@@ -1114,19 +1116,21 @@ export const authService = {
             console.warn("⚠️ Local storage backup failed");
         }
 
-        // 2. Nube (Prioridad para el Rector)
+        // 2. Nube (Prioridad para el Rector y Multi-Tenant Seguro)
         if (supabase) {
             try {
-                // A. Registro en Log de Uso (Para Hoy/Mes/Año)
+                // A. Registro en Log de Uso (Con Aislamiento Institucional)
                 const { error: logErr } = await supabase.from('usage_logs').insert([{
                     user_email: email,
+                    institution_id: instId,
                     action: actionText
                 }]);
                 if (logErr) console.error("❌ Error Log Nube:", logErr.message);
 
-                // B. Guardado en Repositorio (Para Docs Guardados)
+                // B. Guardado en Repositorio (Con Clave Foránea Institucional)
                 const { error: seqErr } = await supabase.from('generated_sequences').insert([{
                     user_email: email,
+                    institution_id: instId,
                     grado: details.grade,
                     area: details.area,
                     tema: details.theme,
@@ -1135,21 +1139,32 @@ export const authService = {
                 }]);
                 if (seqErr) console.error("❌ Error Repositorio Nube:", seqErr.message);
 
-                if (!logErr && !seqErr) console.log("🚀 [Sync] Éxito Total en la Nube");
+                if (!logErr && !seqErr) console.log(`🚀 [Sync] Éxito Total en la Nube (Colegio: ${instId})`);
             } catch (e) {
                 console.error("❌ Fallo crítico de sincronización:", e);
             }
         }
     },
 
-    getAllSequences: async () => {
+    getAllSequences: async (institutionId?: string) => {
         let cloudSeqs: any[] = [];
         if (supabase) {
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('generated_sequences')
                     .select('*')
                     .order('timestamp', { ascending: false });
+
+                // Filtro estricto por institución para evitar fuga de información
+                if (institutionId) {
+                    if (institutionId === 'guaimaral') {
+                        query = query.or('institution_id.eq.guaimaral,institution_id.is.null');
+                    } else {
+                        query = query.eq('institution_id', institutionId);
+                    }
+                }
+
+                const { data, error } = await query;
 
                 if (!error && data) {
                     cloudSeqs = data;
@@ -1168,15 +1183,20 @@ export const authService = {
                     const emailFromKey = k.replace('guaimaral_saved_sequences_', '');
                     const parsed = JSON.parse(localStorage.getItem(k) || '[]');
                     parsed.forEach((seq: any) => {
-                        allLocalSeqs.push({
-                            id: seq.id || String(seq.timestamp),
-                            user_email: emailFromKey,
-                            grado: seq.grade || '',
-                            area: seq.area || '',
-                            tema: seq.theme || '',
-                            content: seq.content,
-                            timestamp: new Date(seq.timestamp || Date.now()).toISOString()
-                        });
+                        const seqInst = seq.institution_id || 'guaimaral';
+                        // Respetar filtro de institución en locales
+                        if (!institutionId || institutionId === seqInst || (institutionId === 'guaimaral' && !seq.institution_id)) {
+                            allLocalSeqs.push({
+                                id: seq.id || String(seq.timestamp),
+                                user_email: emailFromKey,
+                                institution_id: seqInst,
+                                grado: seq.grade || '',
+                                area: seq.area || '',
+                                tema: seq.theme || '',
+                                content: seq.content,
+                                timestamp: new Date(seq.timestamp || Date.now()).toISOString()
+                            });
+                        }
                     });
                 }
             }
@@ -1287,15 +1307,25 @@ export const authService = {
         };
     },
 
-    getAllUsersWithStats: async () => {
-        let userList = [...AUTHORIZED_USERS];
+    getAllUsersWithStats: async (institutionId?: string) => {
+        const targetInst = institutionId || 'guaimaral';
+        // Solo incluir los 24 docentes locales iniciales si el colegio activo es Guaimaral
+        let userList: User[] = targetInst === 'guaimaral' ? [...AUTHORIZED_USERS] : [];
 
         if (supabase) {
             try {
-                // 1. Obtener todos los usuarios de la nube de una vez
-                const { data: cloudData } = await supabase
+                // 1. Obtener todos los usuarios de la nube de este colegio específico
+                let userQuery = supabase
                     .from('app_users')
-                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months, password');
+                    .select('name, email, role, areas, grados, custom_credits, is_unlimited, unlimited_start_date, monthly_price, subscription_months, password, institution_id');
+
+                if (targetInst === 'guaimaral') {
+                    userQuery = userQuery.or('institution_id.eq.guaimaral,institution_id.is.null');
+                } else {
+                    userQuery = userQuery.eq('institution_id', targetInst);
+                }
+
+                const { data: cloudData } = await userQuery;
 
                 if (cloudData && cloudData.length > 0) {
                     const cloudUsers: User[] = cloudData.map(u => ({
@@ -1309,7 +1339,8 @@ export const authService = {
                         unlimited_start_date: u.unlimited_start_date,
                         monthly_price: u.monthly_price,
                         subscription_months: u.subscription_months,
-                        password: u.password
+                        password: u.password,
+                        institution_id: u.institution_id || targetInst
                     }));
 
                     const emailMap = new Map();
@@ -1317,16 +1348,23 @@ export const authService = {
                     userList = Array.from(emailMap.values());
                 }
 
-                // 2. OPTIMIZACIÓN CRÍTICA: Obtener TODAS las secuencias registradas (con paginación para superar el límite de 1000 filas de Supabase)
-                let seqStats: { user_email: string; timestamp: string }[] = [];
+                // 2. OPTIMIZACIÓN CRÍTICA: Obtener secuencias de este colegio únicamente
+                let seqStats: { user_email: string; timestamp: string; institution_id?: string }[] = [];
                 let from = 0;
                 const PAGE_SIZE = 1000;
                 while (true) {
-                    const { data: pageData, error: pageErr } = await supabase
+                    let seqQuery = supabase
                         .from('generated_sequences')
-                        .select('user_email, timestamp')
-                        .order('timestamp', { ascending: false })
-                        .range(from, from + PAGE_SIZE - 1);
+                        .select('user_email, timestamp, institution_id')
+                        .order('timestamp', { ascending: false });
+
+                    if (targetInst === 'guaimaral') {
+                        seqQuery = seqQuery.or('institution_id.eq.guaimaral,institution_id.is.null');
+                    } else {
+                        seqQuery = seqQuery.eq('institution_id', targetInst);
+                    }
+
+                    const { data: pageData, error: pageErr } = await seqQuery.range(from, from + PAGE_SIZE - 1);
                     if (pageErr || !pageData || pageData.length === 0) break;
                     seqStats = seqStats.concat(pageData);
                     if (pageData.length < PAGE_SIZE) break;

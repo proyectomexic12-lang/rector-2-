@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { authService, User, deobfuscate } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
+import { institutionService } from '../services/institutionService';
 import { AREAS, GRADOS } from '../constants';
 import { Users, RefreshCw, Shield, FileText, Download, Upload, Check, X, AlertTriangle, Key, Clock, CreditCard, Sparkles, Zap, LogIn, Search } from 'lucide-react';
 
@@ -71,7 +72,8 @@ export const UserManagement: React.FC = () => {
 
     const fetchUsers = async () => {
         setIsRefreshing(true);
-        const data = await authService.getAllUsersWithStats();
+        const activeInst = institutionService.getActiveInstitution();
+        const data = await authService.getAllUsersWithStats(activeInst.id);
         const sorted = data.sort((a, b) => (b.stats?.total || 0) - (a.stats?.total || 0));
         setUsers(sorted);
         setIsRefreshing(false);
@@ -88,7 +90,8 @@ export const UserManagement: React.FC = () => {
         if (expandedUser === email) { setExpandedUser(null); return; }
         setIsLoadingSeqs(true);
         setExpandedUser(email);
-        const allSeqs = await authService.getAllSequences();
+        const activeInst = institutionService.getActiveInstitution();
+        const allSeqs = await authService.getAllSequences(activeInst.id);
         const filtered = allSeqs.filter(s => (s.user_email || '').toLowerCase() === email.toLowerCase());
         setUserSequences(prev => ({ ...prev, [email]: filtered }));
         setIsLoadingSeqs(false);
@@ -106,8 +109,15 @@ export const UserManagement: React.FC = () => {
 
     useEffect(() => {
         fetchUsers();
+
+        const unsubscribeInst = institutionService.subscribe(() => {
+            fetchUsers();
+        });
+
+        let channel: any = null;
+        let sub: any = null;
         if (supabase) {
-            const channel = supabase
+            channel = supabase
                 .channel('realtime-stats')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => fetchUsers())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'usage_logs' }, () => fetchUsers())
@@ -115,16 +125,19 @@ export const UserManagement: React.FC = () => {
                 .subscribe();
 
             const currentUser = authService.getCurrentUser();
-            const sub = authService.trackPresence(currentUser!, (state) => {
+            sub = authService.trackPresence(currentUser!, (state) => {
                 setOnlineUsers({ ...state });
             });
             if (sub) setOnlineUsers({ ...sub.presenceState() });
-
-            return () => {
-                if (sub) sub.unsubscribe();
-                supabase.removeChannel(channel);
-            };
         }
+
+        return () => {
+            unsubscribeInst();
+            if (sub) sub.unsubscribe();
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
+        };
     }, []);
 
     const handleManualSync = async () => {
