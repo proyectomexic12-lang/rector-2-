@@ -197,11 +197,15 @@ function weekNumber(d: Date = new Date()): number {
   return 1 + Math.ceil((firstThursday - target.getTime()) / 604800000);
 }
 
-// Regla Institucional:
-// Permite registrar la semana actual, semanas pendientes y hasta 4 semanas hacia adelante (planificación anticipada)
+// Regla Institucional Estricta:
+// - De Lunes a Jueves: ÚNICAMENTE la semana actual (y anteriores/pendientes).
+// - Cada VIERNES (y fines de semana: viernes, sábado, domingo): Se desbloquea ÚNICAMENTE la semana siguiente (+1).
+// - Semanas posteriores (+2, +3...) están estrictamente bloqueadas.
 function getMaxAllowedWeek(d: Date = getColombiaDate()): number {
   const currWeek = weekNumber(d);
-  return Math.min(52, currWeek + 4);
+  const dayOfWeek = d.getDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mie, 4: Jue, 5: Vie, 6: Sab
+  const isFridayOrWeekend = (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0);
+  return isFridayOrWeekend ? currWeek + 1 : currWeek;
 }
 
 function generateDynamicWeeks(currentWeek: number, maxAllowedWeek: number, year: number = new Date().getFullYear()): WeekOption[] {
@@ -215,7 +219,7 @@ function generateDynamicWeeks(currentWeek: number, maxAllowedWeek: number, year:
     
     let label = `Semana ${w}`;
     if (isSiguiente) {
-      label = `Semana ${w} (Planificación Anticipada)`;
+      label = `Semana ${w} (Semana Siguiente - Planificación Anticipada)`;
     } else if (isActual) {
       label = `Semana ${w} (Semana Actual - En Curso)`;
     } else {
@@ -336,7 +340,7 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
           }
           const serverMaxW = data.semana_abierta_max || data.semana_maxima_permitida;
           if (serverMaxW) {
-            setMaxWeekLimit(Math.max(serverMaxW, currIsoWeek + 4));
+            setMaxWeekLimit(serverMaxW);
           }
           if (data.areas) setAreasList(data.areas);
           if (data.grados) setGradosList(data.grados);
@@ -409,9 +413,10 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
       return;
     }
 
-    // Validación institucional de semana (permite semana actual, pendientes y hasta 4 semanas hacia adelante)
+    // Regla estricta institucional:
+    // Solo semana actual y anteriores de Lunes a Jueves; la semana siguiente ÚNICAMENTE se habilita a partir del viernes.
     if (semana > maxWeekLimit) {
-      setErrorMessage(`No está permitido registrar la Semana ${semana}. El límite permitido de entrega anticipada es hasta la Semana ${maxWeekLimit}.`);
+      setErrorMessage(`No está permitido registrar la Semana ${semana}. Las semanas posteriores se habilitan automáticamente cada viernes.`);
       return;
     }
 
