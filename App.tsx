@@ -13,7 +13,9 @@ import { SettingsModal } from './components/SettingsModal';
 import { GuidedTour } from './components/GuidedTour';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard, HelpCircle } from 'lucide-react';
+import { InstitutionManagement } from './components/InstitutionManagement';
+import { institutionService } from './services/institutionService';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard, HelpCircle, Building2, Eye, ChevronDown } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
@@ -40,12 +42,19 @@ function App() {
   // UX State
   const { toast } = useToast();
   const [loadingStep, setLoadingStep] = useState(0);
-  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat' | 'institutions'>('create');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showProfile, setShowProfile] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [isTourActive, setIsTourActive] = useState(false);
+  const [hasUploadedPlaneacion, setHasUploadedPlaneacion] = useState<boolean>(() => {
+    const user = authService.getCurrentUser();
+    if (!user?.email) return false;
+    const email = user.email.toLowerCase().trim();
+    return localStorage.getItem(`guaimaral_has_uploaded_${email}`) === 'true' ||
+           localStorage.getItem(`guaimaral_tour_completed_${email}`) === 'true';
+  });
   const [userQuota, setUserQuota] = useState<PlanQuotaInfo | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 
@@ -85,6 +94,24 @@ function App() {
 
       // FETCH QUOTA & CREDITS
       if (currentUser) {
+        const userEmail = (currentUser.email || '').toLowerCase().trim();
+        const tourDone = localStorage.getItem(`guaimaral_tour_completed_${userEmail}`) === 'true';
+        const uploadedDone = localStorage.getItem(`guaimaral_has_uploaded_${userEmail}`) === 'true';
+        const savedSeqs = JSON.parse(localStorage.getItem(`guaimaral_saved_sequences_${userEmail}`) || '[]');
+        const historyKey = authService.getUserStorageKey('guaimaral_history');
+        const historySeqs = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        const hasExistingData = tourDone || uploadedDone || savedSeqs.length > 0 || historySeqs.length > 0;
+
+        // Comprobar políticas institucionales primero
+        const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
+        const localDismissed = localStorage.getItem('guaimaral_policy_ack_2026');
+        const needsPolicyAck = !sessionDismissed && !localDismissed;
+
+        if (needsPolicyAck) {
+          setShowPolicyModal(true);
+          setIsTourActive(false);
+        }
+
         authService.getUserQuotaInfo(currentUser).then(quota => {
           setUserQuota(quota);
           if (quota.isUnlimitedAdmin) {
@@ -92,26 +119,44 @@ function App() {
           } else {
             setCreditsLeft(quota.remainingQuota);
           }
+
+          // Si el docente ya tiene planeaciones registradas o ya subió, desactivar guía y quitar botones definitivamente
+          const hasExistingPlaneaciones = hasExistingData || (quota?.usedQuota !== undefined && quota.usedQuota > 0);
+          if (hasExistingPlaneaciones) {
+            setHasUploadedPlaneacion(true);
+            setIsTourActive(false);
+            localStorage.setItem(`guaimaral_has_uploaded_${userEmail}`, 'true');
+            localStorage.setItem(`guaimaral_tour_completed_${userEmail}`, 'true');
+          } else if (currentUser.role !== 'admin' && !needsPolicyAck) {
+            // Solo auto-iniciar para docentes 100% nuevos si NO hay modal de políticas pendiente
+            setTimeout(() => {
+              setIsTourActive(true);
+            }, 700);
+          }
         });
-
-        // Mostrar comunicado oficial de políticas de una al ingresar (Solo 1 vez en la vida útil)
-        const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
-        const localDismissed = localStorage.getItem('guaimaral_policy_ack_2026');
-        if (!sessionDismissed && !localDismissed) {
-          setShowPolicyModal(true);
-        }
-
-        // Auto-iniciar la Guía Obligatoria para cada docente nuevo que ingrese
-        const userEmail = (currentUser.email || '').toLowerCase().trim();
-        const tourDone = localStorage.getItem(`guaimaral_tour_completed_${userEmail}`);
-        if (!tourDone && currentUser.role !== 'admin') {
-          setTimeout(() => {
-            setIsTourActive(true);
-          }, 700);
-        }
       }
     }
   }, [isAuthenticated, currentUser?.email]);
+
+  // 1.2 Listener en tiempo real para cuando un docente sube una planeación institucional
+  useEffect(() => {
+    const handlePlaneacionSubida = (e: any) => {
+      const email = (currentUser?.email || e?.detail?.email || '').toLowerCase().trim();
+      if (email) {
+        localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
+        localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+      }
+      setHasUploadedPlaneacion(true);
+      setIsTourActive(false);
+    };
+
+    window.addEventListener('guaimaral_tour_completed', handlePlaneacionSubida);
+    window.addEventListener('guaimaral_planeacion_subida', handlePlaneacionSubida);
+    return () => {
+      window.removeEventListener('guaimaral_tour_completed', handlePlaneacionSubida);
+      window.removeEventListener('guaimaral_planeacion_subida', handlePlaneacionSubida);
+    };
+  }, [currentUser?.email]);
 
   // 1.5 Update when activeTab changes (to catch admin changes)
   useEffect(() => {
@@ -219,6 +264,8 @@ function App() {
       const result = await generateDidacticSequence(input, refinementConfig?.instruction);
       setSequence(result);
 
+      // Al generar con éxito una planeación, no forzar tour si el docente ya interactuó
+      setIsTourActive(false);
       // SAVE & LOG TO CLOUD
       if (currentUser) {
         await authService.saveAndLogSequence(currentUser, result, {
@@ -232,6 +279,7 @@ function App() {
           setUserQuota(q);
           setCreditsLeft(q.remainingQuota);
         });
+        authService.getAllUsersWithStats().then(setAllUsers).catch(() => {});
         refreshUser();
       }
       
@@ -298,190 +346,237 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-outfit pb-20 relative selection:bg-blue-100 selection:text-blue-900">
       {/* Header Executive Minimalist */}
-      <header className="relative z-40 bg-slate-900 border-b border-slate-800 text-slate-100 sticky top-0 no-print transition-all duration-300 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleFullReset}>
-            <div className="bg-slate-800 p-1 rounded-lg border border-slate-700 w-10 h-10 flex items-center justify-center shrink-0 group-hover:border-indigo-500 transition-colors">
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded" style={{ maxWidth: '32px', maxHeight: '32px' }} />
+      <header className="relative z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-100 sticky top-0 no-print transition-all duration-300 shadow-lg">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+          
+          {/* 1. SECTOR IZQUIERDO: LOGO + INSTITUCIÓN EDUCATIVA ACTIVA */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div 
+              onClick={handleFullReset}
+              className="flex items-center gap-2 cursor-pointer group"
+              title="Clases Ideal AI - Ir al inicio"
+            >
+              <div className="bg-gradient-to-tr from-indigo-600 to-blue-500 p-0.5 rounded-xl shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+                <div className="bg-slate-950 p-1 rounded-[10px] w-9 h-9 flex items-center justify-center">
+                  <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain rounded" />
+                </div>
+              </div>
+              <div className="hidden sm:block leading-none">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-sm font-black text-white tracking-tight">Clases Ideal</h1>
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI</span>
+                </div>
+                <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+                  {currentUser?.role === 'admin' ? 'Consola Admin SaaS' : 'Plataforma Docente'}
+                </p>
+              </div>
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-base font-bold text-white tracking-tight leading-none">
-                Clases Ideal
-              </h1>
-              <p className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
-                Plataforma Docente IA
-              </p>
-            </div>
+
+            {/* Badge Interactivo Institución */}
+            {currentUser && (
+              <div 
+                onClick={() => {
+                  if (currentUser.role === 'admin') {
+                    setActiveTab('institutions');
+                  } else {
+                    handleAppLogout();
+                  }
+                }}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 cursor-pointer transition-all hover:border-indigo-500/50 group"
+                title={currentUser.role === 'admin' ? "Abrir Gestor SaaS de Colegios" : "Cambiar de Institución Educativa (SaaS)"}
+              >
+                <div className="w-5 h-5 rounded-lg bg-white p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                  <img
+                    src={institutionService.getActiveInstitution(currentUser).logoUrl}
+                    alt="Colegio"
+                    className="max-w-full max-h-full object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-slate-200 group-hover:text-white truncate max-w-[100px] sm:max-w-[140px]">
+                  {institutionService.getActiveInstitution(currentUser).shortName}
+                </span>
+                <ChevronDown size={12} className="text-slate-400 group-hover:text-indigo-400 shrink-0" />
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Nav Tools */}
-            <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
-              {currentUser?.role === 'admin' ? (
-                <>
-                  <button
-                    onClick={() => { setActiveTab('create'); setSequence(null); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Nueva Planeación"
-                  >
-                    <Sparkles size={14} />
-                    <span className="hidden md:inline">Planeador</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('monitor')}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'monitor' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Monitor en Tiempo Real"
-                  >
-                    <LayoutDashboard size={14} />
-                    <span className="hidden lg:inline">Monitor</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'users' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Gestión de Usuarios"
-                  >
-                    <UserIcon size={14} />
-                    <span className="hidden lg:inline">Usuarios</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Repositorio Global"
-                  >
-                    <Database size={14} />
-                    <span className="hidden lg:inline">Historial</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('chat')}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Chat Administrativo"
-                  >
-                    <MessageSquare size={14} />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('security')}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Seguridad Administrativa"
-                  >
-                    <ShieldAlert size={14} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setActiveTab('create'); setSequence(null); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Nueva Planeación"
-                  >
-                    <Sparkles size={14} />
-                    <span>Crear Planeación</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Mi Historial de Planeaciones"
-                  >
-                    <Database size={14} />
-                    <span className="hidden sm:inline">Mis Planeaciones</span>
-                  </button>
-                </>
-              )}
-              
-              {/* Botón Políticas y Planes */}
-              <button
-                onClick={() => setShowPolicyModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60 font-medium text-xs transition-colors"
-                title="Términos y Planes de Suscripción"
-              >
-                <BookOpen size={13} className="text-indigo-400" />
-                <span className="hidden md:inline">Planes y Cuotas</span>
-              </button>
+          {/* 2. SECTOR CENTRAL: PESTAÑAS PRINCIPALES (ORGANIZADAS POR CATEGORÍA) */}
+          <nav className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-2xl border border-slate-800/80 shadow-inner overflow-x-auto max-w-full">
+            {currentUser?.role === 'admin' ? (
+              <>
+                <button
+                  onClick={() => { setActiveTab('create'); setSequence(null); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                  title="Nueva Planeación"
+                >
+                  <Sparkles size={13} className={activeTab === 'create' ? 'text-amber-300' : ''} />
+                  <span>Planeador</span>
+                </button>
 
+                <button
+                  onClick={() => setActiveTab('monitor')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'monitor' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                  title="Monitor en Tiempo Real"
+                >
+                  <LayoutDashboard size={13} />
+                  <span>Monitor</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                  title="Gestión de Docentes y Cuotas"
+                >
+                  <UserIcon size={13} />
+                  <span>Usuarios</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('institutions')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'institutions' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-indigo-300 hover:text-white hover:bg-slate-800/60'}`}
+                  title="Gestor Multi-Colegio SaaS"
+                >
+                  <Building2 size={13} className={activeTab === 'institutions' ? 'text-white' : 'text-indigo-400'} />
+                  <span>Colegios SaaS</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                  title="Repositorio Global"
+                >
+                  <Database size={13} />
+                  <span>Historial</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setActiveTab('create'); setSequence(null); }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'create' && !sequence ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                >
+                  <Sparkles size={13} />
+                  <span>Crear Planeación</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
+                >
+                  <Database size={13} />
+                  <span>Mis Planeaciones</span>
+                </button>
+
+                <button
+                  onClick={handleAppLogout}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5 shrink-0"
+                  title="Ver catálogo de instituciones educativas o cambiar de colegio"
+                >
+                  <Building2 size={13} className="text-indigo-400" />
+                  <span className="hidden sm:inline">Colegios SaaS</span>
+                </button>
+              </>
+            )}
+          </nav>
+
+          {/* 3. SECTOR DERECHO: HERRAMIENTAS, ESTADO Y PERFIL */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Accesos rápidos secundarios para Admin */}
+            {currentUser?.role === 'admin' && (
+              <div className="flex items-center gap-1 pr-1.5 border-r border-slate-800">
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${activeTab === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  title="Chat Administrativo con Docentes"
+                >
+                  <MessageSquare size={14} />
+                </button>
+                <button
+                  onClick={() => setActiveTab('security')}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${activeTab === 'security' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  title="Consola de Seguridad y Auditoría"
+                >
+                  <ShieldAlert size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Badge de Rol o Cuota */}
+            {currentUser?.role === 'admin' ? (
+              <div className="px-2.5 py-1 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>ADMIN</span>
+              </div>
+            ) : userQuota?.hasPlan ? (
+              <button 
+                onClick={() => setShowPolicyModal(true)}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 text-slate-200 transition-colors cursor-pointer text-left"
+                title={`Plan Activo: ${userQuota.usedQuota} de ${userQuota.maxQuota} usadas. Clic para ver detalles.`}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${userQuota.remainingQuota > 3 ? 'bg-emerald-400' : userQuota.remainingQuota > 0 ? 'bg-amber-400' : 'bg-red-400'}`}></span>
+                <div className="flex flex-col leading-none">
+                  <span className="text-[11px] font-bold text-white">
+                    {userQuota.usedQuota} / {userQuota.maxQuota}
+                  </span>
+                  <span className="text-[8px] text-slate-400 font-medium">
+                    {userQuota.maxQuota >= 60 ? 'Plan 3M' : 'Plan Mes'}
+                  </span>
+                </div>
+              </button>
+            ) : (
+              <button 
+                onClick={() => setShowPolicyModal(true)}
+                className="px-2 py-1 rounded-xl bg-red-950/50 border border-red-500/30 text-red-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1"
+                title="Sin Plan Activo. Clic para contratar."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                <span>Sin Plan</span>
+              </button>
+            )}
+
+            {/* Botón Montar Planeaciones (SOLO DOCENTES QUE AÚN NO HAN SUBIDO) */}
+            {!hasUploadedPlaneacion && currentUser?.role !== 'admin' && (
               <a
                 href="https://manuel-red.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-sm"
                 title="Montar planeaciones institucionales"
               >
-                <Upload size={13} />
-                <span className="hidden sm:inline">Montar Planeaciones</span>
+                <Upload size={12} />
+                <span className="hidden md:inline">Montar</span>
               </a>
-            </div>
+            )}
 
-            <div className="h-5 w-px bg-slate-800 mx-1 hidden sm:block"></div>
-
-            {/* User Quota Status Badge */}
-            <div className="flex items-center gap-2 shrink-0">
-              {currentUser && (
-                userQuota?.isUnlimitedAdmin ? (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-emerald-400 text-xs font-semibold" title="Acceso Administrativo Ilimitado">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    <span className="text-[11px] tracking-wide">ADMIN</span>
-                  </div>
-                ) : userQuota?.hasPlan ? (
-                  <button 
-                    onClick={() => setShowPolicyModal(true)}
-                    className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-800/90 border border-slate-700 hover:border-slate-600 text-slate-200 transition-colors cursor-pointer text-left" 
-                    title={`Plan Activo: ${userQuota.usedQuota} de ${userQuota.maxQuota} usadas. Clic para ver detalles.`}
-                  >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${userQuota.remainingQuota > 3 ? 'bg-emerald-400' : userQuota.remainingQuota > 0 ? 'bg-amber-400' : 'bg-red-400'}`}></span>
-                    <div className="flex flex-col leading-none">
-                      <span className="text-[11px] font-bold text-white">
-                        {userQuota.usedQuota} / {userQuota.maxQuota}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-medium">
-                        {userQuota.maxQuota >= 60 ? 'Plan 3M' : 'Plan Mes'}
-                      </span>
-                    </div>
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => setShowPolicyModal(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-950/40 border border-red-500/30 text-red-300 hover:bg-red-950/60 transition-colors text-xs font-semibold" 
-                    title="Sin Plan Activo. Clic para contratar."
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                    <span className="text-[10px] uppercase">Sin Plan</span>
-                  </button>
-                )
-              )}
-
-              <div className="hidden xl:flex flex-col items-end leading-none">
-                <span className="text-xs font-semibold text-slate-200">{currentUser?.name}</span>
-                <span className="text-[9px] text-slate-500 uppercase mt-0.5">{currentUser?.role}</span>
-              </div>
-
-              {/* Botón Modo Guiado Tutorial */}
+            {/* Botón Políticas y Planes para Docentes */}
+            {currentUser?.role !== 'admin' && (
               <button
-                onClick={() => setIsTourActive(prev => !prev)}
-                className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black transition-all shadow-md shrink-0 ${
-                  isTourActive 
-                    ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse' 
-                    : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500 shadow-indigo-600/30 hover:scale-105 active:scale-95'
-                }`}
-                title="Activar tutorial guiado paso a paso con flechas y spotlight"
+                onClick={() => setShowPolicyModal(true)}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60 font-medium text-xs transition-colors"
+                title="Términos y Planes de Suscripción"
               >
-                <Sparkles size={14} className={isTourActive ? 'animate-spin' : ''} />
-                <span className="hidden md:inline">{isTourActive ? 'Modo Guiado Activo' : '🎓 Guía Docente'}</span>
-                <span className="md:hidden">🎓 Guía</span>
+                <BookOpen size={12} className="text-indigo-400" />
+                <span className="hidden lg:inline">Planes</span>
               </button>
+            )}
 
-              {/* Settings (Engranaje) Button */}
+            {/* Botones de Control de Perfil */}
+            <div className="flex items-center gap-1 pl-1">
               <button
                 onClick={() => setShowSettingsModal(true)}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0 ${showSettingsModal ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700'}`}
-                title="Configuración, Suscripción y Cuenta (⚙️)"
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${showSettingsModal ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/80 shadow-xs'}`}
+                title="Configuración y Cuenta (⚙️)"
               >
-                <Settings size={16} />
+                <Settings size={14} />
               </button>
 
               <button
                 onClick={handleAppLogout}
-                className="w-9 h-9 rounded-xl bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 border border-slate-700 transition-colors shadow-sm flex items-center justify-center shrink-0"
+                className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 border border-slate-700/80 transition-all shadow-xs flex items-center justify-center"
                 title="Cerrar Sesión"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           </div>
@@ -538,11 +633,41 @@ function App() {
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
 
+        {/* Banner Informativo de Modo Inspección Multi-Tenant Ultra-Compacto */}
+        {institutionService.getActiveOverrideId() && (
+          <div className="mb-6 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-lg text-white flex items-center justify-between gap-3 animate-fade-in no-print">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping shrink-0"></span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300 shrink-0">Inspección SaaS:</span>
+              <span className="text-xs font-bold text-white truncate">
+                {institutionService.getActiveInstitution().name}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                institutionService.setActiveOverride(null);
+                refreshUser();
+              }}
+              className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white font-bold text-[11px] transition-colors shrink-0 border border-white/15 cursor-pointer"
+            >
+              Restablecer Vista
+            </button>
+          </div>
+        )}
+
         {/* Tabs Content */}
         {!sequence && (
           <div className="animate-fade-in-up">
             {activeTab === 'monitor' && currentUser?.role === 'admin' && <ApiStats />}
             {activeTab === 'users' && currentUser?.role === 'admin' && <UserManagement />}
+            {activeTab === 'institutions' && currentUser?.role === 'admin' && (
+              <InstitutionManagement
+                currentOverrideId={institutionService.getActiveOverrideId()}
+                onInstitutionChange={() => {
+                  refreshUser();
+                }}
+              />
+            )}
             {activeTab === 'history' && (
               <AdminSequenceViewer
                 userEmail={currentUser?.role === 'admin' ? undefined : currentUser?.email}
@@ -721,7 +846,7 @@ function App() {
                     </div>
                   </div>
                 )}
-                {currentUser && authService.isUserUnlimited(currentUser) && (
+                {currentUser && authService.isUserUnlimited(currentUser) && currentUser.role !== 'admin' && (
                   <div className="max-w-4xl mx-auto mb-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 sm:p-4 flex items-center gap-3.5 text-xs text-slate-300">
                     <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
                     <p className="leading-relaxed">
@@ -904,8 +1029,8 @@ function App() {
           onLogout={handleAppLogout}
         />
 
-        {/* Botón Flotante Permanente de Ayuda Guiada (Paso a Paso) */}
-        {currentUser && !isTourActive && (
+        {/* Botón Flotante Permanente de Ayuda Guiada: Solo visible para docentes que aún no han subido */}
+        {currentUser && currentUser.role !== 'admin' && !isTourActive && !hasUploadedPlaneacion && (
           <button
             onClick={() => setIsTourActive(true)}
             className="fixed bottom-6 left-6 z-[9990] bg-gradient-to-r from-violet-700 via-indigo-600 to-purple-600 hover:from-violet-600 hover:to-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 font-black text-xs border-2 border-white/40 hover:scale-105 active:scale-95 transition-all group animate-bounce no-print"
@@ -921,8 +1046,16 @@ function App() {
 
         {/* Componente del Tour Guiado Interactivo */}
         <GuidedTour
-          isActive={isTourActive}
-          onClose={() => setIsTourActive(false)}
+          isActive={isTourActive && !hasUploadedPlaneacion && currentUser?.role !== 'admin' && !showPolicyModal}
+          onClose={() => {
+            setIsTourActive(false);
+            if (currentUser?.email) {
+              const email = currentUser.email.toLowerCase().trim();
+              localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+              localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
+              setHasUploadedPlaneacion(true);
+            }
+          }}
           hasGeneratedSequence={Boolean(sequence)}
           isLoading={isLoading}
           userEmail={currentUser?.email}

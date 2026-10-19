@@ -203,7 +203,7 @@ export const UserManagement: React.FC = () => {
                 grados: tempGrados,
                 is_unlimited: tempIsUnlimited,
                 custom_credits: tempIsUnlimited ? (tempSubscriptionMonths >= 6 ? 120 : tempSubscriptionMonths >= 3 ? 60 : 20) : tempCustomCredits,
-                unlimited_start_date: tempIsUnlimited ? (tempStartDate ? tempStartDate.substring(0, 10) + 'T12:00:00' : new Date().toISOString()) : null,
+                unlimited_start_date: tempIsUnlimited ? (tempStartDate ? tempStartDate.substring(0, 10) + 'T00:00:00.000Z' : new Date().toISOString()) : null,
                 monthly_price: tempMonthlyPrice,
                 subscription_months: tempSubscriptionMonths,
                 password: tempPassword.trim().length > 0 ? tempPassword.trim() : undefined

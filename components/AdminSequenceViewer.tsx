@@ -5,6 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import { User as UserType } from '../services/authService';
 import { generateDocx } from '../services/docxService';
 import { SequenceInput } from '../types';
+import { institutionService } from '../services/institutionService';
 
 interface AdminSequenceViewerProps {
     userEmail?: string;
@@ -96,7 +97,8 @@ export const AdminSequenceViewer: React.FC<AdminSequenceViewerProps> = ({ userEm
                 sesiones: content.actividades?.length || 4,
                 ejeCrese: content.eje_crese_utilizado || ''
             };
-            await generateDocx(content, seqInput);
+            const inst = institutionService.getActiveInstitution(user);
+            await generateDocx(content, seqInput, inst);
         } catch (e) {
             console.error("Error al exportar DOCX:", e);
             alert("No se pudo generar el archivo Word (.docx) de esta planeación.");

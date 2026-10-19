@@ -418,7 +418,18 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
             </span>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                const email = userEmail?.toLowerCase().trim();
+                if (email) {
+                  localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+                  localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { email } }));
+                    window.dispatchEvent(new CustomEvent('guaimaral_planeacion_subida', { detail: { email } }));
+                  }
+                }
+                onClose();
+              }}
               className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
               title="Cerrar guía (X)"
             >
