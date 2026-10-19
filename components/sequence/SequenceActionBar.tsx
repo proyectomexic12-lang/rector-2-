@@ -137,11 +137,15 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
             <button
               id="tour-btn-registrar"
               onClick={() => setShowRevisionModal(true)}
-              className="px-3.5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95"
+              className={`px-3.5 py-2.5 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 ${
+                sentSuccess
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-400 animate-pulse'
+                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-indigo-600/30'
+              }`}
               title="Registrar y enviar planeación a SIGEP / Coordinación"
             >
-              <Send size={14} />
-              <span>Registrar Planeación</span>
+              {sentSuccess ? <CheckCircle size={14} className="text-emerald-100" /> : <Send size={14} />}
+              <span>{sentSuccess ? '✓ ¡Planeación Radicada!' : 'Registrar Planeación'}</span>
             </button>
           )}
 
@@ -223,8 +227,7 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
           input={input}
           onSuccess={(msg) => {
             setSentSuccess(true);
-            alert(`✅ ¡Planeación enviada con éxito a SIGEP-IEG!\n\n${msg}`);
-            setTimeout(() => setSentSuccess(false), 5000);
+            setTimeout(() => setSentSuccess(false), 8000);
           }}
         />
       )}
