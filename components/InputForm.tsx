@@ -132,7 +132,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <select
-                  id="tour-grado"
                   name="grado"
                   value={input.grado}
                   onChange={handleChange}
@@ -165,7 +164,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                   <BrainCircuit className="h-5 w-5" />
                 </div>
                 <select
-                  id="tour-area"
                   name="area"
                   value={input.area}
                   onChange={handleChange}
@@ -185,7 +183,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                   <Target className="h-5 w-5" />
                 </div>
                 <select
-                  id="tour-crese"
                   name="ejeCrese"
                   value={input.ejeCrese}
                   onChange={handleChange}
@@ -205,7 +202,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
                   <Calendar className="h-5 w-5" />
                 </div>
                 <input
-                  id="tour-sesiones"
                   type="number"
                   name="sesiones"
                   value={input.sesiones}
@@ -222,7 +218,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               <label className="block text-[11px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em] group-hover/input:text-blue-500 transition-colors">Tema Principal</label>
               <div className="relative transform transition-all duration-300 hover:-translate-y-1">
                 <input
-                  id="tour-tema"
                   type="text"
                   name="tema"
                   value={input.tema || ''}
@@ -390,7 +385,6 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               return (
                 <div className="space-y-3">
                   <button
-                    id="tour-btn-generar"
                     onClick={handleValidationAndGenerate}
                     disabled={isDisabled}
                     className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isDisabled

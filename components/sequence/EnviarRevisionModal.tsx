@@ -438,11 +438,9 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
       const docEmail = (currentUser?.email || secuencia?.docente_email || (secuencia as any)?.docente || input?.docente || input?.docente_email || '').toLowerCase().trim();
       if (docEmail) {
         localStorage.setItem(`guaimaral_has_uploaded_${docEmail}`, 'true');
-        localStorage.setItem(`guaimaral_tour_completed_${docEmail}`, 'true');
       }
 
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('guaimaral_tour_completed', { detail: { mensaje: res.mensaje, email: docEmail } }));
         window.dispatchEvent(new CustomEvent('guaimaral_planeacion_subida', { detail: { email: docEmail } }));
       }
 
@@ -685,7 +683,6 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
               Cancelar
             </button>
             <button
-              id="tour-btn-confirmar-envio"
               type="submit"
               disabled={isSubmitting}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-indigo-600/30 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"

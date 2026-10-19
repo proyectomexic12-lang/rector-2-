@@ -10,7 +10,6 @@ import { AdminChatPanel } from './components/AdminChatPanel';
 import { ChatWidget } from './components/ChatWidget';
 import { PolicyAnnouncementModal } from './components/PolicyAnnouncementModal';
 import { SettingsModal } from './components/SettingsModal';
-import { GuidedTour } from './components/GuidedTour';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
 import { InstitutionManagement } from './components/InstitutionManagement';
@@ -47,13 +46,11 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
-  const [isTourActive, setIsTourActive] = useState(false);
   const [hasUploadedPlaneacion, setHasUploadedPlaneacion] = useState<boolean>(() => {
     const user = authService.getCurrentUser();
     if (!user?.email) return false;
     const email = user.email.toLowerCase().trim();
-    return localStorage.getItem(`guaimaral_has_uploaded_${email}`) === 'true' ||
-           localStorage.getItem(`guaimaral_tour_completed_${email}`) === 'true';
+    return localStorage.getItem(`guaimaral_has_uploaded_${email}`) === 'true';
   });
   const [userQuota, setUserQuota] = useState<PlanQuotaInfo | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
@@ -95,12 +92,11 @@ function App() {
       // FETCH QUOTA & CREDITS
       if (currentUser) {
         const userEmail = (currentUser.email || '').toLowerCase().trim();
-        const tourDone = localStorage.getItem(`guaimaral_tour_completed_${userEmail}`) === 'true';
         const uploadedDone = localStorage.getItem(`guaimaral_has_uploaded_${userEmail}`) === 'true';
         const savedSeqs = JSON.parse(localStorage.getItem(`guaimaral_saved_sequences_${userEmail}`) || '[]');
         const historyKey = authService.getUserStorageKey('guaimaral_history');
         const historySeqs = JSON.parse(localStorage.getItem(historyKey) || '[]');
-        const hasExistingData = tourDone || uploadedDone || savedSeqs.length > 0 || historySeqs.length > 0;
+        const hasExistingData = uploadedDone || savedSeqs.length > 0 || historySeqs.length > 0;
 
         // Comprobar políticas institucionales primero
         const sessionDismissed = sessionStorage.getItem('guaimaral_policy_modal_dismissed');
@@ -109,7 +105,6 @@ function App() {
 
         if (needsPolicyAck) {
           setShowPolicyModal(true);
-          setIsTourActive(false);
         }
 
         authService.getUserQuotaInfo(currentUser).then(quota => {
@@ -120,18 +115,11 @@ function App() {
             setCreditsLeft(quota.remainingQuota);
           }
 
-          // Si el docente ya tiene planeaciones registradas o ya subió, desactivar guía y quitar botones definitivamente
+          // Si el docente ya tiene planeaciones registradas o ya subió, actualizar estado
           const hasExistingPlaneaciones = hasExistingData || (quota?.usedQuota !== undefined && quota.usedQuota > 0);
           if (hasExistingPlaneaciones) {
             setHasUploadedPlaneacion(true);
-            setIsTourActive(false);
             localStorage.setItem(`guaimaral_has_uploaded_${userEmail}`, 'true');
-            localStorage.setItem(`guaimaral_tour_completed_${userEmail}`, 'true');
-          } else if (currentUser.role !== 'admin' && !needsPolicyAck) {
-            // Solo auto-iniciar para docentes 100% nuevos si NO hay modal de políticas pendiente
-            setTimeout(() => {
-              setIsTourActive(true);
-            }, 700);
           }
         });
       }
@@ -144,16 +132,12 @@ function App() {
       const email = (currentUser?.email || e?.detail?.email || '').toLowerCase().trim();
       if (email) {
         localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
-        localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
       }
       setHasUploadedPlaneacion(true);
-      setIsTourActive(false);
     };
 
-    window.addEventListener('guaimaral_tour_completed', handlePlaneacionSubida);
     window.addEventListener('guaimaral_planeacion_subida', handlePlaneacionSubida);
     return () => {
-      window.removeEventListener('guaimaral_tour_completed', handlePlaneacionSubida);
       window.removeEventListener('guaimaral_planeacion_subida', handlePlaneacionSubida);
     };
   }, [currentUser?.email]);
@@ -264,8 +248,7 @@ function App() {
       const result = await generateDidacticSequence(input, refinementConfig?.instruction);
       setSequence(result);
 
-      // Al generar con éxito una planeación, no forzar tour si el docente ya interactuó
-      setIsTourActive(false);
+
       // SAVE & LOG TO CLOUD
       if (currentUser) {
         await authService.saveAndLogSequence(currentUser, result, {
@@ -1029,37 +1012,7 @@ function App() {
           onLogout={handleAppLogout}
         />
 
-        {/* Botón Flotante Permanente de Ayuda Guiada: Solo visible para docentes que aún no han subido */}
-        {currentUser && currentUser.role !== 'admin' && !isTourActive && !hasUploadedPlaneacion && (
-          <button
-            onClick={() => setIsTourActive(true)}
-            className="fixed bottom-6 left-6 z-[9990] bg-gradient-to-r from-violet-700 via-indigo-600 to-purple-600 hover:from-violet-600 hover:to-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 font-black text-xs border-2 border-white/40 hover:scale-105 active:scale-95 transition-all group animate-bounce no-print"
-            title="Abrir guía con flechas y spotlight para profesores"
-          >
-            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-              <Sparkles size={14} className="text-yellow-300 animate-spin" />
-            </div>
-            <span className="hidden sm:inline">🎓 ¿Cómo crear y subir planeación? (Guía con Flechas)</span>
-            <span className="sm:hidden">🎓 Guía Paso a Paso</span>
-          </button>
-        )}
 
-        {/* Componente del Tour Guiado Interactivo */}
-        <GuidedTour
-          isActive={isTourActive && !hasUploadedPlaneacion && currentUser?.role !== 'admin' && !showPolicyModal}
-          onClose={() => {
-            setIsTourActive(false);
-            if (currentUser?.email) {
-              const email = currentUser.email.toLowerCase().trim();
-              localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
-              localStorage.setItem(`guaimaral_has_uploaded_${email}`, 'true');
-              setHasUploadedPlaneacion(true);
-            }
-          }}
-          hasGeneratedSequence={Boolean(sequence)}
-          isLoading={isLoading}
-          userEmail={currentUser?.email}
-        />
       </main>
     </div>
   );

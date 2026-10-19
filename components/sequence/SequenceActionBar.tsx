@@ -137,7 +137,6 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
           {/* Botón Registrar Planeación en SIGEP */}
           {editableData && (
             <button
-              id="tour-btn-registrar"
               onClick={() => setShowRevisionModal(true)}
               className={`px-3.5 py-2.5 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 ${
                 sentSuccess
