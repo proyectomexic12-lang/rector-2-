@@ -219,9 +219,6 @@ function App() {
       const result = await generateDidacticSequence(input, refinementConfig?.instruction);
       setSequence(result);
 
-      // ACTIVACIÓN AUTOMÁTICA DEL MODO GUIADO DIRECTO AL BOTÓN REGISTRAR
-      setIsTourActive(true);
-
       // SAVE & LOG TO CLOUD
       if (currentUser) {
         await authService.saveAndLogSequence(currentUser, result, {
@@ -238,7 +235,7 @@ function App() {
         refreshUser();
       }
       
-      toast("¡Planeación generada con éxito!", 'success');
+      toast("¡Planeación didáctica generada con éxito! Puedes revisarla, editarla o pulsar 'Registrar Planeación' para subirla.", 'success');
 
     } catch (err) {
       console.error(err);

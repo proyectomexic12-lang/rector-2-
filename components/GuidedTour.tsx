@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, Loader2, ArrowRight, X } from 'lucide-react';
 
 export interface TourStep {
   id: string;
@@ -368,53 +368,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         />
       </svg>
 
-      {/* 2. Bloqueadores invisibles alrededor del target */}
-      {isTargetVisible && targetRect && (
-        <>
-          <div
-            className="fixed pointer-events-auto cursor-not-allowed"
-            style={{
-              top: 0,
-              left: 0,
-              right: 0,
-              height: Math.max(0, targetRect.top - padding),
-              zIndex: 9999982,
-            }}
-          />
-          <div
-            className="fixed pointer-events-auto cursor-not-allowed"
-            style={{
-              top: targetRect.bottom + padding,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 9999982,
-            }}
-          />
-          <div
-            className="fixed pointer-events-auto cursor-not-allowed"
-            style={{
-              top: targetRect.top - padding,
-              left: 0,
-              width: Math.max(0, targetRect.left - padding),
-              height: targetRect.height + padding * 2,
-              zIndex: 9999982,
-            }}
-          />
-          <div
-            className="fixed pointer-events-auto cursor-not-allowed"
-            style={{
-              top: targetRect.top - padding,
-              left: targetRect.right + padding,
-              right: 0,
-              height: targetRect.height + padding * 2,
-              zIndex: 9999982,
-            }}
-          />
-        </>
-      )}
-
-      {/* 3. Borde Brillante Pulsante sobre el elemento */}
+      {/* 2. Borde Brillante Pulsante sobre el elemento */}
       {isTargetVisible && targetRect && (
         <div
           className="fixed pointer-events-none rounded-2xl border-4 border-violet-400 dark:border-violet-300 shadow-[0_0_40px_rgba(139,92,246,0.9)] animate-pulse"
@@ -428,7 +382,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         />
       )}
 
-      {/* 4. Flecha Animada con mensaje directo */}
+      {/* 3. Flecha Animada con mensaje directo */}
       {isTargetVisible && targetRect && (
         <div
           style={arrowStyle}
@@ -443,24 +397,34 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         </div>
       )}
 
-      {/* 5. Tarjeta Explicativa Flotante con Letra Grande */}
+      {/* 4. Tarjeta Explicativa Flotante con Letra Grande y Botón de Cierre */}
       <div
         style={tooltipStyle}
         className="w-[92vw] max-w-[450px] bg-white dark:bg-slate-900 border-2 border-violet-500 rounded-3xl shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 flex flex-col gap-4 animate-scale-in pointer-events-auto"
       >
-        {/* Encabezado sin botón X */}
+        {/* Encabezado con Botón X de Cierre Inmediato */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-violet-600 text-white font-black text-xs flex items-center justify-center shadow-md">
               {currentStepIndex + 1}
             </span>
             <span className="text-[11px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400">
-              Paso {currentStepIndex + 1} de {TOUR_STEPS.length} · Guía Obligatoria
+              Paso {currentStepIndex + 1} de {TOUR_STEPS.length} · Guía Docente
             </span>
           </div>
-          <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            Flujo Guiado
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              Tutorial
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
+              title="Cerrar guía (X)"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
         {/* Estado especial durante la generación */}
@@ -471,7 +435,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               <span>⏳ Espera a que se genere la planeación...</span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-              La Inteligencia Artificial está redactando la secuencia didáctica completa con todos sus momentos pedagógicos. En pocos segundos terminará y la flecha te llevará directamente al botón morado para registrarla.
+              La Inteligencia Artificial está redactando la secuencia didáctica completa con todos sus momentos pedagógicos. En pocos segundos terminará y podrás revisarla o registrarla.
             </p>
           </div>
         ) : (
@@ -496,24 +460,37 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           </>
         )}
 
-        {/* Pie de tarjeta: Indicador de acción obligatoria en pantalla */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300 font-bold text-xs">
-            <span className="w-2 h-2 rounded-full bg-violet-600 animate-ping" />
-            <span>Selecciona o interactúa en pantalla</span>
-          </div>
+        {/* Pie de tarjeta: Indicador de acción e instrucciones */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (userEmail) {
+                try {
+                  localStorage.setItem(`guaimaral_tour_completed_${userEmail.toLowerCase().trim()}`, 'true');
+                } catch (e) {}
+              }
+              onClose();
+            }}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold transition-all cursor-pointer"
+            title="Omitir el tutorial y continuar normalmente"
+          >
+            Saltar Guía
+          </button>
 
-          {/* Botón contextual de avance para el campo Tema si ya escribió */}
-          {currentStepIndex === 3 && canAdvanceTema && (
-            <button
-              type="button"
-              onClick={() => setCurrentStepIndex(4)}
-              className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse"
-            >
-              <span>Ir a Generar</span>
-              <ArrowRight size={13} />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Botón contextual de avance para el campo Tema si ya escribió */}
+            {currentStepIndex === 3 && canAdvanceTema && (
+              <button
+                type="button"
+                onClick={() => setCurrentStepIndex(4)}
+                className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse cursor-pointer"
+              >
+                <span>Ir a Generar</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

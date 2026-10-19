@@ -166,11 +166,14 @@ class ApiSyncService {
     } catch (error: any) {
       console.error('❌ Error enviando planeación:', error);
       if (error?.message === 'Failed to fetch' || error?.name === 'TypeError') {
+        const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
         throw new Error(
-          'No se pudo conectar con el servidor receptor de coordinación (puerto 3001 apagado). Por favor inicia el servidor ejecutando: npm run server'
+          isLocal
+            ? 'No se pudo conectar con el servidor receptor local en el puerto 3001. Por favor inicia el servidor ejecutando: npm run server'
+            : 'No se pudo conectar con el servidor institucional en la nube (manuel-red.vercel.app). Por favor verifica tu conexión a internet o intenta nuevamente.'
         );
       }
-      throw new Error(error.message || 'No se pudo conectar con el software receptor.');
+      throw new Error(error.message || 'No se pudo conectar con el software receptor institucional.');
     }
   }
 }
