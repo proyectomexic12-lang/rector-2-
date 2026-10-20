@@ -10,6 +10,7 @@ import { AdminChatPanel } from './components/AdminChatPanel';
 import { ChatWidget } from './components/ChatWidget';
 import { PolicyAnnouncementModal } from './components/PolicyAnnouncementModal';
 import { SettingsModal } from './components/SettingsModal';
+import { GuidedTour } from './components/GuidedTour';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
 import { InstitutionManagement } from './components/InstitutionManagement';
@@ -46,6 +47,7 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [isTourActive, setIsTourActive] = useState(false);
   const [hasUploadedPlaneacion, setHasUploadedPlaneacion] = useState<boolean>(() => {
     const user = authService.getCurrentUser();
     if (!user?.email) return false;
@@ -247,6 +249,8 @@ function App() {
     try {
       const result = await generateDidacticSequence(input, refinementConfig?.instruction);
       setSequence(result);
+      // Activar la guía especial ÚNICAMENTE cuando se crea la planeación
+      setIsTourActive(true);
 
 
       // SAVE & LOG TO CLOUD
@@ -266,7 +270,15 @@ function App() {
         refreshUser();
       }
       
-      toast("¡Planeación didáctica generada con éxito! Puedes revisarla, editarla o pulsar 'Registrar Planeación' para subirla.", 'success');
+      toast("🎉 ¡Planeación didáctica generada con éxito! Pulsa 'Registrar Planeación' para subirla directamente a SIGEP sin ir a otro software.", 'success');
+
+      // Auto-desplazamiento suave directo al botón de registrar planeación
+      setTimeout(() => {
+        const btn = document.getElementById('btn-registrar-planeacion') || document.getElementById('banner-registrar-planeacion');
+        if (btn) {
+          btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 400);
 
     } catch (err) {
       console.error(err);
@@ -308,12 +320,14 @@ function App() {
 
   const handleReset = () => {
     setSequence(null);
+    setIsTourActive(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleFullReset = () => {
     if (confirm("¿Restablecer parámetros actuales?")) {
       setSequence(null);
+      setIsTourActive(false);
       setInput(initialInput);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -321,8 +335,9 @@ function App() {
 
   const handleEdit = () => {
     setSequence(null);
+    setIsTourActive(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  };
 
   if (!isAuthenticated) return <Login onLogin={login} />;
 
@@ -518,18 +533,33 @@ function App() {
               </button>
             )}
 
-            {/* Botón Montar Planeaciones (SOLO DOCENTES QUE AÚN NO HAN SUBIDO) */}
-            {!hasUploadedPlaneacion && currentUser?.role !== 'admin' && (
-              <a
-                href="https://manuel-red.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-sm"
-                title="Montar planeaciones institucionales"
+            {/* Botón Registrar Planeación Institucional en SIGEP (Sin salir a otro software) */}
+            {currentUser?.role !== 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (sequence) {
+                    window.dispatchEvent(new CustomEvent('abrir_modal_registrar_planeacion'));
+                  } else {
+                    const formEl = document.getElementById('formulario-planeacion');
+                    if (formEl) {
+                      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    toast("Crea tu planeación didáctica en el formulario y podrás radicarla al instante desde aquí sin salir a otro software.", 'info');
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
+                  sequence 
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-indigo-600/30 animate-pulse'
+                    : hasUploadedPlaneacion
+                      ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                }`}
+                title="Registrar planeación directamente en SIGEP sin salir a otro software"
               >
                 <Upload size={12} />
-                <span className="hidden md:inline">Montar</span>
-              </a>
+                <span className="hidden md:inline">{sequence ? 'Registrar Planeación' : hasUploadedPlaneacion ? 'Registrar Otra' : 'Montar / Registrar'}</span>
+              </button>
             )}
 
             {/* Botón Políticas y Planes para Docentes */}
@@ -1012,6 +1042,19 @@ function App() {
           onLogout={handleAppLogout}
         />
 
+        {/* Guía Especial Únicamente para el Botón de Radicar Planeación (Nunca en el formulario) */}
+        <GuidedTour
+          isActive={isTourActive && Boolean(sequence) && !hasUploadedPlaneacion && currentUser?.role !== 'admin'}
+          onClose={() => {
+            setIsTourActive(false);
+            if (currentUser?.email) {
+              const email = currentUser.email.toLowerCase().trim();
+              localStorage.setItem(`guaimaral_tour_completed_${email}`, 'true');
+            }
+          }}
+          hasGeneratedSequence={Boolean(sequence)}
+          userEmail={currentUser?.email}
+        />
 
       </main>
     </div>

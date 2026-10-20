@@ -91,7 +91,7 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
   const isFormComplete = Boolean(input.grado && input.area && input.ejeCrese && (input.tema?.length || 0) >= 5);
 
   return (
-    <div className="w-full mb-10 no-print animate-fade-in-up">
+    <div id="formulario-planeacion" className="w-full mb-10 no-print animate-fade-in-up">
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 relative z-10">
         
         {/* PANEL IZQUIERDO: Configuración (2 Columnas en XL) */}
@@ -383,11 +383,16 @@ export const InputForm: React.FC<InputFormProps> = ({ input, setInput, onGenerat
               const isDisabled = isLoading || isBlockedByCredits || isExpired;
 
               return (
-                <div className="space-y-3">
+                <div className="space-y-3 mt-6">
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                    <span>Radicación Directa: Al generar, podrás radicarla al instante sin salir a otro software</span>
+                  </div>
+
                   <button
                     onClick={handleValidationAndGenerate}
                     disabled={isDisabled}
-                    className={`w-full mt-6 relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isDisabled
+                    className={`w-full relative overflow-hidden flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all duration-300 transform group ${isDisabled
                       ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:-translate-y-1 hover:shadow-blue-500/40 border border-blue-500/30'
                       }`}

@@ -29,6 +29,13 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
   const [sentSuccess, setSentSuccess] = useState(false);
   const activeInstitution = institutionService.getActiveInstitution();
 
+  // Escuchar evento global para abrir el modal desde el header, banner o pie de página
+  React.useEffect(() => {
+    const handleOpenModal = () => setShowRevisionModal(true);
+    window.addEventListener('abrir_modal_registrar_planeacion', handleOpenModal);
+    return () => window.removeEventListener('abrir_modal_registrar_planeacion', handleOpenModal);
+  }, []);
+
   const handleCopyText = () => {
     const el = document.getElementById('preview-container');
     if (el) {
@@ -137,16 +144,20 @@ export const SequenceActionBar: React.FC<SequenceActionBarProps> = ({
           {/* Botón Registrar Planeación en SIGEP */}
           {editableData && (
             <button
+              id="btn-registrar-planeacion"
               onClick={() => setShowRevisionModal(true)}
-              className={`px-3.5 py-2.5 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 ${
+              className={`px-4 py-2.5 text-xs font-black rounded-xl transition-all flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 ring-2 ring-violet-400/50 hover:ring-violet-400 ${
                 sentSuccess
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-400 animate-pulse'
-                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-indigo-600/30'
+                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-indigo-600/40 animate-pulse'
               }`}
-              title="Registrar y enviar planeación a SIGEP / Coordinación"
+              title="Registrar y enviar planeación directamente a SIGEP / Coordinación sin salir a otro software"
             >
-              {sentSuccess ? <CheckCircle size={14} className="text-emerald-100" /> : <Send size={14} />}
+              {sentSuccess ? <CheckCircle size={15} className="text-emerald-100" /> : <Send size={15} />}
               <span>{sentSuccess ? '✓ ¡Planeación Radicada!' : 'Registrar Planeación'}</span>
+              <span className="hidden lg:inline text-[9px] bg-white/20 px-1.5 py-0.5 rounded-md uppercase tracking-wider font-extrabold text-white">
+                SIGEP
+              </span>
             </button>
           )}
 

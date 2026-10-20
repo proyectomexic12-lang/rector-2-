@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DidacticSequence, SequenceInput } from '../../types';
-import { Sparkles, PenTool, Lock, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
+import { Sparkles, PenTool, Lock, BookOpen, GraduationCap, Loader2, Send } from 'lucide-react';
 import { generateExtendedIcfesExam, buildGradeAwareVideoQuery, resolveResourceAction } from '../../services/geminiService';
 import { institutionService } from '../../services/institutionService';
 
@@ -893,6 +893,34 @@ export const SequenceDocument: React.FC<SequenceDocumentProps> = ({
         </p>
       </div>
       {/* --- FIN TALLER --- */}
+
+      {/* --- CALL-TO-ACTION INFERIOR: REGISTRAR EN SIGEP DIRECTAMENTE --- */}
+      <div className="mt-10 p-6 rounded-3xl bg-gradient-to-r from-violet-600/15 via-indigo-600/15 to-blue-600/15 border-2 border-indigo-300 dark:border-indigo-700/60 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left no-print shadow-xl">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/30">
+            <Send size={20} />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider mb-1">
+              ✓ Documento Listo para Radicar
+            </div>
+            <h4 className="font-black text-sm sm:text-base text-slate-800 dark:text-slate-100">
+              ¿Terminaste de revisar tu planeación didáctica?
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 max-w-xl">
+              Radícala ahora mismo en la plataforma de coordinación institucional. No necesitas ir a otro software ni adjuntar archivos manualmente.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('abrir_modal_registrar_planeacion'))}
+          className="px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black text-xs rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+        >
+          <Send size={15} />
+          <span>Registrar Planeación en SIGEP</span>
+        </button>
+      </div>
 
     </div>
     </div>
