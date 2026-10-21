@@ -1,9 +1,10 @@
 # REGLAS Y DIRECTRICES DEL PROYECTO
 
-## 1. EXCLUSIVIDAD INSTITUCIONAL
-- Este aplicativo es **exclusiva y únicamente para la INSTITUCIÓN EDUCATIVA GUAIMARAL**.
-- **PROHIBIDO TERMINANTEMENTE** subir, reactivar o desplegar características SaaS o multi-institución (otros colegios, selectores de entidad, multi-tenancy) sin una orden explícita y directa del usuario autorizándolo expresamente.
-- Todo desarrollo debe priorizar la estabilidad, simplicidad y flujo normal de trabajo de los 24 docentes y directivos de la I.E. Guaimaral.
+## 1. EXCLUSIVIDAD INSTITUCIONAL Y REGLA DE SAAS
+- Este aplicativo en producción y en la rama principal (`main`) es **exclusiva y únicamente para la INSTITUCIÓN EDUCATIVA GUAIMARAL**.
+- **DESARROLLO DE SAAS SOLO EN LOCAL:** Cualquier prueba o funcionalidad de SaaS multi-colegio debe mantenerse estrictamente en entorno local o en rama aislada.
+- **PROHIBIDO SUBIR SAAS A GIT/PRODUCCIÓN:** Cuando se trabaje o suban cambios a la rama principal (`main`), jamás se debe subir nada de SaaS. Queda totalmente restringido a menos que el usuario dé la orden con la frase exacta: **"sube saas"**. Si el usuario no dice esa frase explícitamente, **NO se sube**.
+- Todo desarrollo que se suba debe priorizar la estabilidad, simplicidad y flujo normal de trabajo de los 24 docentes y directivos de la I.E. Guaimaral.
 
 ## 2. FLUJO DE AUTENTICACIÓN Y SESIÓN
 - El login debe ser siempre directo (correo institucional y contraseña) para la I.E. Guaimaral.
