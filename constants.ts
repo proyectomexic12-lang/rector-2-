@@ -41,6 +41,7 @@ export const AREAS = [
   "Dimensión Cognitiva",
   "Dimensión Socioafectiva",
   "Dimensión Comunicativa",
+  "Integral (Matemáticas, Lenguaje, Sociales, Naturales)",
   "Integral (matemáticas+lenguaje+sociales+naturales)"
 ];
 

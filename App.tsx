@@ -13,9 +13,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { GuidedTour } from './components/GuidedTour';
 import { SequenceInput, PlanQuotaInfo } from './types';
 import { generateDidacticSequence } from './services/geminiService';
-import { InstitutionManagement } from './components/InstitutionManagement';
-import { institutionService } from './services/institutionService';
-import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard, HelpCircle, Building2, Eye, ChevronDown } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, LogOut, User as UserIcon, Shield, LayoutDashboard, Database, Sparkles, ShieldAlert, Upload, MessageCircle, ShieldCheck, MessageSquare, BookOpen, FileCheck2, Settings, Award, CreditCard, HelpCircle, Eye } from 'lucide-react';
 import { Login } from './components/Login';
 import { authService, User } from './services/authService';
 import { presenceService } from './services/presenceService';
@@ -42,7 +40,7 @@ function App() {
   // UX State
   const { toast } = useToast();
   const [loadingStep, setLoadingStep] = useState(0);
-  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat' | 'institutions'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'monitor' | 'users' | 'history' | 'security' | 'chat'>('create');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showProfile, setShowProfile] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -361,45 +359,37 @@ function App() {
               </div>
               <div className="hidden sm:block leading-none">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm font-black text-white tracking-tight">Clases Ideal</h1>
-                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI</span>
+                  <h1 className="text-sm font-black text-white tracking-tight">I.E. Guaimaral</h1>
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Docente AI</span>
                 </div>
                 <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
-                  {currentUser?.role === 'admin' ? 'Consola Admin SaaS' : 'Plataforma Docente'}
+                  {currentUser?.role === 'admin' ? 'Consola de Coordinación' : 'Plataforma Docente Institucional'}
                 </p>
               </div>
             </div>
 
-            {/* Badge Interactivo Institución */}
+            {/* Badge Institucional I.E. Guaimaral */}
             {currentUser && (
               <div 
-                onClick={() => {
-                  if (currentUser.role === 'admin') {
-                    setActiveTab('institutions');
-                  } else {
-                    handleAppLogout();
-                  }
-                }}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 cursor-pointer transition-all hover:border-indigo-500/50 group"
-                title={currentUser.role === 'admin' ? "Abrir Gestor SaaS de Colegios" : "Cambiar de Institución Educativa (SaaS)"}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/70 select-none shadow-xs"
+                title="Institución Educativa Guaimaral - San José de Cúcuta"
               >
                 <div className="w-5 h-5 rounded-lg bg-white p-0.5 flex items-center justify-center shrink-0 shadow-xs">
                   <img
-                    src={institutionService.getActiveInstitution(currentUser).logoUrl}
-                    alt="Colegio"
+                    src="/logo_guaimaral.png"
+                    alt="I.E. Guaimaral"
                     className="max-w-full max-h-full object-contain"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
                   />
                 </div>
-                <span className="text-[11px] font-bold text-slate-200 group-hover:text-white truncate max-w-[100px] sm:max-w-[140px]">
-                  {institutionService.getActiveInstitution(currentUser).shortName}
+                <span className="text-[11px] font-bold text-slate-200 truncate max-w-[100px] sm:max-w-[140px]">
+                  I.E. Guaimaral
                 </span>
-                <ChevronDown size={12} className="text-slate-400 group-hover:text-indigo-400 shrink-0" />
               </div>
             )}
           </div>
 
-          {/* 2. SECTOR CENTRAL: PESTAÑAS PRINCIPALES (ORGANIZADAS POR CATEGORÍA) */}
+          {/* 2. SECTOR CENTRAL: PESTAÑAS PRINCIPALES */}
           <nav className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-2xl border border-slate-800/80 shadow-inner overflow-x-auto max-w-full">
             {currentUser?.role === 'admin' ? (
               <>
@@ -431,15 +421,6 @@ function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveTab('institutions')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'institutions' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-indigo-300 hover:text-white hover:bg-slate-800/60'}`}
-                  title="Gestor Multi-Colegio SaaS"
-                >
-                  <Building2 size={13} className={activeTab === 'institutions' ? 'text-white' : 'text-indigo-400'} />
-                  <span>Colegios SaaS</span>
-                </button>
-
-                <button
                   onClick={() => setActiveTab('history')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'}`}
                   title="Repositorio Global"
@@ -464,15 +445,6 @@ function App() {
                 >
                   <Database size={13} />
                   <span>Mis Planeaciones</span>
-                </button>
-
-                <button
-                  onClick={handleAppLogout}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5 shrink-0"
-                  title="Ver catálogo de instituciones educativas o cambiar de colegio"
-                >
-                  <Building2 size={13} className="text-indigo-400" />
-                  <span className="hidden sm:inline">Colegios SaaS</span>
                 </button>
               </>
             )}
@@ -646,41 +618,11 @@ function App() {
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
 
-        {/* Banner Informativo de Modo Inspección Multi-Tenant Ultra-Compacto */}
-        {institutionService.getActiveOverrideId() && (
-          <div className="mb-6 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-lg text-white flex items-center justify-between gap-3 animate-fade-in no-print">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping shrink-0"></span>
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300 shrink-0">Inspección SaaS:</span>
-              <span className="text-xs font-bold text-white truncate">
-                {institutionService.getActiveInstitution().name}
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                institutionService.setActiveOverride(null);
-                refreshUser();
-              }}
-              className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white font-bold text-[11px] transition-colors shrink-0 border border-white/15 cursor-pointer"
-            >
-              Restablecer Vista
-            </button>
-          </div>
-        )}
-
         {/* Tabs Content */}
         {!sequence && (
           <div className="animate-fade-in-up">
             {activeTab === 'monitor' && currentUser?.role === 'admin' && <ApiStats />}
             {activeTab === 'users' && currentUser?.role === 'admin' && <UserManagement />}
-            {activeTab === 'institutions' && currentUser?.role === 'admin' && (
-              <InstitutionManagement
-                currentOverrideId={institutionService.getActiveOverrideId()}
-                onInstitutionChange={() => {
-                  refreshUser();
-                }}
-              />
-            )}
             {activeTab === 'history' && (
               <AdminSequenceViewer
                 userEmail={currentUser?.role === 'admin' ? undefined : currentUser?.email}

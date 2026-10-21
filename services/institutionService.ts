@@ -33,57 +33,7 @@ export const DEFAULT_INSTITUTION: Institution = {
 };
 
 export const INITIAL_INSTITUTIONS: Institution[] = [
-  DEFAULT_INSTITUTION,
-  {
-    id: 'sanjose',
-    name: 'COLEGIO INTEGRADO SAN JOSÉ',
-    shortName: 'Col. San José',
-    slug: 'sanjose',
-    logoUrl: '/logo.png',
-    primaryColor: '#059669',
-    accentColor: '#10b981',
-    status: 'active',
-    formatSchema: {
-      procesoName: 'PROCESO CURRICULAR - APRENDIZAJE POR COMPETENCIAS',
-      lema: 'Ciencia, Virtud y Liderazgo Innovador',
-      daneCode: '154001004567',
-      nit: '890.502.890-1',
-      hasCorporeidadAdi: false,
-      hasEjeCrese: true,
-      momento1Name: 'Exploración',
-      momento2Name: 'Estructuración',
-      momento3Name: 'Transferencia',
-      customFormatNotes: 'Enfoque Constructivista y Aprendizaje Significativo.',
-      promptInstructions: 'Desarrollar la secuencia en tres momentos: Exploración de saberes previos, Estructuración conceptual activa y Transferencia/Aplicación práctica.'
-    },
-    totalTeachers: 18,
-    createdAt: '2026-01-15T00:00:00.000Z'
-  },
-  {
-    id: 'laesperanza',
-    name: 'CENTRO EDUCATIVO RURAL LA ESPERANZA',
-    shortName: 'C.E.R. La Esperanza',
-    slug: 'laesperanza',
-    logoUrl: '/logo_minimal.png',
-    primaryColor: '#d97706',
-    accentColor: '#f59e0b',
-    status: 'active',
-    formatSchema: {
-      procesoName: 'MODELO PEDAGÓGICO ESCUELA NUEVA RURAL',
-      lema: 'Sembrando Saber en el Campo Colombiano',
-      daneCode: '254001009876',
-      nit: '890.503.111-2',
-      hasCorporeidadAdi: false,
-      hasEjeCrese: true,
-      momento1Name: 'Vivencia',
-      momento2Name: 'Fundamentación',
-      momento3Name: 'Aplicación',
-      customFormatNotes: 'Metodología activa multigrado y proyectos productivos pedagógicos.',
-      promptInstructions: 'Diseñar bajo metodología Escuela Nueva con Vivencia cotidiana, Fundamentación científica contextualizada y Aplicación comunitaria.'
-    },
-    totalTeachers: 9,
-    createdAt: '2026-02-01T00:00:00.000Z'
-  }
+  DEFAULT_INSTITUTION
 ];
 
 class InstitutionService {
@@ -126,20 +76,22 @@ class InstitutionService {
       }
 
       if (data && data.length > 0) {
-        const cloudInsts = data.map(d => this.mapFromSupabase(d));
-        // Merge con locales garantizando Guaimaral siempre presente
+        // Excluir tajantemente sanjose y laesperanza - solo Guaimaral
+        const cloudInsts = data
+          .map(d => this.mapFromSupabase(d))
+          .filter(i => i.id !== 'sanjose' && i.id !== 'laesperanza');
+        
         const cloudIds = new Set(cloudInsts.map(i => i.id));
         const merged = [...cloudInsts];
 
         for (const local of this.institutions) {
-          if (!cloudIds.has(local.id)) {
+          if (local.id !== 'sanjose' && local.id !== 'laesperanza' && !cloudIds.has(local.id)) {
             merged.push(local);
-            // Respaldar a la nube si era local únicamente
             this.persistToSupabase(local).catch(() => {});
           }
         }
 
-        this.institutions = merged;
+        this.institutions = merged.length > 0 ? merged : [DEFAULT_INSTITUTION];
         this.saveToStorage(false); // No reenviar a Supabase para evitar bucle
       } else {
         // La tabla está vacía en Supabase: sembramos las instituciones iniciales
@@ -164,7 +116,7 @@ class InstitutionService {
   }
 
   private async persistToSupabase(inst: Institution) {
-    if (!supabase) return;
+    if (!supabase || inst.id === 'sanjose' || inst.id === 'laesperanza') return;
     try {
       const payload = {
         id: inst.id,
@@ -190,14 +142,16 @@ class InstitutionService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const existingIds = new Set(parsed.map((p: any) => p.id));
-          const merged = [...parsed];
+          const filtered = parsed.filter((p: any) => p.id !== 'sanjose' && p.id !== 'laesperanza');
+          const existingIds = new Set(filtered.map((p: any) => p.id));
+          const merged = [...filtered];
           for (const initInst of INITIAL_INSTITUTIONS) {
             if (!existingIds.has(initInst.id)) {
               merged.push(initInst);
             }
           }
-          this.institutions = merged;
+          this.institutions = merged.length > 0 ? merged : [DEFAULT_INSTITUTION];
+          this.saveToStorage(false);
           return;
         }
       }
@@ -231,7 +185,7 @@ class InstitutionService {
   }
 
   public getInstitutions(): Institution[] {
-    return [...this.institutions];
+    return this.institutions.filter(i => i.id !== 'sanjose' && i.id !== 'laesperanza');
   }
 
   public getInstitutionById(id: string): Institution {
@@ -240,36 +194,12 @@ class InstitutionService {
   }
 
   public getActiveInstitution(user?: User | null): Institution {
-    // Si el SuperAdmin activó un switcher temporal para inspeccionar un colegio
-    const overrideId = localStorage.getItem(ACTIVE_OVERRIDE_KEY);
-    if (overrideId) {
-      const found = this.institutions.find(i => i.id === overrideId);
-      if (found) return found;
-    }
-
-    if (!user) return this.institutions[0] || DEFAULT_INSTITUTION;
-
-    // Si el usuario tiene un institution_id explícito
-    if (user.institution_id) {
-      const found = this.institutions.find(i => i.id === user.institution_id);
-      if (found) return found;
-    }
-
-    // Default por dominio de correo o fallback a Guaimaral
-    const email = (user.email || '').toLowerCase();
-    if (email.includes('guaimaral')) {
-      return this.getInstitutionById('guaimaral');
-    }
-
-    return this.institutions[0] || DEFAULT_INSTITUTION;
+    // Modo Institucional Fijo: Exclusivo I.E. Guaimaral
+    return DEFAULT_INSTITUTION;
   }
 
   public setActiveOverride(institutionId: string | null) {
-    if (institutionId) {
-      localStorage.setItem(ACTIVE_OVERRIDE_KEY, institutionId);
-    } else {
-      localStorage.removeItem(ACTIVE_OVERRIDE_KEY);
-    }
+    localStorage.removeItem(ACTIVE_OVERRIDE_KEY);
     this.notifyListeners();
   }
 

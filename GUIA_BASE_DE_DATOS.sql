@@ -46,26 +46,6 @@ values
   '#2563eb',
   '#4f46e5',
   '{"procesoName": "PROCESO: GESTIÓN ACADÉMICA - PREPARACIÓN DE CLASES", "lema": "Calidad Humana y Excelencia Académica", "momento1Name": "Inicio", "momento2Name": "Desarrollo", "momento3Name": "Cierre", "hasCorporeidadAdi": true, "hasEjeCrese": true}'::jsonb
-),
-(
-  'sanjose',
-  'COLEGIO INTEGRADO SAN JOSÉ',
-  'Col. San José',
-  'sanjose',
-  '/logo.png',
-  '#059669',
-  '#10b981',
-  '{"procesoName": "PROCESO CURRICULAR - APRENDIZAJE POR COMPETENCIAS", "lema": "Ciencia, Virtud y Liderazgo Innovador", "momento1Name": "Exploración", "momento2Name": "Estructuración", "momento3Name": "Transferencia", "hasCorporeidadAdi": false, "hasEjeCrese": true}'::jsonb
-),
-(
-  'laesperanza',
-  'CENTRO EDUCATIVO RURAL LA ESPERANZA',
-  'C.E.R. La Esperanza',
-  'laesperanza',
-  '/logo_minimal.png',
-  '#d97706',
-  '#f59e0b',
-  '{"procesoName": "MODELO PEDAGÓGICO ESCUELA NUEVA RURAL", "lema": "Sembrando Saber en el Campo Colombiano", "momento1Name": "Vivencia", "momento2Name": "Fundamentación", "momento3Name": "Aplicación", "hasCorporeidadAdi": false, "hasEjeCrese": true}'::jsonb
 )
 on conflict (id) do update set
   name = excluded.name,
@@ -74,6 +54,9 @@ on conflict (id) do update set
   primary_color = excluded.primary_color,
   accent_color = excluded.accent_color,
   format_schema = excluded.format_schema;
+
+-- Eliminar instituciones demo no deseadas (mantener exclusivamente I.E. Guaimaral)
+delete from institutions where id in ('sanjose', 'laesperanza');
 
 -- ✅ PASO 2: CREAR TABLA DE USUARIOS (Con aislamiento institucional)
 create table if not exists app_users (
@@ -261,7 +244,7 @@ insert into app_users (email, password, name, role, areas, grados, is_unlimited,
 ('jairo.benavides@guaimaral.edu.co', 'Mw==', 'Jairo Benavides', 'docente', '{"Física","Estadística","Matemáticas","Educación Artística"}', '{}', false, null, 15000, 1),
 ('jorge.delahoz@guaimaral.edu.co', 'Mw==', 'Jorge de la Hoz', 'docente', '{"Religión","Inglés"}', '{}', false, null, 15000, 1),
 ('jorge.ferrer@guaimaral.edu.co', 'Mw==', 'Jorge Ferrer', 'docente', '{"Matemáticas","Geometría","Religión","Estadística","Física"}', '{}', false, null, 15000, 1),
-('leovigilda.navarro@guaimaral.edu.co', 'Mw==', 'Leovigilda Navarro', 'docente', '{"Integral (Matemáticas, Lenguaje, Sociales, Naturales)"}', '{"Multigrado"}', false, null, 15000, 1),
+('leovigilda.navarro@guaimaral.edu.co', 'Mw==', 'Leovigilda Navarro', 'docente', '{"Integral (Matemáticas, Lenguaje, Sociales, Naturales)","Matemáticas"}', '{"Multigrado"}', true, now(), 35000, 3),
 ('linda.varela@guaimaral.edu.co', 'Mw==', 'Linda Varela', 'docente', '{"Lengua Castellana"}', '{}', false, null, 15000, 1),
 ('martin.celin@guaimaral.edu.co', 'Mw==', 'Martín Celin', 'docente', '{}', '{}', false, null, 15000, 1),
 ('nancy.vargas@guaimaral.edu.co', 'Mw==', 'Nancy Vargas', 'docente', '{}', '{}', false, null, 15000, 1),

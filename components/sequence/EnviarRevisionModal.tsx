@@ -23,6 +23,7 @@ interface WeekOption {
 }
 
 const DEFAULT_AREAS = [
+  'Integral (Matemáticas, Lenguaje, Sociales, Naturales)',
   'Matemáticas',
   'Humanidades y Lengua Castellana',
   'Idioma Extranjero (Inglés)',
@@ -44,8 +45,6 @@ const DEFAULT_AREAS = [
 ];
 
 const DEFAULT_GRADES = [
-  { value: 'Prejardín', label: 'Prejardín' },
-  { value: 'Jardín', label: 'Jardín' },
   { value: 'Transición', label: 'Transición' },
   { value: '1°', label: '1° Primaria' },
   { value: '2°', label: '2° Primaria' },
@@ -56,13 +55,19 @@ const DEFAULT_GRADES = [
   { value: '7°', label: '7° Secundaria' },
   { value: '8°', label: '8° Secundaria' },
   { value: '9°', label: '9° Secundaria' },
-  { value: '10°', label: '10° Media Technical' },
-  { value: '11°', label: '11° Media Technical' }
+  { value: '10°', label: '10° Media Técnica' },
+  { value: '11°', label: '11° Media Técnica' },
+  { value: 'Multigrado', label: 'Multigrado (Sede Rural / Escuela Nueva)' },
+  { value: 'Multigrado 1° a 5°', label: 'Multigrado 1° a 5° Primaria' },
+  { value: 'Multigrado 6° a 11°', label: 'Multigrado 6° a 11° Secundaria' },
+  { value: 'Prejardín', label: 'Prejardín' },
+  { value: 'Jardín', label: 'Jardín' }
 ];
 
 function mapToSigepGrade(gStr?: string): string {
   if (!gStr) return '';
   const clean = gStr.toLowerCase().trim();
+  if (clean.includes('multigrado')) return 'Multigrado';
   if (clean.includes('prejard')) return 'Prejardín';
   if (clean.includes('jard')) return 'Jardín';
   if (clean.includes('transic')) return 'Transición';
@@ -83,6 +88,7 @@ function mapToSigepGrade(gStr?: string): string {
 function mapToSigepArea(aStr?: string): string {
   if (!aStr) return '';
   const clean = aStr.toLowerCase().trim();
+  if (clean.includes('integral')) return 'Integral (Matemáticas, Lenguaje, Sociales, Naturales)';
   if (clean.includes('lengua') || clean.includes('castellana') || clean.includes('español')) return 'Humanidades y Lengua Castellana';
   if (clean.includes('ingl') || clean.includes('extranjero')) return 'Idioma Extranjero (Inglés)';
   if (clean.includes('naturales') || clean.includes('ambiental')) return 'Ciencias Naturales y Ed. Ambiental';
@@ -112,6 +118,7 @@ function detectArea(input?: SequenceInput, secuencia?: DidacticSequence): string
   const tema = (secuencia?.tema_principal || secuencia?.titulo_secuencia || '').toLowerCase();
   const full = `${comp} ${tema}`;
 
+  if (full.includes('integral')) return 'Integral (Matemáticas, Lenguaje, Sociales, Naturales)';
   if (full.includes('lectura') || full.includes('crítica') || full.includes('critica')) return 'Lectura Crítica';
   if (full.includes('matemática') || full.includes('algebra') || full.includes('geometría') || full.includes('estadística')) return 'Matemáticas';
   if (full.includes('lengua') || full.includes('castellana') || full.includes('español') || full.includes('literatura')) return 'Humanidades y Lengua Castellana';
@@ -126,7 +133,7 @@ function detectArea(input?: SequenceInput, secuencia?: DidacticSequence): string
   if (full.includes('artística') || full.includes('dibujo') || full.includes('teatro') || full.includes('música')) return 'Educación Artística y Cultural';
   if (full.includes('deporte') || full.includes('educación física') || full.includes('motricidad')) return 'Educación Física, Recreación y Deportes';
 
-  return direct || 'Lectura Crítica';
+  return direct || 'Matemáticas';
 }
 
 function detectGrado(input?: SequenceInput, secuencia?: DidacticSequence): string {
@@ -134,6 +141,7 @@ function detectGrado(input?: SequenceInput, secuencia?: DidacticSequence): strin
   if (direct && direct.trim()) return mapToSigepGrade(direct.trim());
 
   const text = `${secuencia?.titulo_secuencia || ''} ${secuencia?.tema_principal || ''}`.toLowerCase();
+  if (text.includes('multigrado')) return 'Multigrado';
   if (text.includes('transición') || text.includes('transicion')) return 'Transición';
   if (text.includes('1°') || text.includes('primero') || text.includes('grado 1')) return '1°';
   if (text.includes('2°') || text.includes('segundo') || text.includes('grado 2')) return '2°';
@@ -308,11 +316,31 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
 
     const currentUser = authService.getCurrentUser();
     const email = currentUser?.email || '';
+    const userAreas = (currentUser?.areas && currentUser.areas.length > 0) ? currentUser.areas : [];
+    const userGrados = (currentUser?.grados && currentUser.grados.length > 0) ? currentUser.grados : [];
 
-    // Mapeo inicial inteligente a partir de la planeación activa
-    const initArea = detectArea(input, secuencia);
-    const initGrado = detectGrado(input, secuencia);
+    // Mapeo inicial inteligente a partir de la planeación activa o el perfil docente
+    let initArea = detectArea(input, secuencia);
+    let initGrado = detectGrado(input, secuencia);
     const initSesiones = Math.min(5, Math.max(1, input?.sesiones || (secuencia?.actividades ? secuencia.actividades.length : 1)));
+
+    // Si el docente tiene materias específicas asignadas (como Leovigilda: Integral), asegurar que se preseleccione
+    if (userAreas.length > 0) {
+      setMisAreas(userAreas);
+      if (!initArea || initArea === 'Matemáticas') {
+        const matchUser = userAreas.find(a => a.toLowerCase().includes('integral') || (initArea && a.toLowerCase().includes(initArea.toLowerCase())));
+        if (matchUser) initArea = matchUser;
+        else if (!initArea) initArea = userAreas[0];
+      }
+    }
+
+    if (userGrados.length > 0) {
+      if (!initGrado || initGrado === '1°') {
+        const isMulti = userGrados.some(g => g.toLowerCase().includes('multigrado'));
+        if (isMulti) initGrado = 'Multigrado';
+        else initGrado = mapToSigepGrade(userGrados[0]);
+      }
+    }
 
     const now = getColombiaDate();
     const currIsoWeek = weekNumber(now);
@@ -350,6 +378,8 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
           }
           if (data.docente_asignaciones?.areas?.length > 0) {
             setMisAreas(data.docente_asignaciones.areas);
+          } else if (userAreas.length > 0) {
+            setMisAreas(userAreas);
           }
         }
       })

@@ -178,6 +178,7 @@ function getColombiaDateInfo() {
 
 // Normalización oficial institucional de áreas y grados
 const CATALOGO_AREAS = [
+  'Integral (Matemáticas, Lenguaje, Sociales, Naturales)',
   'Matemáticas',
   'Humanidades y Lengua Castellana',
   'Idioma Extranjero (Inglés)',
@@ -199,8 +200,6 @@ const CATALOGO_AREAS = [
 ];
 
 const CATALOGO_GRADOS = [
-  { value: 'Prejardín', label: 'Prejardín' },
-  { value: 'Jardín', label: 'Jardín' },
   { value: 'Transición', label: 'Transición' },
   { value: '1°', label: '1° Primaria' },
   { value: '2°', label: '2° Primaria' },
@@ -212,7 +211,12 @@ const CATALOGO_GRADOS = [
   { value: '8°', label: '8° Secundaria' },
   { value: '9°', label: '9° Secundaria' },
   { value: '10°', label: '10° Media Técnica' },
-  { value: '11°', label: '11° Media Técnica' }
+  { value: '11°', label: '11° Media Técnica' },
+  { value: 'Multigrado', label: 'Multigrado (Sede Rural / Escuela Nueva)' },
+  { value: 'Multigrado 1° a 5°', label: 'Multigrado 1° a 5° Primaria' },
+  { value: 'Multigrado 6° a 11°', label: 'Multigrado 6° a 11° Secundaria' },
+  { value: 'Prejardín', label: 'Prejardín' },
+  { value: 'Jardín', label: 'Jardín' }
 ];
 
 function normalizarArea(areaInput) {
