@@ -363,19 +363,44 @@ export const EnviarRevisionModal: React.FC<EnviarRevisionModalProps> = ({
     apiSyncService.getConfigEntrega(email)
       .then(data => {
         if (data) {
+          // BLINDAJE INSTITUCIONAL ESTRICTO:
+          // La semana máxima permitida bajo ningún motivo puede superar maxAllowed (currIsoWeek + (esViernesOFinde ? 1 : 0))
+          const authoritativeMaxWeek = maxAllowed;
+
           if (data.semanas && data.semanas.length > 0) {
-            setSemanasList(data.semanas);
+            // Filtrar cualquier semana futura que supere la semana máxima permitida institucional
+            const validSemanas = (data.semanas as WeekOption[])
+              .filter(s => s.numero <= authoritativeMaxWeek)
+              .map(s => {
+                const isSiguiente = s.numero > currIsoWeek;
+                const isActual = s.numero === currIsoWeek;
+                let label = `Semana ${s.numero}`;
+                if (s.es_institucional) {
+                  label += ' (Institucional / Receso)';
+                } else if (isSiguiente) {
+                  label = `Semana ${s.numero} (Semana Siguiente - Planificación Anticipada)`;
+                } else if (isActual) {
+                  label = `Semana ${s.numero} (Semana Actual - En Curso)`;
+                } else {
+                  label = `Semana ${s.numero} (Anterior / Pendiente)`;
+                }
+                return {
+                  ...s,
+                  label,
+                  es_actual: isActual
+                };
+              });
+
+            if (validSemanas.length > 0) {
+              setSemanasList(validSemanas);
+            }
           }
-          const serverMaxW = data.semana_abierta_max || data.semana_maxima_permitida;
-          if (serverMaxW) {
-            setMaxWeekLimit(serverMaxW);
-          }
+
+          setMaxWeekLimit(authoritativeMaxWeek);
           if (data.areas) setAreasList(data.areas);
           if (data.grados) setGradosList(data.grados);
-          if (data.fecha_maxima) setFechaMaxima(data.fecha_maxima);
-          if (data.semana_actual) {
-            setCurrentAcademicWeek(data.semana_actual);
-          }
+          setFechaMaxima(getSundayOfWeek(authoritativeMaxWeek, now.getFullYear()));
+          setCurrentAcademicWeek(currIsoWeek);
           if (data.docente_asignaciones?.areas?.length > 0) {
             setMisAreas(data.docente_asignaciones.areas);
           } else if (userAreas.length > 0) {
