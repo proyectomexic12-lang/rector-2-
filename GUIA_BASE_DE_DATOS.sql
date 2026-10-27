@@ -76,7 +76,7 @@ create table if not exists app_users (
   created_at timestamptz default now()
 );
 
--- ✅ PASO 2.5: CREAR TABLA DE SESIONES ACTIVAS (Control de acceso único)
+-- ✅ PASO 2.5: CREAR TABLA DE SESIONES ACTIVAS (Registro y sincronización multidispositivo)
 create table if not exists active_sessions (
   id uuid default gen_random_uuid() primary key,
   email text unique not null,

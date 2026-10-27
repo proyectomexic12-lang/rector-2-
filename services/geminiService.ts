@@ -585,14 +585,14 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     }
   `;
 
-  const prompt = `
+  const systemPrompt = `
     ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM EDITION)
     Eres la Autoridad Pedagógica y Curricular Suprema de ${instName}. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL para esta institución, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
     ${activeInstitution.formatSchema?.promptInstructions ? `\n    ### DIRECTRICES INSTITUCIONALES DEL COLEGIO:\n    ${activeInstitution.formatSchema.promptInstructions}\n` : ''}
 
     ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
-    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** PROHIBIDO generar respuestas telegráficas o de una sola línea. Cada fase de la sesión (${m1}, ${m2}, ${m3}) debe contener una descripción metodológica detallada paso a paso (mínimo 2-3 párrafos o instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
-    2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el Ministerio de Educación Nacional (MEN) de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
+    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** Cada fase de la sesión (${m1}, ${m2}, ${m3}) debe contener una descripción metodológica detallada paso a paso (instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
+    2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el MEN de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
     3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
        - **Fase 1 (${m1}):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
        - **Fase 2 (${m2}):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
@@ -602,16 +602,21 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
     6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
     7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
-    8. **RECURSOS DIDÁCTICOS (1 SOLO VIDEO PRINCIPAL + MATERIALES REALES DE AULA):** En 'recursos', incluye EXACTAMENTE 1 video audiovisual principal explicativo de alta calidad adaptado al grado ${input.grado}. Los demás elementos deben ser presentaciones, guías impresas o materiales manipulativos de aula (CERO videos secundarios artificiales o forzados).
+    8. **RECURSOS DIDÁCTICOS (1 SOLO VIDEO PRINCIPAL + MATERIALES REALES DE AULA):** En 'recursos', incluye EXACTAMENTE 1 video audiovisual principal explicativo de alta calidad adaptado al grado escolar. Los demás elementos deben ser presentaciones, guías impresas o materiales manipulativos de aula.
     9. **TALLER DE EXCELENCIA PARA EL ESTUDIANTE (VISTA ESTUDIANTE / GUÍA IMPRIMIBLE DE ALTO IMPACTO):**
-       La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante, extremadamente rica en preguntas potentes, ejercicios contextualizados y retos cognitivos ajustados al grado ("Vista Estudiante"). Debe incluir:
-       - 'introduccion': Texto introductorio motivador y cercano de 2 párrafos que conecte el tema con la vida real del estudiante.
-       - 'instrucciones': Pasos metodológicos claros para el desarrollo individual o colaborativo.
-       - 'bitacora_test_inicial': 2 a 3 preguntas profundas de indagación y pensamiento metacognitivo inicial.
-       - 'ejercicios': Un arreglo de 5 A 6 ACTIVIDADES Y PROBLEMAS COMPLEJOS con subpreguntas detalladas (a, b, c), lecturas cortas de análisis, esquemas de razonamiento, problemas de aplicación real y preguntas de juicio crítico (HOTS).
-       - 'reto_creativo': Un desafío innovador de creación de producto (infografía, propuesta de solución, esquema o modelo).
+       La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante para el estudiante. Debe incluir:
+       - 'introduccion': Texto introductorio motivador de 2 párrafos conectando el tema con la vida real.
+       - 'instrucciones': Pasos metodológicos claros.
+       - 'bitacora_test_inicial': 2 a 3 preguntas de indagación metacognitiva.
+       - 'ejercicios': Un arreglo de 5 actividades y problemas contextualizados con subpreguntas (a, b, c).
+       - 'reto_creativo': Un desafío innovador de creación de producto.
     10. **FORMATO JSON PURO:** Devuelve ÚNICAMENTE el objeto JSON estructurado sin ningún texto introductorio ni final.
 
+    ${jsonStructureGuidance}
+    Responde ÚNICAMENTE con el objeto JSON válido.
+  `;
+
+  const userPrompt = `
     ### PARÁMETROS DEL CURRÍCULO
     - **Grado:** ${input.grado} (${getGradeContext(input.grado)})
     - **Área:** ${input.area} (${getAreaContext(input.area)})
@@ -620,8 +625,8 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
     - **Eje Transversal Socioemocional (CRESE):** ${input.ejeCrese || 'Educación para la paz, empatía y ciudadanía democrática.'}
     ${refinementInstruction ? `- **COMANDO DE AJUSTE DOCENTE:** ${sanitizeInput(refinementInstruction)}` : ''}
 
-    ${jsonStructureGuidance}
-    Responde ÚNICAMENTE con el JSON.`;
+    Genera la planeación pedagógica completa cumpliendo todas las reglas institucionales en el JSON exacto.
+  `;
 
   let lastError: any;
 
@@ -640,7 +645,8 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
       const label = keyInfo.label;
       const keyId = keyInfo.id;
 
-      const maxRetries = 3;
+      // Optimización: 1 intento por llave (evita triplicar cobros de tokens en DeepSeek)
+      const maxRetries = 1;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`[🔍 Orquestador DeepSeek] Conectando a api.deepseek.com con llave: ${label} (${keyId}) - Intento ${attempt}/${maxRetries}...`);
@@ -648,7 +654,7 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           let tokensUsed = 0;
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout para anti-congelamiento
+          const timeoutId = setTimeout(() => controller.abort(), 65000); // 65s timeout para permitir generación completa sin abortos falsos
 
           try {
             const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
@@ -660,9 +666,12 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
               signal: controller.signal,
               body: JSON.stringify({
                 model: 'deepseek-chat',
-                messages: [{ role: "user", content: prompt }],
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userPrompt }
+                ],
                 temperature: 0.2,
-                max_tokens: 4096
+                max_tokens: 3000
               })
             });
 
@@ -676,11 +685,11 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
             const data = await res.json();
             text = data.choices?.[0]?.message?.content || "";
             const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
-            tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
+            tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((systemPrompt.length + userPrompt.length) + (text?.length || 0)) / 3.8);
           } catch (fetchError: any) {
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
-              throw new Error(`Timeout: La API de DeepSeek tardó demasiado en responder.`);
+              throw new Error(`Timeout: La API de DeepSeek tardó más de 65s en responder.`);
             }
             throw fetchError;
           }
@@ -1074,28 +1083,18 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
   const gradoStr = input?.grado || "";
   const areaStr = input?.area || "";
 
-  const prompt = `
+  const icfesSystemPrompt = `
   Actúa como un experto en evaluación educativa del ICFES (Colombia).
   Tu tarea es generar un examen riguroso de 10 preguntas de selección múltiple con única respuesta (opciones A, B, C, D) 
-  basado EXCLUSIVAMENTE en la siguiente planeación de clase y rigurosamente adaptado al grado y nivel cognitivo escolar:
-
-  ${gradoStr ? `Grado Escolar: ${gradoStr} (${getGradeContext(gradoStr)})` : ''}
-  ${areaStr ? `Área del Conocimiento: ${areaStr}` : ''}
-  Tema Principal: ${sequenceData.tema_principal}
-  Objetivo: ${sequenceData.objetivo_aprendizaje}
-  DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
-  Contenidos: ${sequenceData.contenidos.join(', ')}
+  basado en la planeación de clase suministrada y adaptado al grado y nivel cognitivo escolar.
 
   REGLAS ESTRICTAS:
   1. Genera EXACTAMENTE 10 preguntas. Ni una más, ni una menos.
-  2. Las preguntas deben tener diferentes niveles de complejidad:
-     - 3 preguntas de nivel literal (reconocimiento de información).
-     - 4 preguntas de nivel inferencial (análisis, deducción).
-     - 3 preguntas de nivel crítico (toma de postura, evaluación).
+  2. Niveles de complejidad: 3 literales, 4 inferenciales, 3 críticos.
   3. Cada pregunta debe tener 4 opciones (A, B, C, D) donde solo una es correcta.
   4. La respuesta correcta debe estar explícitamente indicada.
-  5. Debes proporcionar una justificación pedagógica clara de por qué la respuesta correcta es la elegida.
-  6. ADAPTACIÓN COGNITIVA AL GRADO (${gradoStr || 'Nivel Escolar'}): El vocabulario, la extensión de las situaciones problema y la dificultad DEBEN corresponder con exactitud al grado escolar. Para Primaria (Transición a 5°), el lenguaje debe ser claro, comprensible y didáctico para niños, sin abstracciones universitarias.
+  5. Justificación pedagógica clara de la clave correcta.
+  6. Para Primaria (Transición a 5°), lenguaje claro y didáctico para niños.
 
   DEVUELVE ÚNICAMENTE UN ARRAY DE OBJETOS JSON CON ESTA ESTRUCTURA EXACTA:
   [
@@ -1103,10 +1102,22 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
       "pregunta": "Texto de la pregunta...",
       "tipo": "Múltiple Opción",
       "opciones": ["A. Opción 1", "B. Opción 2", "C. Opción 3", "D. Opción 4"],
-      "respuesta_correcta": "La opción correcta (ej. A)",
+      "respuesta_correcta": "A",
       "justificacion": "Por qué es correcta."
     }
   ]
+  `;
+
+  const icfesUserPrompt = `
+  Planeación Curricular a Evaluar:
+  ${gradoStr ? `Grado Escolar: ${gradoStr} (${getGradeContext(gradoStr)})` : ''}
+  ${areaStr ? `Área del Conocimiento: ${areaStr}` : ''}
+  Tema Principal: ${sequenceData.tema_principal}
+  Objetivo: ${sequenceData.objetivo_aprendizaje}
+  DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
+  Contenidos: ${sequenceData.contenidos.join(', ')}
+
+  Devuelve ESTRICTAMENTE el array JSON de las 10 preguntas.
   `;
 
   let lastError: any;
@@ -1125,36 +1136,51 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
       const label = keyInfo.label;
       const keyId = keyInfo.id;
 
-      const maxRetries = 2;
+      // Optimización: 1 intento por llave (evita duplicar cobros de tokens en DeepSeek)
+      const maxRetries = 1;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`[🔍 ICFES Generator] Probando modelo ${modelName} con llave: ${label} (${keyId})`);
           let text = "";
           let tokensUsed = 0;
 
-          const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${key}`
-            },
-            body: JSON.stringify({
-              model: 'deepseek-chat',
-              messages: [{ role: "user", content: prompt }],
-              temperature: 0.0,
-              max_tokens: 4000
-            })
-          });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+          try {
+            const res = await fetch(`https://api.deepseek.com/v1/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${key}`
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: [
+                  { role: "system", content: icfesSystemPrompt },
+                  { role: "user", content: icfesUserPrompt }
+                ],
+                temperature: 0.0,
+                max_tokens: 2200
+              })
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(`Error API DeepSeek ${res.status}: ${errData?.error?.message || res.statusText}`);
+            }
+
+            const data = await res.json();
+            text = data.choices?.[0]?.message?.content || "";
+            const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
+            tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((icfesSystemPrompt.length + icfesUserPrompt.length) + (text?.length || 0)) / 3.8);
+          } catch (fetchErr: any) {
+            clearTimeout(timeoutId);
+            throw fetchErr;
           }
-
-          const data = await res.json();
-          text = data.choices?.[0]?.message?.content || "";
-          const apiTotal = data?.usage?.total_tokens || ((data?.usage?.prompt_tokens || 0) + (data?.usage?.completion_tokens || 0));
-          tokensUsed = apiTotal > 0 ? apiTotal : Math.ceil(((prompt?.length || 0) + (text?.length || 0)) / 3.8);
 
           if (!text) throw new Error("Respuesta vacía recibida del servidor de IA.");
 

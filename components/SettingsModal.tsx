@@ -382,8 +382,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-lg">
-                  <strong className="text-white block mb-0.5">3. Asignación de Dispositivos:</strong>
-                  <span className="text-slate-400">La licencia docente autoriza el uso simultáneo en un máximo de 1 celular y 1 computador de uso personal.</span>
+                  <strong className="text-white block mb-0.5">3. Acceso Multidispositivo:</strong>
+                  <span className="text-slate-400">Tu cuenta docente permite el ingreso y uso simultáneo en varios dispositivos (computador personal, celular, tablet o portátil) sin restricciones.</span>
                 </div>
               </div>
 

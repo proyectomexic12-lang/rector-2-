@@ -163,21 +163,7 @@ function App() {
     }
   }, [currentUser?.email]);
 
-  // 1.6 Periodic Anti-Account Sharing Session Validation
-  useEffect(() => {
-    if (isAuthenticated && currentUser?.email && currentUser.role !== 'admin') {
-      const checkSession = async () => {
-        const isValid = await authService.validateSession(currentUser.email);
-        if (!isValid) {
-          alert("🚨 Sesión Inactivada por Seguridad\n\nTu cuenta ha sido iniciada desde otro dispositivo o navegador. Por políticas de la I.E. Guaimaral, no está permitido compartir cuentas entre docentes. Cada profesor debe usar su propia cuenta personal.");
-          handleAppLogout();
-        }
-      };
 
-      const interval = setInterval(checkSession, 12000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, currentUser?.email]);
 
   // 2. Persistencia de entrada (No persiste contenido generado)
   useEffect(() => {
@@ -212,16 +198,7 @@ function App() {
     setIsLoading(true);
     setError(null);
 
-    // ANTI-CUENTA COMPARTIDA: Verificar si otra persona inició sesión con este correo
-    if (currentUser?.email && currentUser.role !== 'admin') {
-      const isSessionValid = await authService.validateSession(currentUser.email);
-      if (!isSessionValid) {
-        alert("🚨 Sesión Inactivada por Seguridad\n\nTu cuenta ha sido iniciada desde otro dispositivo. Por políticas institucionales de la I.E. Guaimaral, no está permitido compartir cuentas entre docentes. Cada profesor debe usar su propia cuenta personal.");
-        handleAppLogout();
-        setIsLoading(false);
-        return;
-      }
-    }
+
 
     // VALIDACIÓN DE CUOTA Y PLAN (20 Planeaciones / Mes, 60 / Trimestre, o Créditos Básicos)
     if (currentUser) {
@@ -805,7 +782,7 @@ function App() {
                   <div className="max-w-4xl mx-auto mb-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 sm:p-4 flex items-center gap-3.5 text-xs text-slate-300">
                     <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
                     <p className="leading-relaxed">
-                      <strong className="text-white">Licencia Personal Activa:</strong> Autorizada para uso en <strong>1 dispositivo móvil y 1 computador personal</strong>. El acceso es personal e intransferible.
+                      <strong className="text-white">Acceso Multidispositivo Habilitado:</strong> Puedes iniciar sesión y trabajar en <strong>varios dispositivos simultáneamente</strong> (computador, celular, tablet o portátil) sin restricciones.
                     </p>
                   </div>
                 )}

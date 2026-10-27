@@ -56,7 +56,7 @@ export interface User {
     unlimited_start_date?: string | null;
     monthly_price?: number;
     subscription_months?: number;
-    session_id?: string; // Para control de sesión única tipo WhatsApp
+    session_id?: string; // Para sincronización de sesión multidispositivo
     institution_id?: string; // ID del colegio al que pertenece (por defecto 'guaimaral')
     stats?: {
         today: number;
@@ -684,7 +684,7 @@ export const authService = {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS) || '[]');
     },
 
-    // --- ANTI-ACCOUNT SHARING SYSTEM (CONTROL DE DISPOSITIVOS Y SESIÓN ÚNICA) ---
+    // --- ACCESO MULTIDISPOSITIVO LIBRE PARA DOCENTES ---
     getDeviceId: (): string => {
         let devId = localStorage.getItem('guaimaral_device_id');
         if (!devId) {
@@ -704,6 +704,7 @@ export const authService = {
 
         if (supabase) {
             try {
+                // Registrar el acceso sin bloquear otros dispositivos concurrentes
                 await supabase.from('active_sessions').upsert({
                     email: lowEmail,
                     session_token: sessionToken,
@@ -714,35 +715,12 @@ export const authService = {
             } catch (e) { }
         }
 
-        console.log(`🛡️ Sesión activa registrada para ${lowEmail}: ${sessionToken}`);
+        console.log(`🛡️ Sesión multidispositivo registrada para ${lowEmail}: ${sessionToken}`);
         return sessionToken;
     },
 
-    validateSession: async (email: string): Promise<boolean> => {
-        if (!email) return true;
-        const lowEmail = email.toLowerCase().trim();
-        const localToken = localStorage.getItem(`guaimaral_session_token`);
-        if (!localToken) return true;
-
-        const activeLocal = localStorage.getItem(`guaimaral_active_session_${lowEmail}`);
-        if (activeLocal && activeLocal !== localToken) {
-            return false;
-        }
-
-        if (supabase) {
-            try {
-                const { data } = await supabase
-                    .from('active_sessions')
-                    .select('session_token')
-                    .eq('email', lowEmail)
-                    .maybeSingle();
-
-                if (data && data.session_token && data.session_token !== localToken) {
-                    return false;
-                }
-            } catch (e) { }
-        }
-
+    validateSession: async (_email: string): Promise<boolean> => {
+        // Garantizar acceso multidispositivo continuo y simultáneo sin restricciones ni cierres forzados de sesión
         return true;
     },
 
@@ -923,7 +901,7 @@ export const authService = {
         if (user) {
             const isValid = await authService.verifyPassword(email, password, user.role);
             if (isValid) {
-                // Generar ID de sesión única (WhatsApp Style)
+                // Generar identificador de sesión multidispositivo
                 const sessionId = crypto.randomUUID();
 
                 // Actualizar en el usuario
@@ -939,8 +917,8 @@ export const authService = {
                 // Reset failed attempts on success
                 localStorage.removeItem(`${STORAGE_KEYS.LOCKOUT}_${lowEmail}`);
 
-                await authService.logSecurityEvent(lowEmail, "Inicio de sesión exitoso (Sesión única activa)", "low");
-                console.log('✅ Sesión única guardada para:', finalUser.email, 'ID:', sessionId);
+                await authService.logSecurityEvent(lowEmail, "Inicio de sesión exitoso (Acceso multidispositivo)", "low");
+                console.log('✅ Sesión multidispositivo activa para:', finalUser.email, 'ID:', sessionId);
                 return finalUser;
             } else {
                 authService.recordFailedAttempt(lowEmail);
