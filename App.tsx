@@ -183,14 +183,16 @@ function App() {
   const isSubscriptionExpired = subscriptionStatus ? subscriptionStatus.status === 'vencido' && currentUser?.role !== 'admin' : false;
 
   const handleGenerate = async (refinementConfig?: { instruction: string }) => {
+    if (isLoading) return;
+
     if (isSubscriptionExpired) {
       toast("Tu suscripción mensual ha vencido. Ponte al día con tu saldo acumulado para continuar.", 'error');
       return;
     }
 
     const now = Date.now();
-    if (now - lastGenTime < 10000 && !refinementConfig) {
-      toast("Por seguridad, espera unos segundos antes de generar.", 'error');
+    if (now - lastGenTime < 10000) {
+      toast("Por seguridad, espera unos segundos antes de generar nuevamente.", 'error');
       return;
     }
     setLastGenTime(now);

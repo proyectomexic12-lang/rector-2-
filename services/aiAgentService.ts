@@ -45,61 +45,10 @@ export const aiAgentService = {
       return `¡Hola Profe ${firstName}! Para radicar tus planeaciones:\n\n1. Cuando generes tu planeación didáctica, haz clic en el botón verde "Registrar Planeación" o en "MONTAR PLANEACIONES" en el menú superior.\n2. El sistema radicará automáticamente la planeación en SIGEP (https://manuel-red.vercel.app) con respaldo directo en Supabase sin pasos manuales.`;
     }
 
-    const keys = getAvailableKeysInfo();
-
-    if (keys.length === 0) {
-      return `¡Hola Profe ${firstName}! 😊 Soy el Asistente Rector AI. He recibido tu mensaje. En este momento puedes dejar tu inquietud y el Administrador te responderá aquí en tiempo real.`;
-    }
-
-    const apiKey = keys[0].key;
-
-    const systemPrompt = `
-Eres "Asistente Rector AI", el Agente Experto de Inteligencia Artificial de la Plataforma Rector (I.E. Guaimaral).
-Tu misión es brindar atención concisa, cálida y pedagógica a los docentes.
-
-REGLAS DE FORMATO Y ESTILO:
-1. Saluda cordialmente al Profe ${firstName}.
-2. Escribe en español claro y conciso (máximo 2 párrafos).
-3. NO uses markdown pesado como ### o \`\`\`. Usa viñetas limpias (•, 👉).
-`;
-
-    const userPrompt = `Consulta del docente ${docente.name}: "${userQuery}"`;
-
-    try {
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.3,
-          max_tokens: 450
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}`);
-      }
-
-      const data = await response.json();
-      const rawReply = data.choices?.[0]?.message?.content?.trim();
-
-      if (rawReply) {
-        return cleanSpecialCharacters(rawReply);
-      }
-    } catch (error) {
-      console.warn("Respuesta de respaldo para Agente de IA", error);
-    }
-
-    // Fallback pulcro sin caracteres especiales
+    // 5. Respuesta Institucional Directa (0 tokens de API gastados en chat de soporte)
+    // El chat con Administración no consume saldo de la API de DeepSeek; reserva el 100% de los tokens para generar planeaciones.
     return cleanSpecialCharacters(
-      `¡Hola Profe ${firstName}! 😊 Gracias por comunicarte.\n\nPuedo orientarte sobre tus planeaciones didácticas con DBAs, el botón verde para Montar Planeaciones, o la suscripción de $15.000 COP a Nequi 3205957019 (comprobante al WhatsApp 3107304533).\n\nEl Administrador también está notificado y te responderá en este chat en tiempo real. 🚀`
+      `¡Hola Profe ${firstName}! 😊 Tu mensaje ha sido enviado directamente a la Administración y te responderán aquí en tiempo real.\n\nRecuerda:\n• Para crear tu clase, completa el formulario y pulsa Generar.\n• Para subir tu planeación a Coordinación, usa el botón verde Registrar Planeación.\n• Para renovar o activar tu plan ($15.000 COP/mes), Nequi 3205957019 y comprobante al WhatsApp 3107304533. 🚀`
     );
   }
 };

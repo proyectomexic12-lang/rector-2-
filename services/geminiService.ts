@@ -183,23 +183,39 @@ export const tryRepairAndParseJson = (raw: string): any => {
       try {
         return JSON.parse(fixed);
       } catch (e2) {
-        // 4. Reparación de JSON truncado por límite de tokens: cerrar estructuras abiertas
-        let openBraces = (fixed.match(/{/g) || []).length;
-        let closeBraces = (fixed.match(/}/g) || []).length;
-        let openBrackets = (fixed.match(/\[/g) || []).length;
-        let closeBrackets = (fixed.match(/\]/g) || []).length;
-
-        // Quitar coma huérfana al final
-        fixed = fixed.trim().replace(/,\s*$/, '');
-
-        // Cerrar corchetes y llaves faltantes
-        while (openBrackets > closeBrackets) {
-          fixed += ']';
-          closeBrackets++;
+        // 4. Reparación avanzada de JSON truncado por límite de tokens (incluyendo cadenas sin cerrar)
+        let inStr = false;
+        const stack: string[] = [];
+        for (let i = 0; i < fixed.length; i++) {
+          const ch = fixed[i];
+          const prev = i > 0 ? fixed[i - 1] : '';
+          if (ch === '"' && prev !== '\\') {
+            inStr = !inStr;
+            continue;
+          }
+          if (!inStr) {
+            if (ch === '{') stack.push('}');
+            else if (ch === '[') stack.push(']');
+            else if ((ch === '}' || ch === ']') && stack.length > 0 && stack[stack.length - 1] === ch) {
+              stack.pop();
+            }
+          }
         }
-        while (openBraces > closeBraces) {
-          fixed += '}';
-          closeBraces++;
+
+        if (inStr) {
+          fixed += '"';
+        }
+
+        // Limpiar dos puntos o comas huérfanas al final antes de cerrar estructuras
+        fixed = fixed.trim();
+        if (fixed.endsWith(':')) {
+          fixed += '""';
+        } else {
+          fixed = fixed.replace(/,\s*$/, '');
+        }
+
+        while (stack.length > 0) {
+          fixed += stack.pop();
         }
 
         try {
@@ -491,12 +507,55 @@ function getAreaContext(area: string): string {
 }
 
 
+const SEQ_CACHE_KEY = "guaimaral_ai_seq_cache_v1";
+const ICFES_CACHE_KEY = "guaimaral_ai_icfes_cache_v1";
+
+function getFromLocalCache<T>(storageKey: string, itemKey: string): T | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const map = JSON.parse(raw);
+    return map?.[itemKey] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveToLocalCache<T>(storageKey: string, itemKey: string, value: T, maxItems = 25) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    const map = raw ? JSON.parse(raw) : {};
+    map[itemKey] = value;
+    const keys = Object.keys(map);
+    if (keys.length > maxItems) {
+      delete map[keys[0]];
+    }
+    window.localStorage.setItem(storageKey, JSON.stringify(map));
+  } catch (e) {}
+}
+
 export const generateDidacticSequence = async (input: SequenceInput, refinementInstruction?: string): Promise<DidacticSequence> => {
   const activeInstitution = institutionService.getActiveInstitution();
   const instName = activeInstitution.name || "la institución educativa";
   const m1 = activeInstitution.formatSchema?.momento1Name || "Inicio";
   const m2 = activeInstitution.formatSchema?.momento2Name || "Desarrollo";
   const m3 = activeInstitution.formatSchema?.momento3Name || "Cierre";
+
+  const safeTema = sanitizeInput(input.tema);
+  const sesionesCount = Math.min(Math.max(Number(input.sesiones) || 2, 1), 4);
+  const seqCacheKey = [input.grado, input.area, safeTema, sesionesCount, sanitizeInput(input.dba), input.ejeCrese]
+    .map(s => String(s || '').toLowerCase().trim())
+    .join('|');
+
+  if (!refinementInstruction) {
+    const cachedSeq = getFromLocalCache<DidacticSequence>(SEQ_CACHE_KEY, seqCacheKey);
+    if (cachedSeq && Array.isArray(cachedSeq.actividades) && cachedSeq.actividades.length > 0) {
+      console.log(`⚡ [Caché Inteligente 0 Tokens] Secuencia recuperada instantáneamente sin gasto de API.`);
+      return cachedSeq;
+    }
+  }
 
   const availableKeys = getAvailableKeysInfo();
 
@@ -507,7 +566,6 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
   // Monopolio DeepSeek - Única configuración
   const modelsToTry = ["deepseek-chat"];
 
-  const safeTema = sanitizeInput(input.tema);
   const areaNormativa = {
     conDBA: ['MATEMATICAS', 'LENGUAJE', 'CIENCIAS NATURALES', 'CIENCIAS SOCIALES', 'INGLES', 'FISICA', 'ESTADISTICA', 'GEOMETRIA', 'BIOLOGIA', 'QUIMICA'],
     conOrientaciones: ['EDUCACION ARTISTICA', 'EDUCACION FISICA', 'ETICA', 'VALORES', 'RELIGION', 'TECNOLOGIA', 'FILOSOFIA', 'CONVIVENCIA', 'AGROPECUARIA', 'CATEDRA DE LA PAZ']
@@ -520,112 +578,80 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
   const hasDBA = areaNormativa.conDBA.some(a => currentArea.includes(a)) || isIntegral;
 
   let pedagogicalInstruction = hasDBA
-    ? `- **DBA Oficial:** Debes identificar el número exacto del DBA (ej: "DBA #3") y transcribir su contenido literal que se está abordando.
-       - **Input del Usuario:** ${sanitizeInput(input.dba) || 'Sin DBA previo'}. Si este input es un número, busca el contenido oficial. Si es texto, valida su correspondencia con el número.`
-    : `- **Referencia Pedagógica:** Esta área NO utiliza DBA. Debes citar explícitamente las **"Orientaciones Pedagógicas y Curriculares del MEN para ${input.area}"**. 
-       - **Instrucción Especial:** En la casilla de DBA, debes colocar: "Tomado de las Orientaciones Pedagógicas del MEN: [Citar el eje o lineamiento específico usado]". NO inventes un número de DBA.`;
+    ? `- **DBA Oficial:** Identifica el número exacto del DBA del MEN Colombia (ej: "DBA #3") y su enunciado para este tema y grado. Input docente: ${sanitizeInput(input.dba) || 'Auto'}.`
+    : `- **Referencia Pedagógica:** Área sin DBA. En 'dba_utilizado' coloca: "Tomado de las Orientaciones Pedagógicas del MEN para ${input.area}: [eje específico]".`;
 
   if (isMultigrado) {
     const gLower = input.grado.toLowerCase();
     const isBachillerato = gLower.includes('6') || gLower.includes('11') || gLower.includes('secundaria') || gLower.includes('media');
 
     if (isBachillerato) {
-      pedagogicalInstruction += `
-    - **INSTRUCCIÓN ESPECIAL MULTIGRADO BACHILLERATO (6° a 11° - Modalidad Rural):** Esta secuencia es para un aula MULTIGRADO DE BACHILLERATO. Debes especificar actividades diferenciadas y niveles de complejidad graduados para los grados: **6°, 7°, 8°, 9°, 10° y 11°**.
-    - **Enfoque Pedagógico:** Aprendizaje Basado en Proyectos (ABP), resolución de problemas contextualizados, pensamiento crítico, trabajo autónomo con guías y roles de liderazgo colaborativo entre grados.`;
+      pedagogicalInstruction += `\n    - **MULTIGRADO BACHILLERATO (6° a 11°):** Incluye actividades diferenciadas por nivel (6°-7°, 8°-9°, 10°-11°) bajo enfoque ABP y trabajo colaborativo.`;
     } else {
-      pedagogicalInstruction += `
-    - **INSTRUCCIÓN ESPECIAL MULTIGRADO PRIMARIA (1° a 5° - Modelo Escuela Nueva / Sede Rural):** Esta secuencia es para un aula MULTIGRADO DE PRIMARIA. Debes especificar acciones y niveles de complejidad diferenciados para cada grado: **1°, 2°, 3°, 4° y 5°** (incluyendo adaptación para transición si aplica).
-    - **Enfoque Integrador & Escuela Nueva:** Guías de autoaprendizaje, rincones de trabajo por niveles, tutoría entre pares infantiles y vinculación con la vida cotidiana y rural. Si el área es Integral, fusionar armónicamente las 4 áreas básicas.`;
+      pedagogicalInstruction += `\n    - **MULTIGRADO PRIMARIA (1° a 5° - Escuela Nueva):** Incluye acciones diferenciadas por nivel (1° a 5°) con trabajo autónomo y colaborativo.`;
     }
   }
 
-  // Guía de estructura JSON estricta para DeepSeek
+  // Guía de estructura JSON compacta para máximo ahorro de tokens
   const jsonStructureGuidance = `
-    DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA EXACTA. NADA DE TEXTO ANTES NI DESPUÉS DEL JSON:
+    DEVUELVE ÚNICAMENTE UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
     {
-      "tema_principal": "string",
       "titulo_secuencia": "string",
       "descripcion_secuencia": "string",
       "objetivo_aprendizaje": "string",
-      "contenidos": ["string"],
+      "contenidos": ["string (3 items)"],
       "competencias_men": "string",
       "estandar": "string",
+      "dba_utilizado": "string",
       "metodologia": "string",
       "corporiedad_adi": "string",
       "actividades": [
-        { "sesion": 1, "fase_inicio": "string", "fase_desarrollo": "string", "fase_cierre": "string", "preguntas_socraticas": ["string"], "materiales": ["string"], "tiempo": "string", "imprimibles": "string", "adi_especifico": "string" }
+        { "sesion": 1, "fase_inicio": "string", "fase_desarrollo": "string", "fase_cierre": "string", "preguntas_socraticas": ["string (2 preguntas)"], "materiales": ["string (3 items)"], "tiempo": "60 min", "imprimibles": "string", "adi_especifico": "string" }
       ],
       "rubrica": [
-        { "criterio": "string", "bajo": "string", "basico": "string", "alto": "string", "superior": "string", "retroalimentacion": "string" }
+        { "criterio": "string", "bajo": "string", "basico": "string", "alto": "string", "superior": "string" }
       ],
       "evaluacion": [
-        { "pregunta": "string", "tipo": "string", "opciones": ["string"], "respuesta_correcta": "string", "justificacion": "string" }
+        { "pregunta": "string", "tipo": "Múltiple Opción", "opciones": ["A) ...", "B) ...", "C) ...", "D) ..."], "respuesta_correcta": "A", "justificacion": "string" }
       ],
       "recursos": [
-        { "nombre": "string", "descripcion": "string" }
+        { "nombre": "Video Explicativo: ...", "descripcion": "string" }
       ],
       "productos_asociados": "string",
-      "instrumentos_evaluacion": "string",
-      "bibliografia": "string",
-      "observaciones": "string",
       "adecuaciones_piar": "string",
       "taller_imprimible": {
         "introduccion": "string",
         "instrucciones": "string",
         "bitacora_test_inicial": "string",
-        "ejercicios": ["string"],
+        "ejercicios": ["string (5 actividades prácticas)"],
         "reto_creativo": "string"
       },
-      "alertas_generadas": ["string"],
-      "dba_utilizado": "string",
-      "eje_crese_utilizado": "string",
       "glosario": [{ "termino": "string", "definicion": "string" }],
       "aula_invertida": "string"
     }
   `;
 
   const systemPrompt = `
-    ### PERSONA: MASTER RECTOR AI (V5.0 PLATINUM EDITION)
-    Eres la Autoridad Pedagógica y Curricular Suprema de ${instName}. Fusionas el rigor de un Consultor Senior del MEN (Colombia) con la maestría de un Arquitecto de Alto Orden Cognitivo (HOTS - Bloom/Webb). Tu objetivo es entregar una planeación de CLASE MUNDIAL para esta institución, exhaustiva, rica en detalles, profundamente pedagógica y lista para ser ejecutada con excelencia.
-    ${activeInstitution.formatSchema?.promptInstructions ? `\n    ### DIRECTRICES INSTITUCIONALES DEL COLEGIO:\n    ${activeInstitution.formatSchema.promptInstructions}\n` : ''}
-
-    ### LAS 10 REGLAS SUPREMAS DE EXCELENCIA PEDAGÓGICA (MEN)
-    1. **PROFUNDIDAD Y RIQUEZA NARRATIVA:** Cada fase de la sesión (${m1}, ${m2}, ${m3}) debe contener una descripción metodológica detallada paso a paso (instrucciones claras de cómo el docente guía y cómo el estudiante interactúa).
-    2. **ALINEACIÓN ESTRICTA DBA MEN COLOMBIA:** Para áreas con DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés), DEBES seleccionar u obtener obligatoriamente el DBA oficial exacto publicado por el MEN de Colombia para el grado especificado. Si el docente ingresó un DBA manual, lo utilizas/validas; si no, citas literalmente el número y enunciado exacto del DBA del MEN para ese tema y grado.
-    3. **METODOLOGÍA ABP Y DUA INTEGRAL (INCLUSIÓN EDUCATIVA):** 
-       - **Fase 1 (${m1}):** Activación de saberes previos, planteamiento del reto/problema detonante y motivación.
-       - **Fase 2 (${m2}):** Modelado conceptual, trabajo colaborativo, manipulación de material concreto y aplicación.
-       - **Fase 3 (${m3}):** Evaluación formativa, síntesis, socialización y preguntas de autorreflexión.
-       - **Adecuaciones DUA / PIAR:** Es OBLIGATORIO detallar en 'adecuaciones_piar' apoyos visuales/auditivos, flexibilización de tiempos, guía paso a paso y adaptaciones específicas del Plan Individual de Ajustes Razonables (PIAR).
-    4. **MOMENTOS ADI (Corporiedad y Bienestar):** Pausa activa cerebral de 3 a 5 minutos detallada en cada sesión (ej. ejercicios de respiración, gimnasia cerebral, coordinación motriz).
-    5. **INTEGRACIÓN TRANSVERSAL CRESE:** Cada actividad debe vivenciar valores de convivencia pacífica, empatía y resiliencia emocional.
-    6. **PREGUNTAS SOCRÁTICAS POTENTES:** Incluye mínimo 2 a 3 preguntas por sesión que desarrollen pensamiento inferencial y crítico (HOTS).
-    7. **EVALUACIÓN FORMATIVA TIPO ICFES:** 3 preguntas de opción múltiple situacionales con justificación pedagógica rigurosa del distractor y la clave correcta.
-    8. **RECURSOS DIDÁCTICOS (1 SOLO VIDEO PRINCIPAL + MATERIALES REALES DE AULA):** En 'recursos', incluye EXACTAMENTE 1 video audiovisual principal explicativo de alta calidad adaptado al grado escolar. Los demás elementos deben ser presentaciones, guías impresas o materiales manipulativos de aula.
-    9. **TALLER DE EXCELENCIA PARA EL ESTUDIANTE (VISTA ESTUDIANTE / GUÍA IMPRIMIBLE DE ALTO IMPACTO):**
-       La 'taller_imprimible' debe ser una guía de trabajo autónomo fascinante para el estudiante. Debe incluir:
-       - 'introduccion': Texto introductorio motivador de 2 párrafos conectando el tema con la vida real.
-       - 'instrucciones': Pasos metodológicos claros.
-       - 'bitacora_test_inicial': 2 a 3 preguntas de indagación metacognitiva.
-       - 'ejercicios': Un arreglo de 5 actividades y problemas contextualizados con subpreguntas (a, b, c).
-       - 'reto_creativo': Un desafío innovador de creación de producto.
-    10. **FORMATO JSON PURO:** Devuelve ÚNICAMENTE el objeto JSON estructurado sin ningún texto introductorio ni final.
-
+    Eres la Autoridad Curricular de ${instName} (MEN Colombia - HOTS/Bloom).
+    ${activeInstitution.formatSchema?.promptInstructions ? `Directrices: ${activeInstitution.formatSchema.promptInstructions}\n` : ''}
+    REGLAS DE CALIDAD Y ECONOMÍA DE TOKENS:
+    1. Redacta cada fase (${m1}, ${m2}, ${m3}) en 1 párrafo claro, práctico y sustancioso (3 oraciones concretas de guía docente y acción del estudiante, sin texto de relleno).
+    2. Incluye pausa activa ADI (3-5 min), enfoque socioemocional CRESE y 3 ajustes puntuales DUA/PIAR en 'adecuaciones_piar'.
+    3. En 'rubrica': genera EXACTAMENTE 2 criterios (1 cognitivo/procedimental y 1 socioemocional CRESE), 1 oración concisa por nivel.
+    4. En 'evaluacion': genera EXACTAMENTE 3 preguntas tipo Saber-ICFES con 4 opciones y justificación de 1 oración.
+    5. En 'recursos': incluye 1 solo video explicativo adaptado al grado. En 'glosario': exactamente 3 términos clave.
+    6. En 'taller_imprimible': 'introduccion' de 1 párrafo corto, 2 preguntas en 'bitacora_test_inicial', 5 'ejercicios' prácticos concisos y 1 'reto_creativo'.
     ${jsonStructureGuidance}
-    Responde ÚNICAMENTE con el objeto JSON válido.
   `;
 
   const userPrompt = `
-    ### PARÁMETROS DEL CURRÍCULO
-    - **Grado:** ${input.grado} (${getGradeContext(input.grado)})
-    - **Área:** ${input.area} (${getAreaContext(input.area)})
-    - **Tema:** ${safeTema} | **Cantidad de Sesiones a Desarrollar:** ${input.sesiones}
+    - Grado: ${input.grado} (${getGradeContext(input.grado)})
+    - Área: ${input.area} (${getAreaContext(input.area)})
+    - Tema: ${safeTema} | Sesiones en 'actividades': ${sesionesCount}
     ${pedagogicalInstruction}
-    - **Eje Transversal Socioemocional (CRESE):** ${input.ejeCrese || 'Educación para la paz, empatía y ciudadanía democrática.'}
-    ${refinementInstruction ? `- **COMANDO DE AJUSTE DOCENTE:** ${sanitizeInput(refinementInstruction)}` : ''}
-
-    Genera la planeación pedagógica completa cumpliendo todas las reglas institucionales en el JSON exacto.
+    - Eje CRESE: ${input.ejeCrese || 'Convivencia pacífica, empatía y ciudadanía.'}
+    ${refinementInstruction ? `- Ajuste solicitado: ${sanitizeInput(refinementInstruction)}` : ''}
+    Responde SOLO con el JSON válido.
   `;
 
   let lastError: any;
@@ -670,8 +696,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
                   { role: "system", content: systemPrompt },
                   { role: "user", content: userPrompt }
                 ],
+                response_format: { type: 'json_object' },
                 temperature: 0.2,
-                max_tokens: 3000
+                max_tokens: 2400
               })
             });
 
@@ -850,6 +877,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           parsed.glosario = Array.isArray(parsed.glosario) ? parsed.glosario : [];
 
           // 5. Auditoría Institucional de Textos
+          parsed.tema_principal = parsed.tema_principal || safeTema;
+          parsed.eje_crese_utilizado = parsed.eje_crese_utilizado || input.ejeCrese || "Educación para la paz, empatía y ciudadanía democrática.";
+          parsed.alertas_generadas = Array.isArray(parsed.alertas_generadas) ? parsed.alertas_generadas : [];
           parsed.titulo_secuencia = parsed.titulo_secuencia || `Secuencia Didáctica: ${safeTema}`;
           parsed.descripcion_secuencia = parsed.descripcion_secuencia || `Secuencia didáctica orientada al desarrollo de aprendizajes significativos en ${safeTema}.`;
           parsed.objetivo_aprendizaje = parsed.objetivo_aprendizaje || `Comprender y aplicar los conceptos fundamentales de ${safeTema} mediante actividades prácticas e investigativas.`;
@@ -879,7 +909,10 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           });
         }
 
-        console.log(`%c[✨ ÉXITO EXTREMO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
+        console.log(`%c[✨ ÉXITO EXTREMO] Respondió modelo ${modelName} usando Llave: ${label} (${tokensUsed} tokens)`, "color: #10b981; font-weight: bold;");
+
+        // Guardar en caché local para evitar cobros repetidos si se vuelve a consultar el mismo tema
+        saveToLocalCache(SEQ_CACHE_KEY, seqCacheKey, parsed);
 
         // Actualizar métricas
         if (!apiMetrics[keyId]) {
@@ -902,9 +935,9 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
           const errMsg = err?.message || String(err);
           console.warn(`%c[🔄 Intento Fallido] Falló ${modelName} con llave ${label} (Intento ${attempt}/${maxRetries}). Error: ${errMsg}`, "color: #f59e0b;");
           
-          // Detección Inteligente: Si es límite de cuota (429), modelo no existe (404/400) o JSON no estructurable,
+          // Detección Inteligente: Si es saldo insuficiente (402), no autorizado (401), límite de cuota (429), modelo no existe (404/400) o JSON no estructurable,
           // no tiene sentido esperar en la misma llave. Saltamos inmediatamente a la siguiente opción.
-          const isFatalApiError = errMsg.includes('429') || errMsg.includes('404') || errMsg.includes('400') || errMsg.includes('JSON') || errMsg.includes('SyntaxError');
+          const isFatalApiError = errMsg.includes('402') || errMsg.includes('401') || errMsg.includes('429') || errMsg.includes('404') || errMsg.includes('400') || errMsg.includes('JSON') || errMsg.includes('SyntaxError');
           
           if (attempt === maxRetries || isFatalApiError) {
             modelHealthStatus[modelName] = "offline";
@@ -938,6 +971,8 @@ export const generateDidacticSequence = async (input: SequenceInput, refinementI
 
 // Generador de Respaldo Inmune (Escudo 100% Inmune a Fallas de Servidor o Red - Nivel Platinum)
 function buildFailSafeSequence(input: SequenceInput): DidacticSequence {
+  const activeInstitution = institutionService.getActiveInstitution();
+  const instName = activeInstitution.name || "la Institución Educativa Guaimaral";
   const tema = input.tema || "Contenido Curricular";
   const grado = input.grado || "General";
   const area = input.area || "Área Principal";
@@ -1072,6 +1107,18 @@ export let lastWorkingModel = "omni-model";
 // =========================================================================
 
 export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, input?: SequenceInput): Promise<EvaluationItem[]> => {
+  const gradoStr = input?.grado || "";
+  const areaStr = input?.area || "";
+  const icfesCacheKey = [gradoStr, areaStr, sequenceData.tema_principal || input?.tema || '']
+    .map(s => String(s || '').toLowerCase().trim())
+    .join('|');
+
+  const cachedIcfes = getFromLocalCache<EvaluationItem[]>(ICFES_CACHE_KEY, icfesCacheKey);
+  if (cachedIcfes && Array.isArray(cachedIcfes) && cachedIcfes.length >= 10) {
+    console.log(`⚡ [Caché ICFES 0 Tokens] Examen ICFES recuperado instantáneamente.`);
+    return cachedIcfes;
+  }
+
   const availableKeys = getAvailableKeysInfo();
 
   if (availableKeys.length === 0) {
@@ -1080,44 +1127,18 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
 
   // Monopolio DeepSeek para el examen
   const modelsToTry = ["deepseek-chat"];
-  const gradoStr = input?.grado || "";
-  const areaStr = input?.area || "";
 
   const icfesSystemPrompt = `
-  Actúa como un experto en evaluación educativa del ICFES (Colombia).
-  Tu tarea es generar un examen riguroso de 10 preguntas de selección múltiple con única respuesta (opciones A, B, C, D) 
-  basado en la planeación de clase suministrada y adaptado al grado y nivel cognitivo escolar.
-
-  REGLAS ESTRICTAS:
-  1. Genera EXACTAMENTE 10 preguntas. Ni una más, ni una menos.
-  2. Niveles de complejidad: 3 literales, 4 inferenciales, 3 críticos.
-  3. Cada pregunta debe tener 4 opciones (A, B, C, D) donde solo una es correcta.
-  4. La respuesta correcta debe estar explícitamente indicada.
-  5. Justificación pedagógica clara de la clave correcta.
-  6. Para Primaria (Transición a 5°), lenguaje claro y didáctico para niños.
-
-  DEVUELVE ÚNICAMENTE UN ARRAY DE OBJETOS JSON CON ESTA ESTRUCTURA EXACTA:
-  [
-    {
-      "pregunta": "Texto de la pregunta...",
-      "tipo": "Múltiple Opción",
-      "opciones": ["A. Opción 1", "B. Opción 2", "C. Opción 3", "D. Opción 4"],
-      "respuesta_correcta": "A",
-      "justificacion": "Por qué es correcta."
-    }
-  ]
+  Experto evaluador ICFES (Colombia). Genera EXACTAMENTE 10 preguntas de selección múltiple (A, B, C, D) basadas en la planeación, adaptadas al grado escolar (3 literales, 4 inferenciales, 3 críticas). Justificación concisa de 1 oración por pregunta.
+  DEVUELVE ÚNICAMENTE UN ARRAY JSON VÁLIDO:
+  [{"pregunta":"...","tipo":"Múltiple Opción","opciones":["A. ...","B. ...","C. ...","D. ..."],"respuesta_correcta":"A","justificacion":"..."}]
   `;
 
   const icfesUserPrompt = `
-  Planeación Curricular a Evaluar:
-  ${gradoStr ? `Grado Escolar: ${gradoStr} (${getGradeContext(gradoStr)})` : ''}
-  ${areaStr ? `Área del Conocimiento: ${areaStr}` : ''}
-  Tema Principal: ${sequenceData.tema_principal}
+  Grado: ${gradoStr} | Área: ${areaStr} | Tema: ${sequenceData.tema_principal}
   Objetivo: ${sequenceData.objetivo_aprendizaje}
-  DBA / Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'No especificado'}
-  Contenidos: ${sequenceData.contenidos.join(', ')}
-
-  Devuelve ESTRICTAMENTE el array JSON de las 10 preguntas.
+  DBA/Estándar: ${sequenceData.dba_utilizado || sequenceData.estandar || 'General'}
+  Devuelve SOLO el array JSON de 10 preguntas.
   `;
 
   let lastError: any;
@@ -1162,7 +1183,7 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
                   { role: "user", content: icfesUserPrompt }
                 ],
                 temperature: 0.0,
-                max_tokens: 2200
+                max_tokens: 1800
               })
             });
 
@@ -1209,7 +1230,9 @@ export const generateExtendedIcfesExam = async (sequenceData: DidacticSequence, 
              throw new Error("El examen devuelto no contiene un array válido o tiene muy pocas preguntas.");
           }
 
-          console.log(`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo ${modelName} usando Llave: ${label}`, "color: #10b981; font-weight: bold;");
+          console.log(`%c[✨ EXAMEN ICFES GENERADO] Respondió modelo ${modelName} usando Llave: ${label} (${tokensUsed} tokens)`, "color: #10b981; font-weight: bold;");
+
+          saveToLocalCache(ICFES_CACHE_KEY, icfesCacheKey, parsed);
 
           if (!apiMetrics[keyId]) {
             apiMetrics[keyId] = { requests: 0, success: 0, errors: 0, tokens: 0, lastUsed: "", label, errorLogs: [] };
