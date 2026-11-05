@@ -291,17 +291,17 @@ Deno.serve(async (req: Request) => {
       - **Area:** ${input.area || 'General'} (${getAreaContext(input.area)})
       - **Tema:** ${safeTema} | **Sesiones:** ${input.sesiones || 4}
       ${pedagogicalInstruction}
-      - **Banco de Evaluación:** Generar obligatoriamente **10 preguntas** de selección múltiple tipo ICFES con 4 opciones.
+      - **Banco de Evaluación:** Generar obligatoriamente **3 preguntas** de selección múltiple tipo ICFES con 4 opciones.
       - **Recursos Multimedia y Audiovisuales Adaptados al Grado Exacto:** Si una actividad implica un video, debes incluir un enlace de búsqueda de YouTube adaptado obligatoriamente a la edad y nivel cognitivo del grado (${input.grado || 'este grado'}). Para primaria (Transición a 5°), el término de búsqueda DEBE incluir palabras clave infantiles/pedagógicas como 'para niños', 'educativo primaria', 'grado ${input.grado}', para EVITAR ABSOLUTAMENTE que YouTube devuelva videos de secundaria o bachillerato (ej: videos de 9° grado para temas de división básica).
       - **Integración Transversal:** ${input.ejeCrese || 'Fusión socioemocional y ciudadana de alto impacto.'}
       ${refinementInstruction ? `- **COMANDO DE REFINAMIENTO MAESTRO:** ${sanitizeInput(refinementInstruction)}` : ''}
 
       ### AUDITORÍA DE CALIDAD PRE-SALIDA
       - ¿El DBA o la Orientación Pedagógica es el oficial del MEN exacto para ${input.grado}?
-      - ¿Hay exactamente **10 preguntas** de evaluación tipo ICFES?
-      - ¿El Taller del Estudiante ('taller_imprimible') contiene mínimo 5 actividades/ejercicios extensos y contextualizados?
+      - ¿Hay exactamente **3 preguntas** de evaluación tipo ICFES?
+      - ¿El Taller del Estudiante ('taller_imprimible') contiene 5 actividades/ejercicios prácticos y contextualizados?
 
-      Responde únicamente con el JSON validado.
+      Responde únicamente con el JSON validado y conciso.
     `;
 
     let lastError: any;
@@ -327,8 +327,9 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify({
               model: 'deepseek-chat',
               messages: [{ role: "user", content: prompt }],
-              temperature: 0.0,
-              max_tokens: 4096
+              response_format: { type: 'json_object' },
+              temperature: 0.2,
+              max_tokens: 2400
             })
           });
 
